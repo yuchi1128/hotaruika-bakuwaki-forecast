@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -21,6 +22,24 @@ type Post struct {
 	ImageURL  *string   `json:"image_url"` // Use pointer for nullable field
 	Label     string    `json:"label"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// Reply represents a reply to a post or another reply
+type Reply struct {
+	ID          int       `json:"id"`
+	PostID      int       `json:"post_id"`
+	ParentReplyID *int      `json:"parent_reply_id"` // Use pointer for nullable field
+	Content     string    `json:"content"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// Reaction represents a good/bad reaction
+type Reaction struct {
+	ID          int       `json:"id"`
+	PostID      *int      `json:"post_id"`
+	ReplyID     *int      `json:"reply_id"`
+	ReactionType string    `json:"reaction_type"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 func main() {
@@ -44,6 +63,9 @@ func main() {
 	log.Println("Successfully connected to the database!")
 
 	http.HandleFunc("/api/posts", postsHandler)
+	http.HandleFunc("/api/posts/", postDetailHandler)
+	http.HandleFunc("/api/replies/", replyDetailHandler)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, Backend!")
 	})
@@ -62,6 +84,76 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		createPost(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func postDetailHandler(w http.ResponseWriter, r *http.Request) {
+	pathSegments := splitPath(r.URL.Path)
+	if len(pathSegments) < 3 || pathSegments[2] == "" {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	postID, err := strconv.Atoi(pathSegments[2])
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	if len(pathSegments) == 3 {
+		// Handle /api/posts/{id} - not implemented yet
+		http.Error(w, "Not Implemented", http.StatusNotImplemented)
+		return
+	} else if len(pathSegments) == 4 && pathSegments[3] == "replies" {
+		switch r.Method {
+		case http.MethodGet:
+			getRepliesForPost(w, r, postID)
+		case http.MethodPost:
+			createReplyToPost(w, r, postID)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else if len(pathSegments) == 4 && pathSegments[3] == "reaction" {
+		switch r.Method {
+		case http.MethodPost:
+			createPostReaction(w, r, postID)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	}
+}
+
+func replyDetailHandler(w http.ResponseWriter, r *http.Request) {
+	pathSegments := splitPath(r.URL.Path)
+	if len(pathSegments) < 3 || pathSegments[2] == "" {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	replyID, err := strconv.Atoi(pathSegments[2])
+	if err != nil {
+		http.Error(w, "Invalid reply ID", http.StatusBadRequest)
+		return
+	}
+
+	if len(pathSegments) == 4 && pathSegments[3] == "replies" {
+		switch r.Method {
+		case http.MethodPost:
+			createReplyToReply(w, r, replyID)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else if len(pathSegments) == 4 && pathSegments[3] == "reaction" {
+		switch r.Method {
+		case http.MethodPost:
+			createReplyReaction(w, r, replyID)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		http.Error(w, "Not Found", http.StatusNotFound)
 	}
 }
 
@@ -93,7 +185,18 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPosts(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id, content, image_url, label, created_at FROM posts ORDER BY created_at DESC")
+	query := "SELECT id, content, image_url, label, created_at FROM posts"
+	label := r.URL.Query().Get("label")
+	if label != "" {
+		if label != "現地情報" && label != "その他" {
+			http.Error(w, "Invalid label filter. Must be '現地情報' or 'その他'", http.StatusBadRequest)
+			return
+		}
+		query += fmt.Sprintf(" WHERE label = '%s'", label)
+	}
+	query += " ORDER BY created_at DESC"
+
+	rows, err := db.Query(query)
 	if err != nil {
 		log.Printf("Error querying posts: %v", err)
 		http.Error(w, "Could not retrieve posts", http.StatusInternalServerError)
@@ -104,14 +207,12 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	posts := []Post{}
 	for rows.Next() {
 		var post Post
-		// Scan into a temporary variable for image_url to handle NULL values
 		var imageUrl sql.NullString
 		err := rows.Scan(&post.ID, &post.Content, &imageUrl, &post.Label, &post.CreatedAt)
 		if err != nil {
 			log.Printf("Error scanning post row: %v", err)
 			continue
 		}
-		// Assign the scanned value to post.ImageURL
 		if imageUrl.Valid {
 			post.ImageURL = &imageUrl.String
 		} else {
@@ -128,4 +229,165 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
+}
+
+func createReplyToPost(w http.ResponseWriter, r *http.Request, postID int) {
+	var reply Reply
+	err := json.NewDecoder(r.Body).Decode(&reply)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO replies (post_id, content) VALUES ($1, $2) RETURNING id, created_at`
+	err = db.QueryRow(query, postID, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+	if err != nil {
+		log.Printf("Error inserting reply to post: %v", err)
+		http.Error(w, "Could not create reply", http.StatusInternalServerError)
+		return
+	}
+
+	reply.PostID = postID
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(reply)
+}
+
+func createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int) {
+	var reply Reply
+	err := json.NewDecoder(r.Body).Decode(&reply)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get post_id from parent reply
+	var postID int
+	row := db.QueryRow("SELECT post_id FROM replies WHERE id = $1", parentReplyID)
+	err = row.Scan(&postID)
+	if err != nil {
+		log.Printf("Error getting post_id from parent reply: %v", err)
+		http.Error(w, "Parent reply not found", http.StatusNotFound)
+		return
+	}
+
+	query := `INSERT INTO replies (post_id, parent_reply_id, content) VALUES ($1, $2, $3) RETURNING id, created_at`
+	err = db.QueryRow(query, postID, parentReplyID, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+	if err != nil {
+		log.Printf("Error inserting reply to reply: %v", err)
+		http.Error(w, "Could not create reply", http.StatusInternalServerError)
+		return
+	}
+
+	reply.PostID = postID
+	reply.ParentReplyID = &parentReplyID
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(reply)
+}
+
+func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
+	rows, err := db.Query("SELECT id, post_id, parent_reply_id, content, created_at FROM replies WHERE post_id = $1 ORDER BY created_at ASC", postID)
+	if err != nil {
+		log.Printf("Error querying replies: %v", err)
+		http.Error(w, "Could not retrieve replies", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	replies := []Reply{}
+	for rows.Next() {
+		var reply Reply
+		var parentReplyID sql.NullInt64
+		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Content, &reply.CreatedAt)
+		if err != nil {
+			log.Printf("Error scanning reply row: %v", err)
+			continue
+		}
+		if parentReplyID.Valid {
+			val := int(parentReplyID.Int64)
+			reply.ParentReplyID = &val
+		} else {
+			reply.ParentReplyID = nil
+		}
+		replies = append(replies, reply)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error after iterating rows: %v", err)
+		http.Error(w, "Error retrieving replies", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(replies)
+}
+
+func createPostReaction(w http.ResponseWriter, r *http.Request, postID int) {
+	var reaction Reaction
+	err := json.NewDecoder(r.Body).Decode(&reaction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if reaction.ReactionType != "good" && reaction.ReactionType != "bad" {
+		http.Error(w, "Invalid reaction type. Must be 'good' or 'bad'", http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO reactions (post_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
+	err = db.QueryRow(query, postID, reaction.ReactionType).Scan(&reaction.ID, &reaction.CreatedAt)
+	if err != nil {
+		log.Printf("Error inserting post reaction: %v", err)
+		http.Error(w, "Could not create reaction", http.StatusInternalServerError)
+		return
+	}
+
+	val := postID
+	reaction.PostID = &val
+	reaction.ReplyID = nil
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(reaction)
+}
+
+func createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
+	var reaction Reaction
+	err := json.NewDecoder(r.Body).Decode(&reaction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if reaction.ReactionType != "good" && reaction.ReactionType != "bad" {
+		http.Error(w, "Invalid reaction type. Must be 'good' or 'bad'", http.StatusBadRequest)
+		return
+	}
+
+	query := `INSERT INTO reactions (reply_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
+	err = db.QueryRow(query, replyID, reaction.ReactionType).Scan(&reaction.ID, &reaction.CreatedAt)
+	if err != nil {
+		log.Printf("Error inserting reply reaction: %v", err)
+		http.Error(w, "Could not create reaction", http.StatusInternalServerError)
+		return
+	}
+
+	val := replyID
+	reaction.ReplyID = &val
+	reaction.PostID = nil
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(reaction)
+}
+
+// Helper function to split URL path segments
+func splitPath(path string) []string {
+	var segments []string
+	for _, s := range strings.Split(path, "/") {
+		if s != "" {
+			segments = append(segments, s)
+		}
+	}
+	return segments
 }
