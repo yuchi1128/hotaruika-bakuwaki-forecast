@@ -22,6 +22,8 @@ services:
       - ./backend:/app
     depends_on:
       - db
+    environment:
+      DATABASE_URL: "postgres://user:password@db:5432/hotaruika_db?sslmode=disable"
 
   db:
     image: postgres:14-alpine
