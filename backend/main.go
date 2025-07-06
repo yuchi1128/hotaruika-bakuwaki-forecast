@@ -43,7 +43,7 @@ func main() {
 
 	log.Println("Successfully connected to the database!")
 
-	http.HandleFunc("/api/posts", createPost)
+	http.HandleFunc("/api/posts", postsHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, Backend!")
 	})
@@ -54,12 +54,18 @@ func main() {
 	}
 }
 
-func createPost(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+func postsHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getPosts(w, r)
+	case http.MethodPost:
+		createPost(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
+}
 
+func createPost(w http.ResponseWriter, r *http.Request) {
 	var post Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
@@ -84,4 +90,42 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(post)
+}
+
+func getPosts(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query("SELECT id, content, image_url, label, created_at FROM posts ORDER BY created_at DESC")
+	if err != nil {
+		log.Printf("Error querying posts: %v", err)
+		http.Error(w, "Could not retrieve posts", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	posts := []Post{}
+	for rows.Next() {
+		var post Post
+		// Scan into a temporary variable for image_url to handle NULL values
+		var imageUrl sql.NullString
+		err := rows.Scan(&post.ID, &post.Content, &imageUrl, &post.Label, &post.CreatedAt)
+		if err != nil {
+			log.Printf("Error scanning post row: %v", err)
+			continue
+		}
+		// Assign the scanned value to post.ImageURL
+		if imageUrl.Valid {
+			post.ImageURL = &imageUrl.String
+		} else {
+			post.ImageURL = nil
+		}
+		posts = append(posts, post)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error after iterating rows: %v", err)
+		http.Error(w, "Error retrieving posts", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
 }
