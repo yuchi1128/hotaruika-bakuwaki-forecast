@@ -2,11 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -70,10 +72,19 @@ func main() {
 
 	log.Println("Successfully connected to the database!")
 
+	// Create uploads directory if it doesn't exist
+	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
+		err = os.Mkdir("./uploads", 0755)
+		if err != nil {
+			log.Fatalf("Failed to create uploads directory: %v", err)
+		}
+	}
+
 	http.HandleFunc("/api/posts", postsHandler)
 	http.HandleFunc("/api/posts/", postDetailHandler)
 	http.HandleFunc("/api/replies/", replyDetailHandler)
 	http.HandleFunc("/api/forecasts", getForecast)
+	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, Backend!")
@@ -180,14 +191,54 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var imageURL *string
+	if post.ImageURL != nil && *post.ImageURL != "" {
+		// Decode base64 image and save to file
+		dataURL := *post.ImageURL
+		parts := strings.SplitN(dataURL, ";base64,", 2)
+		if len(parts) != 2 {
+			http.Error(w, "Invalid image data format", http.StatusBadRequest)
+			return
+		}
+		
+		// Extract file extension from data URL
+		mimeType := strings.TrimPrefix(parts[0], "data:")
+		extension := "jpg" // Default to jpg
+		if strings.Contains(mimeType, "png") {
+			extension = "png"
+		} else if strings.Contains(mimeType, "gif") {
+			extension = "gif"
+		} else if strings.Contains(mimeType, "jpeg") {
+			extension = "jpeg"
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			http.Error(w, "Failed to decode image", http.StatusInternalServerError)
+			return
+		}
+
+		filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
+		filePath := filepath.Join("./uploads", filename)
+		err = os.WriteFile(filePath, decoded, 0644)
+		if err != nil {
+			log.Printf("Failed to save image: %v", err)
+			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			return
+		}
+		url := "/uploads/" + filename
+		imageURL = &url
+	}
+
 	query := `INSERT INTO posts (content, image_url, label) VALUES ($1, $2, $3) RETURNING id, created_at`
-	err = db.QueryRow(query, post.Content, post.ImageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
+	err = db.QueryRow(query, post.Content, imageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
 	if err != nil {
 		log.Printf("Error inserting post: %v", err)
 		http.Error(w, "Could not create post", http.StatusInternalServerError)
 		return
 	}
 
+	post.ImageURL = imageURL
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(post)
