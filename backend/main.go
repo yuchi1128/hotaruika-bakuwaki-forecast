@@ -460,9 +460,13 @@ func getForecast(w http.ResponseWriter, r *http.Request) {
 
 	// Mock forecast data
 	forecasts := []Forecast{
-		{Date: "2025-07-07", Amount: 100, Condition: "晴れ"},
-		{Date: "2025-07-08", Amount: 50, Condition: "曇り"},
-		{Date: "2025-07-09", Amount: 200, Condition: "雨"},
+		{Date: time.Now().Format("2006-01-02"), Amount: 100, Condition: "晴れ"},
+		{Date: time.Now().AddDate(0, 0, 1).Format("2006-01-02"), Amount: 50, Condition: "曇り"},
+		{Date: time.Now().AddDate(0, 0, 2).Format("2006-01-02"), Amount: 200, Condition: "雨"},
+		{Date: time.Now().AddDate(0, 0, 3).Format("2006-01-02"), Amount: 120, Condition: "晴れ"},
+		{Date: time.Now().AddDate(0, 0, 4).Format("2006-01-02"), Amount: 80, Condition: "曇り"},
+		{Date: time.Now().AddDate(0, 0, 5).Format("2006-01-02"), Amount: 150, Condition: "雨"},
+		{Date: time.Now().AddDate(0, 0, 6).Format("2006-01-02"), Amount: 90, Condition: "晴れ"},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
