@@ -14,6 +14,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/rs/cors"
 )
 
 var db *sql.DB
@@ -30,7 +31,7 @@ type Post struct {
 // Reply represents a reply to a post or another reply
 type Reply struct {
 	ID          int       `json:"id"`
-	PostID      int       `json:"post_id"`
+	PostID      int       `json:"post"`
 	ParentReplyID *int      `json:"parent_reply_id"` // Use pointer for nullable field
 	Content     string    `json:"content"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -80,18 +81,28 @@ func main() {
 		}
 	}
 
-	http.HandleFunc("/api/posts", postsHandler)
-	http.HandleFunc("/api/posts/", postDetailHandler)
-	http.HandleFunc("/api/replies/", replyDetailHandler)
-	http.HandleFunc("/api/forecasts", getForecast)
-	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/posts", postsHandler)
+	mux.HandleFunc("/api/posts/", postDetailHandler)
+	mux.HandleFunc("/api/replies/", replyDetailHandler)
+	mux.HandleFunc("/api/forecasts", getForecast)
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, Backend!")
 	})
 
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:3001"}, // Allow requests from your frontend
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(mux)
+
 	log.Println("Server starting on port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatal(err)
 	}
 }
