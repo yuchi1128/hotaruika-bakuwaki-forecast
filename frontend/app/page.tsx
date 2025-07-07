@@ -86,8 +86,11 @@ export default function Home() {
 
   useEffect(() => {
     fetchForecasts();
+  }, []); // Run only once on component mount
+
+  useEffect(() => {
     fetchPosts();
-  }, [selectedFilterLabel]);
+  }, [selectedFilterLabel]); // Re-fetch posts when filter changes
 
   const fetchForecasts = async () => {
     try {
@@ -99,20 +102,40 @@ export default function Home() {
       
       const mappedPredictions: DayPrediction[] = data.map(forecast => {
         const date = new Date(forecast.date);
+        // Ensure date is valid before proceeding
+        if (isNaN(date.getTime())) {
+          console.error("Invalid date received from API:", forecast.date);
+          return null; // Or handle error appropriately
+        }
+
         const moonAge = (date.getDate() + 15) % 29; // 簡易的な月齢計算
         const moonPhaseIndex = Math.floor(moonAge / 3.625);
 
+        let level = 0;
+        if (forecast.amount > 150) {
+          level = 5;
+        } else if (forecast.amount > 100) {
+          level = 4;
+        } else if (forecast.amount > 50) {
+          level = 3;
+        } else if (forecast.amount > 20) {
+          level = 2;
+        } else if (forecast.amount > 0) {
+          level = 1;
+        }
+
         return {
           date,
-          level: forecast.amount > 150 ? 5 : (forecast.amount > 100 ? 4 : (forecast.amount > 50 ? 3 : (forecast.amount > 20 ? 2 : (forecast.amount > 0 ? 1 : 0)))),
+          level,
           temperature: Math.floor(Math.random() * 15) + 5, // Mock temperature
-          weather: forecast.condition, // Use condition from API
+          weather: forecast.condition,
           moonPhase: moonPhases[moonPhaseIndex] || '新月',
           moonAge: moonAge,
           precipitation: Math.floor(Math.random() * 50), // Mock precipitation
           tideInfo: ['大潮', '中潮', '小潮', '長潮'][Math.floor(Math.random() * 4)], // Mock tide info
         };
-      });
+      }).filter(p => p !== null) as DayPrediction[]; // Filter out any null predictions
+
       setPredictions(mappedPredictions);
     } catch (error) {
       console.error("Failed to fetch forecasts:", error);
