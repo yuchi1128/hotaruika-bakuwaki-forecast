@@ -55,6 +55,12 @@ interface Comment extends Post {
   myReaction: 'good' | 'bad' | null;
 }
 
+interface ForecastData {
+  date: string;
+  amount: number;
+  condition: string;
+}
+
 const predictionLevels: PredictionLevel[] = [
   { level: 0, name: 'なし', description: '身投げは期待できません', color: 'text-gray-400', bgColor: 'bg-gray-800' },
   { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-900/30' },
@@ -79,39 +85,39 @@ export default function Home() {
   const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    // 予測データの生成（実際のAPIに置き換え予定）
-    const generatePredictions = () => {
-      const today = new Date();
-      const predictions: DayPrediction[] = [];
-      
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        
-        const moonAge = (date.getDate() + 15) % 29; // 簡易的な月齢計算
-        const moonPhaseIndex = Math.floor(moonAge / 3.625);
-        
-        predictions.push({
-          date,
-          level: Math.floor(Math.random() * 6),
-          temperature: Math.floor(Math.random() * 15) + 5, // 5-20度
-          weather: ['晴れ', '曇り', '雨', '霧'][Math.floor(Math.random() * 4)],
-          moonPhase: moonPhases[moonPhaseIndex] || '新月',
-          moonAge: moonAge,
-          precipitation: Math.floor(Math.random() * 50), // 0-50mm
-          tideInfo: ['大潮', '中潮', '小潮', '長潮'][Math.floor(Math.random() * 4)],
-        });
-      }
-      
-      setPredictions(predictions);
-    };
-
-    generatePredictions();
-  }, []);
-
-  useEffect(() => {
+    fetchForecasts();
     fetchPosts();
   }, [selectedFilterLabel]);
+
+  const fetchForecasts = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/forecasts');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: ForecastData[] = await response.json();
+      
+      const mappedPredictions: DayPrediction[] = data.map(forecast => {
+        const date = new Date(forecast.date);
+        const moonAge = (date.getDate() + 15) % 29; // 簡易的な月齢計算
+        const moonPhaseIndex = Math.floor(moonAge / 3.625);
+
+        return {
+          date,
+          level: forecast.amount > 150 ? 5 : (forecast.amount > 100 ? 4 : (forecast.amount > 50 ? 3 : (forecast.amount > 20 ? 2 : (forecast.amount > 0 ? 1 : 0)))),
+          temperature: Math.floor(Math.random() * 15) + 5, // Mock temperature
+          weather: forecast.condition, // Use condition from API
+          moonPhase: moonPhases[moonPhaseIndex] || '新月',
+          moonAge: moonAge,
+          precipitation: Math.floor(Math.random() * 50), // Mock precipitation
+          tideInfo: ['大潮', '中潮', '小潮', '長潮'][Math.floor(Math.random() * 4)], // Mock tide info
+        };
+      });
+      setPredictions(mappedPredictions);
+    } catch (error) {
+      console.error("Failed to fetch forecasts:", error);
+    }
+  };
 
   const fetchPosts = async () => {
     try {
@@ -592,7 +598,7 @@ export default function Home() {
                 size="sm"
                 onClick={() => setSelectedFilterLabel('現地情報')}
                 className={selectedFilterLabel === '現地情報' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}
-              >
+                >
                 現地情報
               </Button>
               <Button
