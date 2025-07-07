@@ -94,7 +94,7 @@ export default function Home() {
 
   const fetchForecasts = async () => {
     try {
-      const response = await fetch('http://backend:8080/api/forecasts');
+      const response = await fetch('http://localhost:8080/api/forecasts');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -144,7 +144,7 @@ export default function Home() {
 
   const fetchPosts = async () => {
     try {
-      let url = 'http://backend:8080/api/posts';
+      let url = 'http://localhost:8080/api/posts';
       if (selectedFilterLabel) {
         url += `?label=${selectedFilterLabel}`;
       }
@@ -178,7 +178,7 @@ export default function Home() {
 
   const fetchRepliesForPost = async (postId: number): Promise<Reply[]> => {
     try {
-      const response = await fetch(`http://backend:8080/api/posts/${postId}/replies`);
+      const response = await fetch(`http://localhost:8080/api/posts/${postId}/replies`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -192,7 +192,7 @@ export default function Home() {
 
   const createPost = async (content: string, label: string, imageBase64: string | null) => {
     try {
-      const response = await fetch('http://backend:8080/api/posts', {
+      const response = await fetch('http://localhost:8080/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +212,7 @@ export default function Home() {
   const createReply = async (targetId: number, type: 'post' | 'reply', content: string) => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/replies` : `/api/replies/${targetId}/replies`;
-      const response = await fetch(`http://backend:8080${endpoint}`, {
+      const response = await fetch(`http://localhost:8080${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ export default function Home() {
   const createReaction = async (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/reaction` : `/api/replies/${targetId}/reaction`;
-      const response = await fetch(`http://backend:8080${endpoint}`, {
+      const response = await fetch(`http://localhost:8080${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -652,7 +652,7 @@ export default function Home() {
                       </div>
                       <p className="text-gray-200 mb-3">{comment.content}</p>
                       {comment.image_url && (
-                        <img src={`http://backend:8080${comment.image_url}`} alt="投稿画像" className="max-w-xs max-h-48 object-contain rounded-lg mb-3" />
+                        <img src={`http://localhost:8080${comment.image_url}`} alt="投稿画像" className="max-w-xs max-h-48 object-contain rounded-lg mb-3" />
                       )}
                       <div className="flex items-center gap-4">
                         <Button
