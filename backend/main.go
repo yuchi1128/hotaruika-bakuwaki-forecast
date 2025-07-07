@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -42,6 +43,13 @@ type Reaction struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// Forecast represents a mock forecast data
+type Forecast struct {
+	Date      string `json:"date"`
+	Amount    int    `json:"amount"`
+	Condition string `json:"condition"`
+}
+
 func main() {
 	// Database connection
 	dbURL := os.Getenv("DATABASE_URL")
@@ -65,6 +73,7 @@ func main() {
 	http.HandleFunc("/api/posts", postsHandler)
 	http.HandleFunc("/api/posts/", postDetailHandler)
 	http.HandleFunc("/api/replies/", replyDetailHandler)
+	http.HandleFunc("/api/forecasts", getForecast)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, Backend!")
@@ -379,6 +388,23 @@ func createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(reaction)
+}
+
+func getForecast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Mock forecast data
+	forecasts := []Forecast{
+		{Date: "2025-07-07", Amount: 100, Condition: "晴れ"},
+		{Date: "2025-07-08", Amount: 50, Condition: "曇り"},
+		{Date: "2025-07-09", Amount: 200, Condition: "雨"},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(forecasts)
 }
 
 // Helper function to split URL path segments
