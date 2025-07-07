@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon } from 'lucide-react';
+import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 interface PredictionLevel {
   level: number;
@@ -29,14 +29,30 @@ interface DayPrediction {
   tideInfo: string;
 }
 
-interface Comment {
-  id: string;
-  author: string;
+interface Post {
+  id: number;
   content: string;
-  timestamp: Date;
-  likes: number;
-  replies: Comment[];
-  isLiked: boolean;
+  image_url: string | null;
+  label: string;
+  created_at: string;
+}
+
+interface Reply {
+  id: number;
+  post_id: number;
+  parent_reply_id: number | null;
+  content: string;
+  created_at: string;
+  goodCount: number;
+  badCount: number;
+  myReaction: 'good' | 'bad' | null;
+}
+
+interface Comment extends Post {
+  replies: Reply[];
+  goodCount: number;
+  badCount: number;
+  myReaction: 'good' | 'bad' | null;
 }
 
 const predictionLevels: PredictionLevel[] = [
@@ -55,8 +71,8 @@ export default function Home() {
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [authorName, setAuthorName] = useState('');
-  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [authorName, setAuthorName] = useState(''); // This will be removed later when user authentication is implemented
+  const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
@@ -87,45 +103,86 @@ export default function Home() {
       setPredictions(predictions);
     };
 
-    // サンプルコメントの生成
-    const generateComments = () => {
-      const sampleComments: Comment[] = [
-        {
-          id: '1',
-          author: '富山の漁師',
-          content: '昨夜は素晴らしい身投げでした！海が青く光って幻想的でした。',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          likes: 12,
-          replies: [
-            {
-              id: '1-1',
-              author: 'ホタルイカ愛好家',
-              content: '羨ましいです！写真はありますか？',
-              timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-              likes: 3,
-              replies: [],
-              isLiked: false,
-            }
-          ],
-          isLiked: false,
-        },
-        {
-          id: '2',
-          author: '観光客A',
-          content: '初めて見ましたが、本当に神秘的でした。また来年も来たいと思います。',
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-          likes: 8,
-          replies: [],
-          isLiked: true,
-        },
-      ];
-      
-      setComments(sampleComments);
-    };
-
     generatePredictions();
-    generateComments();
+    fetchPosts();
   }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/posts');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: Post[] = await response.json();
+      // For now, mock goodCount, badCount, myReaction and replies
+      const commentsWithMockData: Comment[] = data.map(post => ({
+        ...post,
+        replies: [], // Will fetch replies later
+        goodCount: Math.floor(Math.random() * 100),
+        badCount: Math.floor(Math.random() * 10),
+        myReaction: null,
+      }));
+      setComments(commentsWithMockData);
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+    }
+  };
+
+  const createPost = async (content: string, label: string) => {
+    try {
+      const response = await fetch('http://localhost:8080/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content, label }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const newPost: Post = await response.json();
+      // For now, mock goodCount, badCount, myReaction and replies
+      const newComment: Comment = {
+        ...newPost,
+        replies: [],
+        goodCount: 0,
+        badCount: 0,
+        myReaction: null,
+      };
+      setComments(prevComments => [newComment, ...prevComments]);
+    } catch (error) {
+      console.error("Failed to create post:", error);
+    }
+  };
+
+  const createReaction = async (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
+    try {
+      const endpoint = type === 'post' ? `/api/posts/${targetId}/reaction` : `/api/replies/${targetId}/reaction`;
+      const response = await fetch(`http://localhost:8080${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reaction_type: reactionType }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      // Update UI based on successful reaction
+      setComments(prevComments => prevComments.map(comment => {
+        if (comment.id === targetId && type === 'post') {
+          const newGoodCount = reactionType === 'good' ? comment.goodCount + 1 : comment.goodCount;
+          const newBadCount = reactionType === 'bad' ? comment.badCount + 1 : comment.badCount;
+          return { ...comment, goodCount: newGoodCount, badCount: newBadCount, myReaction: reactionType };
+        } else {
+          // Handle replies reactions (more complex, will implement later)
+          return comment;
+        }
+      }));
+    } catch (error) {
+      console.error("Failed to create reaction:", error);
+    }
+  };
 
   const renderHotaruikaIcons = (level: number, src: string, size = 'w-8 h-8', animated = true) => {
     return Array.from({ length: level }).map((_, index) => (
@@ -144,35 +201,29 @@ export default function Home() {
     router.push(`/detail/${dateString}`);
   };
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = async () => {
     if (!newComment.trim() || !authorName.trim()) return;
 
-    const comment: Comment = {
-      id: Date.now().toString(),
-      author: authorName,
-      content: newComment,
-      timestamp: new Date(),
-      likes: 0,
-      replies: [],
-      isLiked: false,
-    };
+    // For now, hardcode label to 'その他'
+    await createPost(newComment, 'その他');
 
-    setComments([comment, ...comments]);
     setNewComment('');
     setAuthorName('');
   };
 
-  const handleSubmitReply = (parentId: string) => {
+  const handleSubmitReply = (parentId: number) => {
     if (!replyContent.trim() || !authorName.trim()) return;
 
-    const reply: Comment = {
-      id: `${parentId}-${Date.now()}`,
-      author: authorName,
+    // This part will be updated to use API later
+    const reply: Reply = {
+      id: Date.now(), // Mock ID
+      post_id: parentId,
+      parent_reply_id: null,
       content: replyContent,
-      timestamp: new Date(),
-      likes: 0,
-      replies: [],
-      isLiked: false,
+      created_at: new Date().toISOString(),
+      goodCount: 0,
+      badCount: 0,
+      myReaction: null,
     };
 
     setComments(comments.map(comment => 
@@ -185,27 +236,8 @@ export default function Home() {
     setReplyTo(null);
   };
 
-  const toggleLike = (commentId: string, isReply: boolean = false, parentId?: string) => {
-    if (isReply && parentId) {
-      setComments(comments.map(comment => 
-        comment.id === parentId 
-          ? {
-              ...comment,
-              replies: comment.replies.map(reply =>
-                reply.id === commentId
-                  ? { ...reply, isLiked: !reply.isLiked, likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1 }
-                  : reply
-              )
-            }
-          : comment
-      ));
-    } else {
-      setComments(comments.map(comment => 
-        comment.id === commentId 
-          ? { ...comment, isLiked: !comment.isLiked, likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1 }
-          : comment
-      ));
-    }
+  const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
+    createReaction(targetId, type, reactionType);
   };
 
   const formatDate = (date: Date) => {
@@ -387,24 +419,33 @@ export default function Home() {
                   <div className="flex items-start gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                        {comment.author.charAt(0)}
+                        {comment.content.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-purple-200">{comment.author}</span>
-                        <span className="text-xs text-gray-400">{formatTime(comment.timestamp)}</span>
+                        <span className="font-semibold text-purple-200">{comment.id}</span> {/* Temporarily using ID as author */} 
+                        <span className="text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
                       </div>
                       <p className="text-gray-200 mb-3">{comment.content}</p>
                       <div className="flex items-center gap-4">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleLike(comment.id)}
-                          className={`text-xs ${comment.isLiked ? 'text-pink-400' : 'text-gray-400'} hover:text-pink-300`}
+                          onClick={() => handleReaction(comment.id, 'post', 'good')}
+                          className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
                         >
-                          <Heart className={`w-4 h-4 mr-1 ${comment.isLiked ? 'fill-current' : ''}`} />
-                          {comment.likes}
+                          <ThumbsUp className={`w-4 h-4 mr-1 ${comment.myReaction === 'good' ? 'fill-current' : ''}`} />
+                          {comment.goodCount}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReaction(comment.id, 'post', 'bad')}
+                          className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
+                        >
+                          <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                          {comment.badCount}
                         </Button>
                         <Button
                           variant="ghost"
@@ -462,23 +503,32 @@ export default function Home() {
                               <div className="flex items-start gap-2">
                                 <Avatar className="w-8 h-8">
                                   <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-xs">
-                                    {reply.author.charAt(0)}
+                                    {reply.content.charAt(0)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-semibold text-blue-200 text-sm">{reply.author}</span>
-                                    <span className="text-xs text-gray-400">{formatTime(reply.timestamp)}</span>
+                                    <span className="font-semibold text-blue-200 text-sm">{reply.id}</span> {/* Temporarily using ID as author */} 
+                                    <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
                                   </div>
                                   <p className="text-gray-200 text-sm mb-2">{reply.content}</p>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => toggleLike(reply.id, true, comment.id)}
-                                    className={`text-xs ${reply.isLiked ? 'text-pink-400' : 'text-gray-400'} hover:text-pink-300`}
+                                    onClick={() => handleReaction(reply.id, 'reply', 'good')}
+                                    className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
                                   >
-                                    <Heart className={`w-3 h-3 mr-1 ${reply.isLiked ? 'fill-current' : ''}`} />
-                                    {reply.likes}
+                                    <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
+                                    {/* No goodCount/badCount for replies yet in frontend */}0
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleReaction(reply.id, 'reply', 'bad')}
+                                    className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
+                                  >
+                                    <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                                    {/* No goodCount/badCount for replies yet in frontend */}0
                                   </Button>
                                 </div>
                               </div>
