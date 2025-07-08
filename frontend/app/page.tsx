@@ -35,6 +35,8 @@ interface Post {
   image_url: string | null;
   label: string;
   created_at: string;
+  good_count: number;
+  bad_count: number;
 }
 
 interface Reply {
@@ -43,8 +45,8 @@ interface Reply {
   parent_reply_id: number | null;
   content: string;
   created_at: string;
-  goodCount: number;
-  badCount: number;
+  good_count: number;
+  bad_count: number;
   myReaction: 'good' | 'bad' | null;
 }
 
@@ -156,18 +158,17 @@ export default function Home() {
       
       const commentsWithReplies: Comment[] = await Promise.all(data.map(async post => {
         const replies = await fetchRepliesForPost(post.id);
-        // For now, mock goodCount, badCount, myReaction for posts
         return {
           ...post,
           replies: replies.map(reply => ({
             ...reply,
-            goodCount: Math.floor(Math.random() * 10),
-            badCount: Math.floor(Math.random() * 2),
-            myReaction: null,
+            goodCount: reply.good_count,
+            badCount: reply.bad_count,
+            myReaction: null, // TODO: Implement user-specific reaction state
           })),
-          goodCount: Math.floor(Math.random() * 100),
-          badCount: Math.floor(Math.random() * 10),
-          myReaction: null,
+          goodCount: post.good_count,
+          badCount: post.bad_count,
+          myReaction: null, // TODO: Implement user-specific reaction state
         };
       }));
       setComments(commentsWithReplies);
@@ -357,7 +358,7 @@ export default function Home() {
               className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
             >
               <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
-              {reply.goodCount}
+              {reply.good_count}
             </Button>
             <Button
               variant="ghost"
@@ -366,7 +367,7 @@ export default function Home() {
               className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
             >
               <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
-              {reply.badCount}
+              {reply.bad_count}
             </Button>
             <Button
               variant="ghost"

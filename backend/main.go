@@ -26,15 +26,19 @@ type Post struct {
 	ImageURL  *string   `json:"image_url"` // Use pointer for nullable field
 	Label     string    `json:"label"`
 	CreatedAt time.Time `json:"created_at"`
+	GoodCount int       `json:"good_count"`
+	BadCount  int       `json:"bad_count"`
 }
 
 // Reply represents a reply to a post or another reply
 type Reply struct {
 	ID          int       `json:"id"`
-	PostID      int       `json:"post"`
+	PostID      int       `json:"post_id"`
 	ParentReplyID *int      `json:"parent_reply_id"` // Use pointer for nullable field
 	Content     string    `json:"content"`
 	CreatedAt   time.Time `json:"created_at"`
+	GoodCount int       `json:"good_count"`
+	BadCount  int       `json:"bad_count"`
 }
 
 // Reaction represents a good/bad reaction
@@ -256,16 +260,29 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPosts(w http.ResponseWriter, r *http.Request) {
-	query := "SELECT id, content, image_url, label, created_at FROM posts"
+	query := `
+		SELECT 
+			p.id, p.content, p.image_url, p.label, p.created_at,
+			COALESCE(r_good.count, 0) as good_count,
+			COALESCE(r_bad.count, 0) as bad_count
+		FROM posts p
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id
+		) r_good ON p.id = r_good.post_id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id
+		) r_bad ON p.id = r_bad.post_id
+	`
+
 	label := r.URL.Query().Get("label")
 	if label != "" {
 		if label != "現地情報" && label != "その他" {
 			http.Error(w, "Invalid label filter. Must be '現地情報' or 'その他'", http.StatusBadRequest)
 			return
 		}
-		query += fmt.Sprintf(" WHERE label = '%s'", label)
+		query += fmt.Sprintf(" WHERE p.label = '%s'", label)
 	}
-	query += " ORDER BY created_at DESC"
+	query += " ORDER BY p.created_at DESC"
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -279,7 +296,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var post Post
 		var imageUrl sql.NullString
-		err := rows.Scan(&post.ID, &post.Content, &imageUrl, &post.Label, &post.CreatedAt)
+		err := rows.Scan(&post.ID, &post.Content, &imageUrl, &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
 		if err != nil {
 			log.Printf("Error scanning post row: %v", err)
 			continue
@@ -358,7 +375,22 @@ func createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID in
 }
 
 func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
-	rows, err := db.Query("SELECT id, post_id, parent_reply_id, content, created_at FROM replies WHERE post_id = $1 ORDER BY created_at ASC", postID)
+	query := `
+		SELECT 
+			r.id, r.post_id, r.parent_reply_id, r.content, r.created_at,
+			COALESCE(r_good.count, 0) as good_count,
+			COALESCE(r_bad.count, 0) as bad_count
+		FROM replies r
+		LEFT JOIN (
+			SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id
+		) r_good ON r.id = r_good.reply_id
+		LEFT JOIN (
+			SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id
+		) r_bad ON r.id = r_bad.reply_id
+		WHERE r.post_id = $1
+		ORDER BY r.created_at ASC
+	`
+	rows, err := db.Query(query, postID)
 	if err != nil {
 		log.Printf("Error querying replies: %v", err)
 		http.Error(w, "Could not retrieve replies", http.StatusInternalServerError)
@@ -370,7 +402,7 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 	for rows.Next() {
 		var reply Reply
 		var parentReplyID sql.NullInt64
-		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Content, &reply.CreatedAt)
+		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount)
 		if err != nil {
 			log.Printf("Error scanning reply row: %v", err)
 			continue
