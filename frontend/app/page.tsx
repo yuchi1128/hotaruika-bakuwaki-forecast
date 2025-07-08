@@ -31,6 +31,7 @@ interface DayPrediction {
 
 interface Post {
   id: number;
+  username: string;
   content: string;
   image_url: string | null;
   label: string;
@@ -43,6 +44,7 @@ interface Reply {
   id: number;
   post_id: number;
   parent_reply_id: number | null;
+  username: string;
   content: string;
   created_at: string;
   good_count: number;
@@ -191,14 +193,14 @@ export default function Home() {
     }
   };
 
-  const createPost = async (content: string, label: string, imageBase64: string | null) => {
+  const createPost = async (username: string, content: string, label: string, imageBase64: string | null) => {
     try {
       const response = await fetch('http://localhost:8080/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, label, image_url: imageBase64 }),
+        body: JSON.stringify({ username, content, label, image_url: imageBase64 }),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -210,7 +212,7 @@ export default function Home() {
     }
   };
 
-  const createReply = async (targetId: number, type: 'post' | 'reply', content: string) => {
+  const createReply = async (targetId: number, type: 'post' | 'reply', username: string, content: string) => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/replies` : `/api/replies/${targetId}/replies`;
       const response = await fetch(`http://localhost:8080${endpoint}`, {
@@ -218,7 +220,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ username, content }),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -282,7 +284,7 @@ export default function Home() {
       reader.readAsDataURL(selectedImage);
       reader.onload = async () => {
         imageBase64 = reader.result as string;
-        await createPost(newComment, selectedLabel, imageBase64);
+        await createPost(authorName, newComment, selectedLabel, imageBase64);
         setNewComment('');
         setAuthorName('');
         setSelectedImage(null);
@@ -292,7 +294,7 @@ export default function Home() {
         console.error("Error reading file:", error);
       };
     } else {
-      await createPost(newComment, selectedLabel, null);
+      await createPost(authorName, newComment, selectedLabel, null);
       setNewComment('');
       setAuthorName('');
       setSelectedImage(null);
@@ -303,7 +305,7 @@ export default function Home() {
   const handleSubmitReply = async (targetId: number, type: 'post' | 'reply') => {
     if (!replyContent.trim() || !authorName.trim()) return;
 
-    await createReply(targetId, type, replyContent);
+    await createReply(targetId, type, authorName, replyContent);
     
     setReplyContent('');
     setReplyTo(null);
@@ -342,12 +344,12 @@ export default function Home() {
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-sm">{reply.id}</span> {/* Temporarily using ID as author */} 
+              <span className="font-semibold text-blue-200 text-sm">{reply.username}</span> 
               <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
             </div>
             <p className="text-gray-200 text-sm mb-2">
               {reply.parent_reply_id && (
-                <span className="text-blue-300 mr-1">@{reply.parent_reply_id}</span>
+                <span className="text-blue-300 mr-1">@{reply.username}</span>
               )}
               {reply.content}
             </p>
@@ -647,7 +649,7 @@ export default function Home() {
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-purple-200">{comment.id}</span> {/* Temporarily using ID as author */} 
+                        <span className="font-semibold text-purple-200">{comment.username}</span> 
                         <span className="text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
                         <Badge variant="secondary" className="bg-purple-700/50 text-purple-200">{comment.label}</Badge>
                       </div>

@@ -22,6 +22,7 @@ var db *sql.DB
 // Post represents a post in the forum
 type Post struct {
 	ID        int       `json:"id"`
+	Username  string    `json:"username"`
 	Content   string    `json:"content"`
 	ImageURL  *string   `json:"image_url"` // Use pointer for nullable field
 	Label     string    `json:"label"`
@@ -35,6 +36,7 @@ type Reply struct {
 	ID          int       `json:"id"`
 	PostID      int       `json:"post_id"`
 	ParentReplyID *int      `json:"parent_reply_id"` // Use pointer for nullable field
+	Username    string    `json:"username"`
 	Content     string    `json:"content"`
 	CreatedAt   time.Time `json:"created_at"`
 	GoodCount int       `json:"good_count"`
@@ -245,8 +247,8 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		imageURL = &url
 	}
 
-	query := `INSERT INTO posts (content, image_url, label) VALUES ($1, $2, $3) RETURNING id, created_at`
-	err = db.QueryRow(query, post.Content, imageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
+	query := `INSERT INTO posts (username, content, image_url, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	err = db.QueryRow(query, post.Username, post.Content, imageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
 	if err != nil {
 		log.Printf("Error inserting post: %v", err)
 		http.Error(w, "Could not create post", http.StatusInternalServerError)
@@ -262,7 +264,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 func getPosts(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT 
-			p.id, p.content, p.image_url, p.label, p.created_at,
+			p.id, p.username, p.content, p.image_url, p.label, p.created_at,
 			COALESCE(r_good.count, 0) as good_count,
 			COALESCE(r_bad.count, 0) as bad_count
 		FROM posts p
@@ -296,7 +298,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var post Post
 		var imageUrl sql.NullString
-		err := rows.Scan(&post.ID, &post.Content, &imageUrl, &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
+		err := rows.Scan(&post.ID, &post.Username, &post.Content, &imageUrl, &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
 		if err != nil {
 			log.Printf("Error scanning post row: %v", err)
 			continue
@@ -327,8 +329,8 @@ func createReplyToPost(w http.ResponseWriter, r *http.Request, postID int) {
 		return
 	}
 
-	query := `INSERT INTO replies (post_id, content) VALUES ($1, $2) RETURNING id, created_at`
-	err = db.QueryRow(query, postID, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+	query := `INSERT INTO replies (post_id, username, content) VALUES ($1, $2, $3) RETURNING id, created_at`
+	err = db.QueryRow(query, postID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		log.Printf("Error inserting reply to post: %v", err)
 		http.Error(w, "Could not create reply", http.StatusInternalServerError)
@@ -359,8 +361,8 @@ func createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID in
 		return
 	}
 
-	query := `INSERT INTO replies (post_id, parent_reply_id, content) VALUES ($1, $2, $3) RETURNING id, created_at`
-	err = db.QueryRow(query, postID, parentReplyID, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+	query := `INSERT INTO replies (post_id, parent_reply_id, username, content) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	err = db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		log.Printf("Error inserting reply to reply: %v", err)
 		http.Error(w, "Could not create reply", http.StatusInternalServerError)
@@ -377,7 +379,7 @@ func createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID in
 func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 	query := `
 		SELECT 
-			r.id, r.post_id, r.parent_reply_id, r.content, r.created_at,
+			r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.created_at,
 			COALESCE(r_good.count, 0) as good_count,
 			COALESCE(r_bad.count, 0) as bad_count
 		FROM replies r
@@ -402,7 +404,7 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 	for rows.Next() {
 		var reply Reply
 		var parentReplyID sql.NullInt64
-		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount)
+		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount)
 		if err != nil {
 			log.Printf("Error scanning reply row: %v", err)
 			continue
