@@ -50,6 +50,7 @@ interface Reply {
   good_count: number;
   bad_count: number;
   myReaction: 'good' | 'bad' | null;
+  parent_username?: string;
 }
 
 interface Comment extends Post {
@@ -348,8 +349,8 @@ export default function Home() {
               <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
             </div>
             <p className="text-gray-200 text-sm mb-2">
-              {reply.parent_reply_id && (
-                <span className="text-blue-300 mr-1">@{reply.username}</span>
+              {reply.parent_username && (
+                <span className="text-blue-300 mr-1">@{reply.parent_username}</span>
               )}
               {reply.content}
             </p>

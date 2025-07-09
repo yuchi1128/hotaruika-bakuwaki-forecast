@@ -33,14 +33,15 @@ type Post struct {
 
 // Reply represents a reply to a post or another reply
 type Reply struct {
-	ID          int       `json:"id"`
-	PostID      int       `json:"post_id"`
-	ParentReplyID *int      `json:"parent_reply_id"` // Use pointer for nullable field
-	Username    string    `json:"username"`
-	Content     string    `json:"content"`
-	CreatedAt   time.Time `json:"created_at"`
-	GoodCount int       `json:"good_count"`
-	BadCount  int       `json:"bad_count"`
+	ID            int       `json:"id"`
+	PostID        int       `json:"post_id"`
+	ParentReplyID *int      `json:"parent_reply_id"`
+	Username      string    `json:"username"`
+	Content       string    `json:"content"`
+	CreatedAt     time.Time `json:"created_at"`
+	GoodCount     int       `json:"good_count"`
+	BadCount      int       `json:"bad_count"`
+	ParentUsername *string  `json:"parent_username,omitempty"`
 }
 
 // Reaction represents a good/bad reaction
@@ -381,8 +382,11 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 		SELECT 
 			r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.created_at,
 			COALESCE(r_good.count, 0) as good_count,
-			COALESCE(r_bad.count, 0) as bad_count
+			COALESCE(r_bad.count, 0) as bad_count,
+			COALESCE(pr.username, p.username) as parent_username
 		FROM replies r
+		LEFT JOIN posts p ON r.post_id = p.id
+		LEFT JOIN replies pr ON r.parent_reply_id = pr.id
 		LEFT JOIN (
 			SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id
 		) r_good ON r.id = r_good.reply_id
@@ -404,7 +408,8 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 	for rows.Next() {
 		var reply Reply
 		var parentReplyID sql.NullInt64
-		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount)
+		var parentUsername sql.NullString
+		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername)
 		if err != nil {
 			log.Printf("Error scanning reply row: %v", err)
 			continue
@@ -414,6 +419,11 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 			reply.ParentReplyID = &val
 		} else {
 			reply.ParentReplyID = nil
+		}
+		if parentUsername.Valid {
+			reply.ParentUsername = &parentUsername.String
+		} else {
+			reply.ParentUsername = nil
 		}
 		replies = append(replies, reply)
 	}
