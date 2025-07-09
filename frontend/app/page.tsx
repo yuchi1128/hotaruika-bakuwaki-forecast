@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon } from 'lucide-react';
 
 interface PredictionLevel {
@@ -338,11 +337,6 @@ export default function Home() {
     return replies.map(reply => (
       <div key={reply.id} className={`ml-${level * 6} bg-slate-700/20 rounded-lg p-3 border-l-2 border-blue-500/30 mt-3`}>
         <div className="flex items-start gap-2">
-          <Avatar className="w-8 h-8">
-            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-xs">
-              {reply.content.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-semibold text-blue-200 text-sm">{reply.username}</span> 
@@ -641,13 +635,8 @@ export default function Home() {
             {/* コメント一覧 */}
             <div className="space-y-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-slate-800/30 rounded-lg p-4 border border-purple-500/10">
+                <div key={comment.id} className="bg-slate-800/30 rounded-lg p-4 border border-purple-500/20">
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                        {comment.content.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-purple-200">{comment.username}</span> 
