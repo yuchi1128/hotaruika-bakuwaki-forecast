@@ -325,10 +325,16 @@ export default function Home() {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('ja-JP', {
+    const datePart = date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+    });
+    const timePart = date.toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit'
     });
+    return `${datePart} ${timePart}`;
   };
 
   const todayPrediction = predictions[0];
@@ -495,7 +501,7 @@ export default function Home() {
                 {selectedImage && <span className="text-sm text-gray-300">{selectedImage.name}</span>}
               </div>
               <div className="flex items-center gap-4 mb-4">
-                <span className="text-gray-300">ラベル:</span>
+                <span className="text-gray-300 text-xs font-bold">ラベル：</span>
                 <Button
                   variant={selectedLabel === '現地情報' ? 'default' : 'outline'}
                   size="sm"
@@ -525,7 +531,7 @@ export default function Home() {
 
             {/* ラベルフィルター */}
             <div className="mb-4 flex items-center gap-2">
-              <span className="text-gray-300">表示フィルター:</span>
+              <span className="text-gray-300 text-xs font-bold">フィルター：</span>
               <Button
                 variant={selectedFilterLabel === null ? 'default' : 'outline'}
                 size="sm"
