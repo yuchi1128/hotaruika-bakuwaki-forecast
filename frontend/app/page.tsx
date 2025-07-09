@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon } from 'lucide-react';
+import CommentItem from '@/components/CommentItem';
 
 interface PredictionLevel {
   level: number;
@@ -333,88 +334,7 @@ export default function Home() {
   const todayPrediction = predictions[0];
   const weekPredictions = predictions.slice(1);
 
-  const renderReplies = (replies: Reply[], level: number = 0) => {
-    return replies.map(reply => (
-      <div key={reply.id} className={`ml-${level * 6} bg-slate-700/20 rounded-lg p-3 border-l-2 border-blue-500/30 mt-3`}>
-        <div className="flex items-start gap-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-sm">{reply.username}</span> 
-              <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
-            </div>
-            <p className="text-gray-200 text-sm mb-2">
-              {reply.parent_username && (
-                <span className="text-blue-300 mr-1">@{reply.parent_username}</span>
-              )}
-              {reply.content}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'good')}
-              className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
-            >
-              <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
-              {reply.good_count}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'bad')}
-              className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
-            >
-              <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
-              {reply.bad_count}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setReplyTo(replyTo === reply.id ? null : reply.id)}
-              className="text-xs text-gray-400 hover:text-blue-300"
-            >
-              <MessageCircle className="w-4 h-4 mr-1" />
-              返信
-            </Button>
-            {replyTo === reply.id && (
-              <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
-                <Input
-                  placeholder="お名前"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  className="mb-2 bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
-                />
-                <Textarea
-                  placeholder="返信を書く..."
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  className="mb-2 bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
-                  rows={2}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => handleSubmitReply(reply.id, 'reply')}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    disabled={!replyContent.trim() || !authorName.trim()}
-                  >
-                    返信
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setReplyTo(null)}
-                    className="text-gray-400 hover:text-gray-300"
-                  >
-                    キャンセル
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    ));
-  };
+  
 
   return (
     <div className="min-h-screen relative z-10">
@@ -635,94 +555,19 @@ export default function Home() {
             {/* コメント一覧 */}
             <div className="space-y-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-slate-800/30 rounded-lg p-4 border border-purple-500/20">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-purple-200">{comment.username}</span> 
-                        <span className="text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
-                        <Badge variant="secondary" className="bg-purple-700/50 text-purple-200">{comment.label}</Badge>
-                      </div>
-                      <p className="text-gray-200 mb-3">{comment.content}</p>
-                      {comment.image_url && (
-                        <img src={`http://localhost:8080${comment.image_url}`} alt="投稿画像" className="max-w-xs max-h-48 object-contain rounded-lg mb-3" />
-                      )}
-                      <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleReaction(comment.id, 'post', 'good')}
-                          className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
-                        >
-                          <ThumbsUp className={`w-4 h-4 mr-1 ${comment.myReaction === 'good' ? 'fill-current' : ''}`} />
-                          {comment.goodCount}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleReaction(comment.id, 'post', 'bad')}
-                          className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
-                        >
-                          <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
-                          {comment.badCount}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
-                          className="text-xs text-gray-400 hover:text-blue-300"
-                        >
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          返信
-                        </Button>
-                      </div>
-
-                      {/* 返信フォーム */}
-                      {replyTo === comment.id && (
-                        <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
-                          <Input
-                            placeholder="お名前"
-                            value={authorName}
-                            onChange={(e) => setAuthorName(e.target.value)}
-                            className="mb-2 bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
-                          />
-                          <Textarea
-                            placeholder="返信を書く..."
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            className="mb-2 bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
-                            rows={2}
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSubmitReply(comment.id, 'post')}
-                              className="bg-blue-600 hover:bg-blue-700"
-                              disabled={!replyContent.trim() || !authorName.trim()}
-                            >
-                              返信
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setReplyTo(null)}
-                              className="text-gray-400 hover:text-gray-300"
-                            >
-                              キャンセル
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 返信一覧 */}
-                      {comment.replies.length > 0 && (
-                        <div className="mt-4 space-y-3">
-                          {renderReplies(comment.replies)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  replyTo={replyTo}
+                  setReplyTo={setReplyTo}
+                  authorName={authorName}
+                  setAuthorName={setAuthorName}
+                  replyContent={replyContent}
+                  setReplyContent={setReplyContent}
+                  handleSubmitReply={handleSubmitReply}
+                  handleReaction={handleReaction}
+                  formatTime={formatTime}
+                />
               ))}
             </div>
           </CardContent>
