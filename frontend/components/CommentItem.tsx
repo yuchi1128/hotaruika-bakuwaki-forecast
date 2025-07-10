@@ -40,30 +40,33 @@ interface Comment extends Post {
 
 interface CommentItemProps {
   comment: Comment;
-  replyTo: number | null;
-  setReplyTo: (id: number | null) => void;
-  authorName: string;
-  setAuthorName: (name: string) => void;
-  replyContent: string;
-  setReplyContent: (content: string) => void;
-  handleSubmitReply: (targetId: number, type: 'post' | 'reply') => void;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
   formatTime: (date: Date) => string;
+  createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string) => Promise<void>;
 }
 
 export default function CommentItem({
   comment,
-  replyTo,
-  setReplyTo,
-  authorName,
-  setAuthorName,
-  replyContent,
-  setReplyContent,
-  handleSubmitReply,
   handleReaction,
   formatTime,
+  createReply,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [authorName, setAuthorName] = useState('');
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+
+  const handleSubmitReply = async (targetId: number, type: 'post' | 'reply') => {
+    if (!replyContent.trim() || !authorName.trim()) return;
+
+    await createReply(targetId, type, authorName, replyContent);
+    
+    setReplyContent('');
+    setAuthorName('');
+    setIsReplying(false);
+    setReplyingTo(null);
+  };
 
   const renderReplies = (replies: Reply[], level: number = 0) => {
     return replies.map(reply => (
@@ -101,13 +104,13 @@ export default function CommentItem({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setReplyTo(replyTo === reply.id ? null : reply.id)}
+              onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
               className="text-xs text-gray-400 hover:text-blue-300"
             >
               <MessageCircle className="w-4 h-4 mr-1" />
               返信
             </Button>
-            {replyTo === reply.id && (
+            {replyingTo === reply.id && (
               <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
                 <Input
                   placeholder="お名前"
@@ -134,7 +137,7 @@ export default function CommentItem({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setReplyTo(null)}
+                    onClick={() => setReplyingTo(null)}
                     className="text-gray-400 hover:text-gray-300"
                   >
                     キャンセル
@@ -183,7 +186,7 @@ export default function CommentItem({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
+              onClick={() => setIsReplying(!isReplying)}
               className="text-xs text-gray-400 hover:text-blue-300"
             >
               <MessageCircle className="w-4 h-4 mr-1" />
@@ -192,7 +195,7 @@ export default function CommentItem({
           </div>
 
           {/* 返信フォーム */}
-          {replyTo === comment.id && (
+          {isReplying && (
             <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
               <Input
                 placeholder="お名前"
@@ -219,7 +222,7 @@ export default function CommentItem({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setReplyTo(null)}
+                  onClick={() => setIsReplying(false)}
                   className="text-gray-400 hover:text-gray-300"
                 >
                   キャンセル

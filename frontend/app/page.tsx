@@ -303,14 +303,7 @@ export default function Home() {
     }
   };
 
-  const handleSubmitReply = async (targetId: number, type: 'post' | 'reply') => {
-    if (!replyContent.trim() || !authorName.trim()) return;
-
-    await createReply(targetId, type, authorName, replyContent);
-    
-    setReplyContent('');
-    setReplyTo(null);
-  };
+  
 
   const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
     createReaction(targetId, type, reactionType);
@@ -564,15 +557,9 @@ export default function Home() {
                 <CommentItem
                   key={comment.id}
                   comment={comment}
-                  replyTo={replyTo}
-                  setReplyTo={setReplyTo}
-                  authorName={authorName}
-                  setAuthorName={setAuthorName}
-                  replyContent={replyContent}
-                  setReplyContent={setReplyContent}
-                  handleSubmitReply={handleSubmitReply}
                   handleReaction={handleReaction}
                   formatTime={formatTime}
+                  createReply={createReply}
                 />
               ))}
             </div>
