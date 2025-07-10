@@ -77,7 +77,7 @@ export default function CommentItem({
               <span className="font-semibold text-blue-200 text-sm">{reply.username}</span> 
               <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
             </div>
-            <p className="text-gray-200 text-sm mb-2">
+            <p className="text-gray-200 text-sm mb-2 whitespace-pre-wrap">
               {reply.parent_username && (
                 <span className="text-blue-300 mr-1">@{reply.parent_username}</span>
               )}
@@ -160,7 +160,7 @@ export default function CommentItem({
             <span className="text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
             <Badge variant="secondary" className="bg-purple-700/50 text-purple-200">{comment.label}</Badge>
           </div>
-          <p className="text-gray-200 mb-3">{comment.content}</p>
+          <p className="text-gray-200 mb-3 whitespace-pre-wrap">{comment.content}</p>
           {comment.image_url && (
             <img src={`http://localhost:8080${comment.image_url}`} alt="投稿画像" className="max-w-xs max-h-48 object-contain rounded-lg mb-3" />
           )}
