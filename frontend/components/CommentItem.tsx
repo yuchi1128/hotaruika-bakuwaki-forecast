@@ -74,7 +74,7 @@ export default function CommentItem({
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-sm">{reply.username}</span> 
+              <span className="font-semibold text-blue-200 text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">{reply.username}</span> 
               <span className="text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
             </div>
             <p className="text-gray-200 text-sm mb-2 whitespace-pre-wrap">
@@ -156,7 +156,7 @@ export default function CommentItem({
       <div className="flex items-start gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold text-purple-200">{comment.username}</span> 
+            <span className="font-semibold text-purple-200 max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">{comment.username}</span> 
             <span className="text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
             <Badge variant="secondary" className="bg-purple-700/50 text-purple-200">{comment.label}</Badge>
           </div>
