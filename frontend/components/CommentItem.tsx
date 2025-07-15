@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { saveReaction, getReaction } from '@/lib/utils';
 
 interface Post {
   id: number;
@@ -84,23 +85,25 @@ export default function CommentItem({
               {reply.content}
             </p>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'good')}
-              className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
-            >
-              <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
-              {reply.good_count}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'bad')}
-              className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
-            >
-              <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
-              {reply.bad_count}
-            </Button>
+        variant="ghost"
+        size="sm"
+        onClick={() => handleReaction(reply.id, 'reply', 'good')}
+        className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
+        disabled={reply.myReaction !== null}
+      >
+        <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
+        {reply.good_count}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => handleReaction(reply.id, 'reply', 'bad')}
+        className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
+        disabled={reply.myReaction !== null}
+      >
+        <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+        {reply.bad_count}
+      </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -170,6 +173,7 @@ export default function CommentItem({
               size="sm"
               onClick={() => handleReaction(comment.id, 'post', 'good')}
               className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover:text-green-300`}
+              disabled={comment.myReaction !== null}
             >
               <ThumbsUp className={`w-4 h-4 mr-1 ${comment.myReaction === 'good' ? 'fill-current' : ''}`} />
               {comment.goodCount}
@@ -179,6 +183,7 @@ export default function CommentItem({
               size="sm"
               onClick={() => handleReaction(comment.id, 'post', 'bad')}
               className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover:text-red-300`}
+              disabled={comment.myReaction !== null}
             >
               <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
               {comment.badCount}

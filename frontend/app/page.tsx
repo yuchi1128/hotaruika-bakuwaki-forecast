@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
+import { saveReaction, getReaction } from '@/lib/utils';
 
 interface PredictionLevel {
   level: number;
@@ -167,11 +168,11 @@ export default function Home() {
             ...reply,
             goodCount: reply.good_count,
             badCount: reply.bad_count,
-            myReaction: null, // TODO: Implement user-specific reaction state
+            myReaction: getReaction('reply', reply.id),
           })),
           goodCount: post.good_count,
           badCount: post.bad_count,
-          myReaction: null, // TODO: Implement user-specific reaction state
+          myReaction: getReaction('post', post.id),
         };
       }));
       setComments(commentsWithReplies);
@@ -246,7 +247,8 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // After successful reaction, re-fetch posts to update the list
+      // After successful reaction, save to localStorage and re-fetch posts to update the list
+      saveReaction(type, targetId, reactionType);
       fetchPosts();
     } catch (error) {
       console.error("Failed to create reaction:", error);
