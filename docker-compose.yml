@@ -11,6 +11,8 @@ services:
       - ./frontend:/app
     depends_on:
       - backend
+    environment:
+      TZ: Asia/Tokyo
 
   backend:
     build:
@@ -24,6 +26,7 @@ services:
       - db
     environment:
       DATABASE_URL: "postgres://user:password@db:5432/hotaruika_db?sslmode=disable"
+      TZ: Asia/Tokyo
 
   db:
     image: postgres:14-alpine
@@ -31,6 +34,7 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: hotaruika_db
+      TZ: Asia/Tokyo
     ports:
       - "5433:5432"
     volumes:
