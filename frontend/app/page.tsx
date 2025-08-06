@@ -45,7 +45,7 @@ interface Reply {
   id: number;
   post_id: number;
   parent_reply_id: number | null;
-  username: string;
+  username:string;
   content: string;
   created_at: string;
   good_count: number;
@@ -83,7 +83,7 @@ export default function Home() {
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [authorName, setAuthorName] = useState(''); // This will be removed later when user authentication is implemented
+  const [authorName, setAuthorName] = useState('');
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -92,11 +92,11 @@ export default function Home() {
 
   useEffect(() => {
     fetchForecasts();
-  }, []); // Run only once on component mount
+  }, []);
 
   useEffect(() => {
     fetchPosts();
-  }, [selectedFilterLabel]); // Re-fetch posts when filter changes
+  }, [selectedFilterLabel]);
 
   const fetchForecasts = async () => {
     try {
@@ -108,13 +108,12 @@ export default function Home() {
       
       const mappedPredictions: DayPrediction[] = data.map(forecast => {
         const date = new Date(forecast.date);
-        // Ensure date is valid before proceeding
         if (isNaN(date.getTime())) {
           console.error("Invalid date received from API:", forecast.date);
-          return null; // Or handle error appropriately
+          return null;
         }
 
-        const moonAge = (date.getDate() + 15) % 29; // 簡易的な月齢計算
+        const moonAge = (date.getDate() + 15) % 29;
         const moonPhaseIndex = Math.floor(moonAge / 3.625);
 
         let level = 0;
@@ -133,14 +132,14 @@ export default function Home() {
         return {
           date,
           level,
-          temperature: Math.floor(Math.random() * 15) + 5, // Mock temperature
+          temperature: Math.floor(Math.random() * 15) + 5,
           weather: forecast.condition,
           moonPhase: moonPhases[moonPhaseIndex] || '新月',
           moonAge: moonAge,
-          precipitation: Math.floor(Math.random() * 50), // Mock precipitation
-          tideInfo: ['大潮', '中潮', '小潮', '長潮'][Math.floor(Math.random() * 4)], // Mock tide info
+          precipitation: Math.floor(Math.random() * 50),
+          tideInfo: ['大潮', '中潮', '小潮', '長潮'][Math.floor(Math.random() * 4)],
         };
-      }).filter(p => p !== null) as DayPrediction[]; // Filter out any null predictions
+      }).filter(p => p !== null) as DayPrediction[];
 
       setPredictions(mappedPredictions);
     } catch (error) {
@@ -207,7 +206,6 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // After successful creation, re-fetch posts to update the list
       fetchPosts();
     } catch (error) {
       console.error("Failed to create post:", error);
@@ -227,7 +225,6 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // After successful creation, re-fetch posts to update the list
       fetchPosts();
     } catch (error) {
       console.error("Failed to create reply:", error);
@@ -247,7 +244,6 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // After successful reaction, save to localStorage and re-fetch posts to update the list
       saveReaction(type, targetId, reactionType);
       fetchPosts();
     } catch (error) {
@@ -342,20 +338,21 @@ export default function Home() {
       {/* ヘッダー */}
       <header className="text-center py-12 px-4">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
             ホタルイカ爆湧き予報
           </h1>
         </div>
-        <p className="text-xl text-blue-200 mb-2">富山湾の神秘を予測</p>
-        <div className="flex items-center justify-center gap-2 text-sm text-blue-300">
-          <MapPin className="w-4 h-4" />
+        <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘を予測</p>
+        <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
+          <MapPin className="w-3 h-3" />
           <span>富山湾</span>
-          <Waves className="w-4 h-4 ml-4" />
+          <Waves className="w-3 h-3 ml-3" />
           <span>リアルタイム予測</span>
         </div>
+
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12">
+      <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
         {/* 今日の予測 */}
         {todayPrediction && (
           <Card 
@@ -363,46 +360,46 @@ export default function Home() {
             onClick={() => handleCardClick(todayPrediction.date)}
           >
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-blue-200 mb-2">
+              <CardTitle className="text-2xl md:text-3xl font-bold text-blue-200 mb-2">
                 今日の予測
               </CardTitle>
               <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
             </CardHeader>
             <CardContent className="text-center">
-              <div className={`inline-block px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
-                <div className={`text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
+              <div className={`inline-block px-6 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
+                <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
                   {predictionLevels[todayPrediction.level].name}
                 </div>
                 <div className="flex justify-center gap-2 mb-4">
-                  {renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-24 h-24')}
+                  {renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20')}
                 </div>
                 <p className="text-lg text-gray-300">
                   {predictionLevels[todayPrediction.level].description}
                 </p>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
                 <div className="bg-blue-900/30 rounded-lg p-3">
                   <div className="flex items-center justify-center mb-1">
                     <Thermometer className="w-4 h-4 text-blue-300 mr-1" />
                     <p className="text-sm text-blue-300">気温</p>
                   </div>
-                  <p className="text-xl font-bold text-white">{todayPrediction.temperature}°C</p>
+                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.temperature}°C</p>
                 </div>
                 <div className="bg-blue-900/30 rounded-lg p-3">
                   <p className="text-sm text-blue-300">天気</p>
-                  <p className="text-xl font-bold text-white">{todayPrediction.weather}</p>
+                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.weather}</p>
                 </div>
                 <div className="bg-blue-900/30 rounded-lg p-3">
                   <div className="flex items-center justify-center mb-1">
                     <Moon className="w-4 h-4 text-blue-300 mr-1" />
                     <p className="text-sm text-blue-300">月齢</p>
                   </div>
-                  <p className="text-lg font-bold text-white">{todayPrediction.moonAge.toFixed(1)}</p>
+                  <p className="text-lg sm:text-lg font-bold text-white">{todayPrediction.moonAge.toFixed(1)}</p>
                   <p className="text-xs text-blue-200">{todayPrediction.moonPhase}</p>
                 </div>
                 <div className="bg-blue-900/30 rounded-lg p-3">
                   <p className="text-sm text-blue-300">潮汐</p>
-                  <p className="text-xl font-bold text-white">{todayPrediction.tideInfo}</p>
+                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.tideInfo}</p>
                 </div>
               </div>
               <p className="text-sm text-blue-300 mt-4">クリックで詳細を表示</p>
@@ -413,13 +410,13 @@ export default function Home() {
         {/* 週間予測 */}
         <Card className="mb-8 bg-gradient-to-br from-slate-900/40 to-blue-900/40 border-blue-500/20">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-blue-200 flex items-center gap-2">
+            <CardTitle className="text-xl md:text-2xl font-bold text-blue-200 flex items-center gap-2">
               <Calendar className="w-6 h-6" />
               週間予測
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {weekPredictions.map((prediction, index) => (
                 <div
                   key={index}
@@ -458,7 +455,7 @@ export default function Home() {
         {/* 口コミ掲示板 */}
         <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-purple-200 flex items-center gap-2">
+            <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
               <MessageCircle className="w-6 h-6" />
               みんなの口コミ
             </CardTitle>
@@ -471,19 +468,19 @@ export default function Home() {
                   placeholder="お名前"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  className="bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+                  className="h-9 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 />
               </div>
               <Textarea
-                placeholder="ホタルイカの身投げについて教えてください..."
+                placeholder="ホタルイカについてご自由にお書きください！　現地の情報の場合、場所と一緒にお書きください！"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="mb-4 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
-                rows={3}
+                rows={5}
               />
               <div className="flex items-center gap-2 mb-4">
-                <label htmlFor="image-upload" className="cursor-pointer flex items-center text-gray-400 hover:text-gray-200">
-                  <ImageIcon className="w-5 h-5 mr-1" />
+                <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200">
+                  <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
                   画像を選択
                 </label>
                 <Input
@@ -495,21 +492,19 @@ export default function Home() {
                 />
                 {selectedImage && <span className="text-sm text-gray-300">{selectedImage.name}</span>}
               </div>
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-wrap items-center gap-4 mb-4">
                 <span className="text-gray-300 text-xs font-bold">ラベル：</span>
                 <Button
                   variant={selectedLabel === '現地情報' ? 'default' : 'outline'}
-                  size="sm"
                   onClick={() => setSelectedLabel('現地情報')}
-                  className={selectedLabel === '現地情報' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}
+                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedLabel === '現地情報' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}`}
                 >
                   現地情報
                 </Button>
                 <Button
                   variant={selectedLabel === 'その他' ? 'default' : 'outline'}
-                  size="sm"
                   onClick={() => setSelectedLabel('その他')}
-                  className={selectedLabel === 'その他' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}
+                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedLabel === 'その他' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}`}
                 >
                   その他
                 </Button>
@@ -525,29 +520,26 @@ export default function Home() {
             </div>
 
             {/* ラベルフィルター */}
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-7 flex flex-wrap items-center gap-2">
               <span className="text-gray-300 text-xs font-bold">フィルター：</span>
               <Button
                 variant={selectedFilterLabel === null ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setSelectedFilterLabel(null)}
-                className={selectedFilterLabel === null ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === null ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
               >
                 全て
               </Button>
               <Button
                 variant={selectedFilterLabel === '現地情報' ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setSelectedFilterLabel('現地情報')}
-                className={selectedFilterLabel === '現地情報' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === '現地情報' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
                 >
                 現地情報
               </Button>
               <Button
                 variant={selectedFilterLabel === 'その他' ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setSelectedFilterLabel('その他')}
-                className={selectedFilterLabel === 'その他' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === 'その他' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
               >
                 その他
               </Button>
