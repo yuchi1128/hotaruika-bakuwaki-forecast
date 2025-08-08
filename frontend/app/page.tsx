@@ -577,8 +577,8 @@ export default function Home() {
         )}
 
         {/* 週間予測 */}
-        <Card className="mb-8 bg-transparent border-none shadow-none">
-          <CardHeader className="px-0 mb-4">
+        <Card className="mb-16 bg-transparent border-none shadow-none">
+          <CardHeader className="px-0">
             <CardTitle className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
               <Calendar className="w-7 h-7 text-blue-300" />
               週間予報
