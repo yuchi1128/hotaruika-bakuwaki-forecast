@@ -81,12 +81,12 @@ interface ForecastData {
 }
 
 const predictionLevels: PredictionLevel[] = [
-  { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-400', bgColor: 'bg-gray-800' },
-  { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-900/30' },
-  { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-900/30' },
-  { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-900/30' },
-  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます', color: 'text-yellow-300', bgColor: 'bg-yellow-900/30' },
-  { level: 5, name: '爆湧き', description: '最高の身投げが期待できます！', color: 'text-pink-300', bgColor: 'bg-pink-900/30' },
+  { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
+  { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
+  { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
+  { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-500/[.14] border border-green-400/20 backdrop-blur-sm' },
+  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
+  { level: 5, name: '爆湧き', description: '最高の身投げが期待できます！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
 const getWeatherFromCode = (code: number): string => {
@@ -169,10 +169,10 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
+
       // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
-    
       const mockData: ForecastData[] = [
-        { date: "2025-08-08", predicted_amount: 0.1, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
+        { date: "2025-08-08", predicted_amount: 1.3, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
         { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
         { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
         { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
@@ -472,6 +472,9 @@ export default function Home() {
     return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   }
 
+  const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
+
+
   return (
     <div className="min-h-screen relative z-10">
       {/* ヘッダー */}
@@ -505,13 +508,33 @@ export default function Home() {
               <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
             </CardHeader>
             <CardContent className="text-center px-4 pb-8">
-              <div className={`inline-block px-6 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
+              <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
                 <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
                   {predictionLevels[todayPrediction.level].name}
                 </div>
-                <div className="flex justify-center gap-2 mb-4">
-                  {renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20')}
+
+                <div className="mb-4">
+                  {todayPrediction.level === 5 ? (
+                    <>
+                      <div className="flex flex-col items-center sm:hidden">
+                        <div className="flex justify-center gap-2">
+                          {todayIcons.slice(0, 3)}
+                        </div>
+                        <div className="flex justify-center gap-2 -mt-3">
+                          {todayIcons.slice(3, 5)}
+                        </div>
+                      </div>
+                      <div className="hidden sm:flex justify-center gap-2">
+                        {todayIcons}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
+                      {todayIcons}
+                    </div>
+                  )}
                 </div>
+
                 <p className="text-lg text-gray-300">
                   {predictionLevels[todayPrediction.level].description}
                 </p>
@@ -547,15 +570,15 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-sm text-blue-300 mt-6 opacity-70 hover:opacity-100 transition-opacity">
-                クリックで詳細・口コミを見る
+                クリックで詳細を見る
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* 週間予測 */}
-        <Card className="mb-8 bg-transparent border-none shadow-none">
-          <CardHeader className="px-0 mb-4">
+        <Card className="mb-16 bg-transparent border-none shadow-none">
+          <CardHeader className="px-0">
             <CardTitle className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
               <Calendar className="w-7 h-7 text-blue-300" />
               週間予報
@@ -573,7 +596,7 @@ export default function Home() {
                 {weekPredictions.map((prediction, index) => (
                   <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
                     <div
-                      className={`flex flex-col items-center p-4 rounded-2xl border clickable-card h-full ${predictionLevels[prediction.level].bgColor} border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 backdrop-blur-sm bg-white/5`}
+                      className={`flex flex-col items-center p-4 rounded-2xl border clickable-card h-full border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 backdrop-blur-sm bg-white/5`}
                       onClick={() => handleCardClick(prediction.date)}
                     >
                       <p className="text-base font-semibold text-blue-200 mb-2">
