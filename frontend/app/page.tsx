@@ -522,7 +522,7 @@ export default function Home() {
                     <Thermometer className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">気温</p>
                   </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">{`${todayPrediction.temperature_max}° / ${todayPrediction.temperature_min}°`}</p>
+                  <p className="text-lg sm:text-xl font-bold text-white">{`${todayPrediction.temperature_max}℃/${todayPrediction.temperature_min}℃`}</p>
                 </div>
                 <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
@@ -591,7 +591,7 @@ export default function Home() {
                             <Thermometer className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>気温</span>
                           </div>
-                          <span className="font-medium">{`${prediction.temperature_max}°/${prediction.temperature_min}°`}</span>
+                          <span className="font-medium">{`${prediction.temperature_max}℃/${prediction.temperature_min}℃`}</span>
                         </div>
                         <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
