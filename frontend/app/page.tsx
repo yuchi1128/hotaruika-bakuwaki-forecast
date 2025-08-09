@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind } from 'lucide-react';
+import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
 import { Skeleton } from "@/components/ui/skeleton"
@@ -172,7 +172,7 @@ export default function Home() {
 
       // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
       const mockData: ForecastData[] = [
-        { date: "2025-08-08", predicted_amount: 0.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
+        { date: "2025-08-08", predicted_amount: 1.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
         { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
         { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
         { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
@@ -428,7 +428,7 @@ export default function Home() {
           <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
             <MapPin className="w-3 h-3" />
             <span>富山湾</span>
-            <Waves className="w-3 h-3 ml-3" />
+            <TrendingUp className="w-3 h-3 ml-3" />
             <span>リアルタイム予測</span>
           </div>
         </header>
@@ -520,7 +520,7 @@ export default function Home() {
         <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
           <MapPin className="w-3 h-3" />
           <span>富山湾</span>
-          <Waves className="w-3 h-3 ml-3" />
+          <TrendingUp className="w-3 h-3 ml-3" />
           <span>リアルタイム予測</span>
         </div>
 
@@ -594,7 +594,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
-                    <Waves className="w-5 h-5 mr-1.5" />
+                    <Cloudy className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">天気</p>
                   </div>
                   <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.weather}</p>
@@ -663,7 +663,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
-                            <Waves className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                            <Cloudy className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>天気</span>
                           </div>
                           <span className="font-medium">{prediction.weather}</span>
@@ -804,7 +804,7 @@ export default function Home() {
 
       {/* フッター */}
       <footer className="text-center py-8 text-gray-400 border-t border-blue-500/20">
-        <p className="mb-2">© 2024 ホタルイカ身投げ予測サイト</p>
+        <p className="mb-2">© 2026 ホタルイカ爆湧き予測サイト</p>
         <p className="text-sm">富山湾の神秘をお届けします</p>
       </footer>
     </div>
