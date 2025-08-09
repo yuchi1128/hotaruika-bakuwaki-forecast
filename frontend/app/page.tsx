@@ -424,7 +424,7 @@ export default function Home() {
               ホタルイカ爆湧き予報
             </h1>
           </div>
-          <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘を予測</p>
+          <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
           <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
             <MapPin className="w-3 h-3" />
             <span>富山湾</span>
@@ -484,7 +484,7 @@ export default function Home() {
             ホタルイカ爆湧き予報
           </h1>
         </div>
-        <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘を予測</p>
+        <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
         <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
           <MapPin className="w-3 h-3" />
           <span>富山湾</span>
@@ -509,12 +509,16 @@ export default function Home() {
             </CardHeader>
             <CardContent className="text-center px-4 pb-8">
               <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
-                <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
-                  {predictionLevels[todayPrediction.level].name}
-                </div>
+                {/* レベルが0より大きい場合のみ、ここにタイトルを表示 */}
+                {todayPrediction.level > 0 && (
+                  <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
+                    {predictionLevels[todayPrediction.level].name}
+                  </div>
+                )}
 
                 <div className="mb-4">
                   {todayPrediction.level === 5 ? (
+                    // レベル5（爆湧き）の特殊なアイコンレイアウト
                     <>
                       <div className="flex flex-col items-center sm:hidden">
                         <div className="flex justify-center gap-2">
@@ -529,8 +533,17 @@ export default function Home() {
                       </div>
                     </>
                   ) : (
+                    // レベル0〜4の場合の表示領域
                     <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
-                      {todayIcons}
+                      {todayPrediction.level > 0 ? (
+                        // レベルが1〜4ならアイコンを表示
+                        todayIcons
+                      ) : (
+                        // レベルが0ならタイトルをこの中央に表示
+                        <div className={`text-3xl md:text-4xl font-bold ${predictionLevels[todayPrediction.level].color}`}>
+                          {predictionLevels[todayPrediction.level].name}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
