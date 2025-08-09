@@ -654,33 +654,41 @@ export default function Home() {
                         {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
                       </div>
                       <div className="w-full space-y-2 text-xs text-gray-300">
-                        <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
+                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
                             <Thermometer className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>気温</span>
                           </div>
-                          <span className="font-medium">{`${prediction.temperature_max}℃/${prediction.temperature_min}℃`}</span>
+                          <div className="text-center">
+                            <span className="font-medium">{`${prediction.temperature_max}℃/${prediction.temperature_min}℃`}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
+                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
                             <Cloudy className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>天気</span>
                           </div>
-                          <span className="font-medium">{prediction.weather}</span>
+                          <div className="text-center">
+                            <span className="font-medium">{prediction.weather}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
+                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
                             <Moon className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>月齢</span>
                           </div>
-                          <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
+                          <div className="text-center">
+                            <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
+                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
                           <div className="flex items-center">
                             <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
                             <span>風</span>
                           </div>
-                          <span className="font-medium">{prediction.wind_direction}</span>
+                          <div className="text-center">
+                            <span className="font-medium">{prediction.wind_direction}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -805,7 +813,6 @@ export default function Home() {
       {/* フッター */}
       <footer className="text-center py-8 text-gray-400 border-t border-blue-500/20">
         <p className="mb-2">© 2026 ホタルイカ爆湧き予測サイト</p>
-        <p className="text-sm">富山湾の神秘をお届けします</p>
       </footer>
     </div>
   );
