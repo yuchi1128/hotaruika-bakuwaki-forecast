@@ -172,7 +172,7 @@ export default function Home() {
 
       // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
       const mockData: ForecastData[] = [
-        { date: "2025-08-08", predicted_amount: 1.3, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
+        { date: "2025-08-08", predicted_amount: 0.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
         { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
         { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
         { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
@@ -433,33 +433,65 @@ export default function Home() {
           </div>
         </header>
         <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
-          <Card className="mb-8 glow-effect clickable-card bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-blue-500/30">
-            <CardHeader className="text-center">
+          {/* 今日の予報スケルトン */}
+          <Card className="mb-8 glow-effect clickable-card bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
+            <CardHeader className="text-center pt-8 pb-4">
               <Skeleton className="h-8 w-32 mx-auto mb-2" />
               <Skeleton className="h-4 w-24 mx-auto" />
             </CardHeader>
-            <CardContent className="text-center">
-              <Skeleton className="h-48 w-full mb-6" />
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
+            <CardContent className="text-center px-4 pb-8">
+              <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 mb-6">
+                <Skeleton className="h-10 w-40 mx-auto mb-4" />
+                <Skeleton className="h-24 w-full mb-4" />
+                <Skeleton className="h-6 w-64 mx-auto" />
               </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+                    <div className="flex items-center mb-1">
+                      <Skeleton className="w-5 h-5 mr-1.5 rounded-full" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-4 w-28 mx-auto mt-6" />
             </CardContent>
           </Card>
-          <Card className="mb-8 bg-gradient-to-br from-slate-900/40 to-blue-900/40 border-blue-500/20">
-            <CardHeader>
-              <Skeleton className="h-8 w-48" />
+
+          {/* 週間予報スケルトン */}
+          <Card className="mb-16 bg-transparent border-none shadow-none">
+            <CardHeader className="px-0">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-7 h-7" />
+                <Skeleton className="h-8 w-48" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
+            <CardContent className="p-0">
+              <div className="w-full max-w-6xl mx-auto">
+                <div className="flex space-x-2 md:space-x-4 overflow-hidden">
+                  {[...Array(6)].map((_, index) => (
+                    <div key={index} className="flex-shrink-0 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6 pl-2 md:pl-4">
+                      <div className="flex flex-col items-center p-4 rounded-2xl border border-blue-500/20 bg-white/5 h-full">
+                        <Skeleton className="h-5 w-24 mb-2" />
+                        <Skeleton className="h-6 w-16 mb-3" />
+                        <Skeleton className="h-10 w-full mb-4" />
+                        <div className="w-full space-y-2 text-xs">
+                          {[...Array(4)].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between bg-white/5 px-2 py-1 rounded">
+                              <div className="flex items-center">
+                                <Skeleton className="w-4 h-4 mr-1.5 rounded-full" />
+                                <Skeleton className="h-3 w-8" />
+                              </div>
+                              <Skeleton className="h-4 w-12" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
