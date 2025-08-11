@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind } from 'lucide-react';
+import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,6 +18,11 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 
 interface PredictionLevel {
@@ -124,6 +129,7 @@ export default function Home() {
   const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchForecasts();
@@ -138,26 +144,26 @@ export default function Home() {
     setError(null);
     try {
 
-      // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
-      // const mockData: ForecastData[] = [
-      //   { date: "2025-08-08", predicted_amount: 1.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
-      //   { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
-      //   { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
-      //   { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
-      //   { date: "2025-08-12", predicted_amount: 1.1, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-      //   { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
-      //   { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
-      // ];
-      // const data = mockData; 
+      // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
+      const mockData: ForecastData[] = [
+        { date: "2025-08-12", predicted_amount: 1.4, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+        { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
+        { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
+        { date: "2025-08-15", predicted_amount: 0.3, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
+        { date: "2025-08-16", predicted_amount: 0.6, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
+        { date: "2025-08-17", predicted_amount: 0.8, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
+        { date: "2025-08-18", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      ];
+      const data = mockData;
 
-      // The backend now serves the cached prediction data.
-      const response = await fetch(`http://localhost:8080/api/prediction`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: ForecastData[] = await response.json();
-      
-      
+      // // The backend now serves the cached prediction data.
+      // const response = await fetch(`http://localhost:8080/api/prediction`);
+      // if (!response.ok) {
+      //   throw new Error(`HTTP error! status: ${response.status}`);
+      // }
+      // const data: ForecastData[] = await response.json();
+
+
       const mappedPredictions: DayPrediction[] = data.map(forecast => {
         const date = new Date(forecast.date);
         if (isNaN(date.getTime())) {
@@ -209,7 +215,7 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: Post[] = await response.json();
-      
+
       const commentsWithReplies: Comment[] = await Promise.all(data.map(async post => {
         const replies = await fetchRepliesForPost(post.id);
         return {
@@ -352,18 +358,28 @@ export default function Home() {
     }
   };
 
-  
-
   const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
     createReaction(targetId, type, reactionType);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDateForWeek = (date: Date) => {
     return date.toLocaleDateString('ja-JP', {
-      month: 'short',
+      month: 'numeric',
       day: 'numeric',
       weekday: 'short'
     });
+  };
+
+  const formatDate = (date: Date) => {
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+
+    const dateOptions: Intl.DateTimeFormatOptions = { month: 'numeric', day: 'numeric', weekday: 'short' };
+    
+    const dateStr = date.toLocaleDateString('ja-JP', dateOptions);
+    const nextDayStr = nextDay.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
+
+    return `${dateStr}深夜 〜 ${nextDayStr}朝の身投げ`;
   };
 
   const formatTime = (date: Date) => {
@@ -401,7 +417,7 @@ export default function Home() {
         </header>
         <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
           {/* 今日の予報スケルトン */}
-          <Card className="mb-8 glow-effect clickable-card bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
+          <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
             <CardHeader className="text-center pt-8 pb-4">
               <Skeleton className="h-8 w-32 mx-auto mb-2" />
               <Skeleton className="h-4 w-24 mx-auto" />
@@ -423,7 +439,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <Skeleton className="h-4 w-28 mx-auto mt-6" />
+              <Skeleton className="h-10 w-32 mx-auto mt-6" />
             </CardContent>
           </Card>
 
@@ -455,6 +471,7 @@ export default function Home() {
                             </div>
                           ))}
                         </div>
+                        <Skeleton className="h-8 w-full mt-4" />
                       </div>
                     </div>
                   ))}
@@ -497,18 +514,72 @@ export default function Home() {
         {/* 今日の予測 */}
         {todayPrediction && (
           <Card
-            className="mb-8 glow-effect clickable-card bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl hover:shadow-blue-400/20 transition-all duration-300 transform hover:-translate-y-1"
-            onClick={() => handleCardClick(todayPrediction.date)}
+            className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl"
           >
             <CardHeader className="text-center pt-8 pb-4">
-              <CardTitle className="text-2xl md:text-3xl font-bold text-white mb-1">
-                今日の予報
-              </CardTitle>
+              <div className="flex justify-center items-center gap-2 mb-1">
+                <CardTitle className="text-2xl md:text-3xl font-bold text-white">
+                  今日の予報
+                </CardTitle>
+                <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
+                      <HelpCircle className="w-5 h-5" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <h4 className="font-medium leading-none text-blue-200">予報のしくみ</h4>
+                        <p className="text-sm text-slate-300">
+                          このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを朝5時に行っています。
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <p className="text-sm font-semibold text-slate-200">
+                          <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded">05:00〜23:59</span> の「今日の予報」
+                        </p>
+                        <p className="text-sm text-slate-300 pl-3 border-l-2 border-blue-400">
+                          今夜から<strong className="text-white">翌朝にかけて</strong>の予報です。
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <p className="text-sm font-semibold text-slate-200">
+                          <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded">00:00〜04:59</span> の「今日の予報」
+                        </p>
+                        <p className="text-sm text-slate-300 pl-3 border-l-2 border-blue-400">
+                          <strong className="text-white">現在の朝</strong>の予報です。
+                        </p>
+                      </div>
+                      
+                      <p className="text-xs text-slate-400 pt-2 border-t border-slate-700">
+                       気温・天気・月齢・風は、予報対象日の日中のデータです。00:00〜04:59の時間帯は前日のデータが表示されます。
+                      </p>
+
+                      <div className="space-y-2 pt-2 border-t border-slate-700">
+                        <h4 className="font-medium leading-none text-blue-200">予報の更新</h4>
+                        <p className="text-sm text-slate-300">
+                         次の時刻に更新されます:<br/>
+                         <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00</span>
+                        </p>
+                      </div>
+                      <div className="space-y-2 pt-2 border-t border-slate-700">
+                         <h4 className="font-medium leading-none text-blue-200">湧きレベル</h4>
+                         <p className="text-sm text-slate-300">
+                          「湧きなし」「プチ湧き」「チョイ湧き」「湧き」「大湧き」「爆湧き」の6段階です。
+                        </p>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
             </CardHeader>
+
             <CardContent className="text-center px-4 pb-8">
               <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
-                {/* レベルが0より大きい場合のみ、ここにタイトルを表示 */}
                 {todayPrediction.level > 0 && (
                   <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
                     {predictionLevels[todayPrediction.level].name}
@@ -517,7 +588,6 @@ export default function Home() {
 
                 <div className="mb-4">
                   {todayPrediction.level === 5 ? (
-                    // レベル5（爆湧き）の特殊なアイコンレイアウト
                     <>
                       <div className="flex flex-col items-center sm:hidden">
                         <div className="flex justify-center gap-2">
@@ -532,13 +602,10 @@ export default function Home() {
                       </div>
                     </>
                   ) : (
-                    // レベル0〜4の場合の表示領域
                     <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
                       {todayPrediction.level > 0 ? (
-                        // レベルが1〜4ならアイコンを表示
                         todayIcons
                       ) : (
-                        // レベルが0ならタイトルをこの中央に表示
                         <div className={`text-3xl md:text-4xl font-bold ${predictionLevels[todayPrediction.level].color}`}>
                           {predictionLevels[todayPrediction.level].name}
                         </div>
@@ -581,9 +648,15 @@ export default function Home() {
                   <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.wind_direction}</p>
                 </div>
               </div>
-              <p className="text-sm text-blue-300 mt-6 opacity-70 hover:opacity-100 transition-opacity">
-                クリックで詳細を見る
-              </p>
+              <div className="mt-8 flex justify-center">
+                <Button
+                  onClick={() => handleCardClick(todayPrediction.date)}
+                  variant="outline"
+                  className="bg-white/[0.06] border border-white/10 text-slate-200 hover:bg-white/10 transition-colors duration-300 px-6 py-2 rounded-lg"
+                >
+                  詳細を見る
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -608,55 +681,68 @@ export default function Home() {
                 {weekPredictions.map((prediction, index) => (
                   <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
                     <div
-                      className={`flex flex-col items-center p-4 rounded-2xl border clickable-card h-full border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 backdrop-blur-sm bg-white/5`}
-                      onClick={() => handleCardClick(prediction.date)}
+                      className={`flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 backdrop-blur-sm bg-white/5`}
                     >
-                      <p className="text-base font-semibold text-blue-200 mb-2">
-                        {formatDate(prediction.date)}
-                      </p>
-                      <div className={`text-lg font-bold mb-3 ${predictionLevels[prediction.level].color}`}>
-                        {predictionLevels[prediction.level].name}
+                      <div>
+                        <p className="text-base font-semibold text-blue-200 mb-1 text-center">
+                          {formatDateForWeek(prediction.date)}
+                        </p>
+                        <p className="text-xs text-blue-300 mb-2 text-center">
+                          深夜〜翌朝の予測
+                        </p>
+                        <div className={`text-lg font-bold mb-3 text-center ${predictionLevels[prediction.level].color}`}>
+                          {predictionLevels[prediction.level].name}
+                        </div>
+                        <div className="flex justify-center items-center h-10 mb-4">
+                          {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
+                        </div>
+                        <div className="w-full space-y-2 text-xs text-gray-300">
+                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
+                            <div className="flex items-center">
+                              <Thermometer className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                              <span>気温</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="font-medium">{`${prediction.temperature_max}℃/${prediction.temperature_min}℃`}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
+                            <div className="flex items-center">
+                              <Cloudy className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                              <span>天気</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="font-medium">{prediction.weather}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
+                            <div className="flex items-center">
+                              <Moon className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                              <span>月齢</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
+                            <div className="flex items-center">
+                              <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                              <span>風</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="font-medium">{prediction.wind_direction}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-center items-center h-10 mb-4">
-                        {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
-                      </div>
-                      <div className="w-full space-y-2 text-xs text-gray-300">
-                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                          <div className="flex items-center">
-                            <Thermometer className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                            <span>気温</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="font-medium">{`${prediction.temperature_max}℃/${prediction.temperature_min}℃`}</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                          <div className="flex items-center">
-                            <Cloudy className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                            <span>天気</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="font-medium">{prediction.weather}</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                          <div className="flex items-center">
-                            <Moon className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                            <span>月齢</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                          <div className="flex items-center">
-                            <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                            <span>風</span>
-                          </div>
-                          <div className="text-center">
-                            <span className="font-medium">{prediction.wind_direction}</span>
-                          </div>
-                        </div>
+                      <div className="mt-4 w-full flex justify-center">
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleCardClick(prediction.date); }}
+                          variant="outline"
+                          className="h-7 text-xs font-medium bg-white/5 border-blue-500/40 text-blue-100 hover:bg-white/15 hover:border-blue-400/50 transition-all duration-200 px-5"
+                        >
+                          詳細
+                        </Button>
                       </div>
                     </div>
                   </CarouselItem>
