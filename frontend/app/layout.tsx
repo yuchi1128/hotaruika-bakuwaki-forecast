@@ -2,8 +2,11 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'ホタルイカ身投げ予測 - 富山湾の神秘',
-  description: '富山湾のホタルイカ身投げ量を予測。今日から一週間の予測と口コミ情報をお届けします。',
+  title: 'ホタルイカ爆湧き予報',
+  description: '富山湾のホタルイカ身投げ量をAIで予測。今日から一週間の予測と口コミ情報をお届けします。',
+  icons: {
+    icon: '/hotaruika_aikon_2.png',
+  },
 };
 
 export default function RootLayout({
