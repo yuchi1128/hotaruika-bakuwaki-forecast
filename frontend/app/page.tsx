@@ -89,54 +89,6 @@ const predictionLevels: PredictionLevel[] = [
   { level: 5, name: '爆湧き', description: '最高の身投げが期待できます！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
-// const getWeatherFromCode = (code: number): string => {
-//   const weatherMap: { [key: number]: string } = {
-//     0: '快晴',
-//     1: '晴れ',
-//     2: '晴れ',
-//     3: '曇り',
-//     4: '煙霧',
-//     5: 'もや',
-//     10: '霧',
-//     11: '地霧',
-//     12: '地霧',
-//     17: '雷電',
-//     18: 'スコール',
-//     20: '霧雨',
-//     21: '雨',
-//     22: '雪',
-//     23: '雨と雪',
-//     24: '着氷性の雨',
-//     25: 'しゅう雨',
-//     26: 'しゅう雪',
-//     27: 'しゅうひょう',
-//     41: '霧（薄）',
-//     42: '霧（薄）',
-//     43: '霧（濃）',
-//     44: '霧（濃）',
-//     45: '霧（濃）',
-//     46: '霧（濃）',
-//     47: '霧（濃）',
-//     48: '霧（濃）',
-//     49: '霧（濃）',
-//     51: '霧雨（弱）',
-//     53: '霧雨（並）',
-//     55: '霧雨（強）',
-//     61: '雨（弱）',
-//     63: '雨（並）',
-//     65: '雨（強）',
-//     71: '雪（弱）',
-//     73: '雪（並）',
-//     75: '雪（強）',
-//     80: 'しゅう雨（弱）',
-//     81: 'しゅう雨（並）',
-//     82: 'しゅう雨（強）',
-//     95: '雷電',
-//     97: '雷電（ひょう）'
-//   };
-//   return weatherMap[code] || '不明';
-// };
-
 const getWeatherFromCode = (code: number): string => {
   if (code >= 0 && code <= 2) return '晴れ';
   if (code === 3) return '曇り';
@@ -186,25 +138,24 @@ export default function Home() {
     setError(null);
     try {
 
-      // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
-      const mockData: ForecastData[] = [
-        { date: "2025-08-08", predicted_amount: 1.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
-        { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
-        { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
-        { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
-        { date: "2025-08-12", predicted_amount: 1.1, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-        { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
-        { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
-      ];
-      const data = mockData;
-      
+      // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
+      // const mockData: ForecastData[] = [
+      //   { date: "2025-08-08", predicted_amount: 1.4, moon_age: 14.3, weather_code: 55, temperature_max: 29.6, temperature_min: 22.6, precipitation_probability_max: 88, dominant_wind_direction: 218 },
+      //   { date: "2025-08-09", predicted_amount: 0.3, moon_age: 15.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
+      //   { date: "2025-08-10", predicted_amount: 0.6, moon_age: 16.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
+      //   { date: "2025-08-11", predicted_amount: 0.8, moon_age: 17.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
+      //   { date: "2025-08-12", predicted_amount: 1.1, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      //   { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
+      //   { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
+      // ];
+      // const data = mockData; 
 
-      // // 本番環境ではこちらのAPIからデータを取得します。
-      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict/week`);
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! status: ${response.status}`);
-      // }
-      // const data: ForecastData[] = await response.json();
+      // The backend now serves the cached prediction data.
+      const response = await fetch(`http://localhost:8080/api/prediction`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: ForecastData[] = await response.json();
       
       
       const mappedPredictions: DayPrediction[] = data.map(forecast => {
