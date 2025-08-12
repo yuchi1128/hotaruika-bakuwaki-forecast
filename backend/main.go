@@ -16,14 +16,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/robfig/cron/v3"
-
+	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/lib/pq"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/cors"
 )
 
 var db *sql.DB
 var logger *slog.Logger
+var jwtKey []byte
 
 // predictionCacheは、キャッシュされた予測データと、安全な並行アクセスのためのミューテックスを保持する
 var predictionCache struct {
@@ -67,65 +68,79 @@ type Reaction struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// ClaimsはJWTのペイロードを表す
+type Claims struct {
+	Role string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+// LoginRequestはログインリクエストのボディを表す
+type LoginRequest struct {
+	Password string `json:"password"`
+}
+
 func main() {
 	// 構造化ロガーを初期化する
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	// JWTキーを設定する
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	if adminPassword == "" {
+		logger.Warn("環境変数ADMIN_PASSWORDが設定されていません。管理者機能は無効になります。")
+	}
+	jwtSecret := os.Getenv("JWT_SECRET_KEY")
+	if jwtSecret == "" {
+		logger.Error("環境変数JWT_SECRET_KEYが設定されていません")
+		os.Exit(1)
+	}
+	jwtKey = []byte(jwtSecret)
+
 	// --- データベース接続 ---
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		logger.Error("DATABASE_URL environment variable not set")
+		logger.Error("環境変数DATABASE_URLが設定されていません")
 		os.Exit(1)
 	}
 
 	predictionURL = os.Getenv("PREDICTION_API_URL")
 	if predictionURL == "" {
-		logger.Error("PREDICTION_API_URL environment variable not set")
+		logger.Error("環境変数PREDICTION_API_URLが設定されていません")
 		os.Exit(1)
 	}
 
 	var err error
 	db, err = sql.Open("postgres", dbURL)
 	if err != nil {
-		logger.Error("Error opening database", "error", err)
+		logger.Error("データベースのオープンエラー", "error", err)
 		os.Exit(1)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		logger.Error("Error connecting to the database", "error", err)
+		logger.Error("データベースへの接続エラー", "error", err)
 		os.Exit(1)
 	}
-	logger.Info("Successfully connected to the database!")
+	logger.Info("データベースに正常に接続しました！")
 
 	// --- ディレクトリ設定 ---
 	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
 		err = os.Mkdir("./uploads", 0755)
 		if err != nil {
-			logger.Error("Failed to create uploads directory", "error", err)
+			logger.Error("uploadsディレクトリの作成に失敗しました", "error", err)
 			os.Exit(1)
 		}
 	}
 
 	// --- 予測データの取得とキャッシュ ---
-	// 起動時に最初のデータ取得を実行する
 	fetchAndCachePredictionData()
-
-	// スケジューラを設定する
-	jst, err := time.LoadLocation("Asia/Tokyo")
-	if err != nil {
-		logger.Error("Failed to load JST timezone", "error", err)
-		os.Exit(1)
-	}
-	c := cron.New(cron.WithLocation(jst))
-	// スケジュール: 日本時間の 02:00, 05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00
+	c := cron.New()
 	_, err = c.AddFunc("0 2,5,8,11,14,17,20,23 * * *", fetchAndCachePredictionData)
 	if err != nil {
-		logger.Error("Failed to add cron job", "error", err)
+		logger.Error("cronジョブの追加に失敗しました", "error", err)
 		os.Exit(1)
 	}
 	c.Start()
-	logger.Info("Cron scheduler started for fetching prediction data.")
+	logger.Info("予測データ取得のためのcronスケジューラを開始しました。")
 
 	// --- HTTPサーバー設定 ---
 	mux := http.NewServeMux()
@@ -134,9 +149,10 @@ func main() {
 	mux.HandleFunc("/api/posts/", postDetailHandler)
 	mux.HandleFunc("/api/replies/", replyDetailHandler)
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	mux.HandleFunc("/api/admin/login", adminLoginHandler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, Backend!")
+		fmt.Fprintf(w, "こんにちは、バックエンドです！")
 	})
 
 	corsHandler := cors.New(cors.Options{
@@ -146,75 +162,144 @@ func main() {
 		AllowCredentials: true,
 	}).Handler(mux)
 
-	logger.Info("Server starting on port 8080...")
+	logger.Info("サーバーをポート8080で起動します...")
 	if err := http.ListenAndServe(":8080", corsHandler); err != nil {
-		logger.Error("Server failed to start", "error", err)
+		logger.Error("サーバーの起動に失敗しました", "error", err)
 		os.Exit(1)
 	}
 }
 
-// fetchAndCachePredictionDataは、予測APIからデータを取得し、それをキャッシュする
 func fetchAndCachePredictionData() {
-	logger.Info("Attempting to fetch prediction data", "url", predictionURL)
-
+	logger.Info("予測データの取得を試みています", "url", predictionURL)
 	resp, err := http.Get(predictionURL)
 	if err != nil {
-		logger.Error("Failed to fetch prediction data", "error", err)
+		logger.Error("予測データの取得に失敗しました", "error", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Error("Prediction API returned non-OK status", "status_code", resp.StatusCode)
+		logger.Error("予測APIが正常なステータスを返しませんでした", "status_code", resp.StatusCode)
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("Failed to read prediction response body", "error", err)
+		logger.Error("予測APIのレスポンスボディの読み取りに失敗しました", "error", err)
 		return
 	}
 
-	// 取得したデータが有効なJSONか検証する
 	if !json.Valid(body) {
-		logger.Error("Fetched prediction data is not valid JSON")
+		logger.Error("取得した予測データは有効なJSONではありません")
 		return
 	}
 
 	predictionCache.Lock()
 	predictionCache.data = body
 	predictionCache.Unlock()
-
-	logger.Info("Successfully fetched and cached new prediction data")
+	logger.Info("新しい予測データを正常に取得し、キャッシュしました")
 }
 
-// getPredictionHandlerは、キャッシュされた予測データを提供する
 func getPredictionHandler(w http.ResponseWriter, r *http.Request) {
 	predictionCache.RLock()
 	data := predictionCache.data
 	predictionCache.RUnlock()
 
 	if data == nil {
-		// 予測データがリクエストされたが、キャッシュが空である
-		logger.Warn("Prediction data requested but cache is empty")
-		http.Error(w, "Prediction data not available yet. Please try again later.", http.StatusServiceUnavailable)
+		logger.Warn("予測データがリクエストされましたが、キャッシュは空です")
+		http.Error(w, "予測データはまだ利用できません。", http.StatusServiceUnavailable)
 		return
 	}
 
-	// 送信する前にデータが有効なJSONかチェックする
 	if !json.Valid(data) {
-		// 内部サーバーエラー：キャッシュされたデータが破損している
-		logger.Error("Invalid JSON data in cache")
-		http.Error(w, "Internal server error: cached data is corrupted.", http.StatusInternalServerError)
+		logger.Error("キャッシュ内のJSONデータが無効です")
+		http.Error(w, "内部サーバーエラー: キャッシュデータが破損しています。", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	// データを書き込むためにバッファを使用するこの方が効率的である
 	_, err := io.Copy(w, bytes.NewReader(data))
 	if err != nil {
-		logger.Error("Failed to write prediction response", "error", err)
-		// ヘッダーはすでに送信されている可能性が高いため、通常のhttp.Errorは送信できない
+		logger.Error("予測レスポンスの書き込みに失敗しました", "error", err)
+	}
+}
+
+func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "リクエストボディが不正です", http.StatusBadRequest)
+		return
+	}
+
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	if adminPassword == "" {
+		http.Error(w, "管理者機能が設定されていません", http.StatusInternalServerError)
+		return
+	}
+
+	if req.Password != adminPassword {
+		http.Error(w, "パスワードが不正です", http.StatusUnauthorized)
+		return
+	}
+
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		Role: "admin",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		http.Error(w, "トークンの作成に失敗しました", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+}
+
+func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorizationヘッダーが必要です", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			http.Error(w, "トークンの形式が不正です", http.StatusUnauthorized)
+			return
+		}
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil {
+			if err == jwt.ErrSignatureInvalid {
+				http.Error(w, "トークン署名が不正です", http.StatusUnauthorized)
+				return
+			}
+			http.Error(w, "不正なトークンです", http.StatusBadRequest)
+			return
+		}
+
+		if !token.Valid || claims.Role != "admin" {
+			http.Error(w, "トークンまたはロールが不正です", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	}
 }
 
@@ -223,28 +308,48 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		getPosts(w, r)
 	case http.MethodPost:
-		createPost(w, r)
+		authHeader := r.Header.Get("Authorization")
+		isAdmin := false
+		if authHeader != "" {
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString != authHeader {
+				claims := &Claims{}
+				token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+					return jwtKey, nil
+				})
+				if err == nil && token.Valid && claims.Role == "admin" {
+					isAdmin = true
+				}
+			}
+		}
+		createPost(w, r, isAdmin)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 	}
 }
 
 func postDetailHandler(w http.ResponseWriter, r *http.Request) {
 	pathSegments := splitPath(r.URL.Path)
 	if len(pathSegments) < 3 || pathSegments[2] == "" {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "見つかりません", http.StatusNotFound)
 		return
 	}
 
 	postID, err := strconv.Atoi(pathSegments[2])
 	if err != nil {
-		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		http.Error(w, "投稿IDが不正です", http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			deleteItem(w, r, "posts", postID)
+		}).ServeHTTP(w, r)
 		return
 	}
 
 	if len(pathSegments) == 3 {
-		// /api/posts/{id} の処理 - 未実装
-		http.Error(w, "Not Implemented", http.StatusNotImplemented)
+		http.Error(w, "実装されていません", http.StatusNotImplemented)
 		return
 	} else if len(pathSegments) == 4 && pathSegments[3] == "replies" {
 		switch r.Method {
@@ -253,30 +358,37 @@ func postDetailHandler(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			createReplyToPost(w, r, postID)
 		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 		}
 	} else if len(pathSegments) == 4 && pathSegments[3] == "reaction" {
 		switch r.Method {
 		case http.MethodPost:
 			createPostReaction(w, r, postID)
 		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 		}
 	} else {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "見つかりません", http.StatusNotFound)
 	}
 }
 
 func replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 	pathSegments := splitPath(r.URL.Path)
 	if len(pathSegments) < 3 || pathSegments[2] == "" {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "見つかりません", http.StatusNotFound)
 		return
 	}
 
 	replyID, err := strconv.Atoi(pathSegments[2])
 	if err != nil {
-		http.Error(w, "Invalid reply ID", http.StatusBadRequest)
+		http.Error(w, "返信IDが不正です", http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			deleteItem(w, r, "replies", replyID)
+		}).ServeHTTP(w, r)
 		return
 	}
 
@@ -285,21 +397,21 @@ func replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			createReplyToReply(w, r, replyID)
 		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 		}
 	} else if len(pathSegments) == 4 && pathSegments[3] == "reaction" {
 		switch r.Method {
 		case http.MethodPost:
 			createReplyReaction(w, r, replyID)
 		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 		}
 	} else {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "見つかりません", http.StatusNotFound)
 	}
 }
 
-func createPost(w http.ResponseWriter, r *http.Request) {
+func createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 	var post Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
@@ -307,25 +419,33 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ラベルを検証する
-	if post.Label != "現地情報" && post.Label != "その他" {
-		http.Error(w, "Invalid label. Must be '現地情報' or 'その他'", http.StatusBadRequest)
-		return
+	if isAdmin {
+		if post.Label != "現地情報" && post.Label != "その他" && post.Label != "管理者" {
+			http.Error(w, "ラベルが不正です。「現地情報」、「その他」、「管理者」のいずれかである必要があります", http.StatusBadRequest)
+			return
+		}
+	} else {
+		if post.Label == "管理者" {
+			http.Error(w, "「管理者」ラベルで投稿することはできません", http.StatusForbidden)
+			return
+		}
+		if post.Label != "現地情報" && post.Label != "その他" {
+			http.Error(w, "ラベルが不正です。「現地情報」または「その他」のいずれかである必要があります", http.StatusBadRequest)
+			return
+		}
 	}
 
 	var imageURL *string
 	if post.ImageURL != nil && *post.ImageURL != "" {
-		// base64形式の画像をデコードしてファイルに保存する
 		dataURL := *post.ImageURL
 		parts := strings.SplitN(dataURL, ";base64,", 2)
 		if len(parts) != 2 {
-			http.Error(w, "Invalid image data format", http.StatusBadRequest)
+			http.Error(w, "画像データのフォーマットが不正です", http.StatusBadRequest)
 			return
 		}
 
-		// データURLからファイルの拡張子を抽出する
 		mimeType := strings.TrimPrefix(parts[0], "data:")
-		extension := "jpg" // デフォルトはjpgとする
+		extension := "jpg"
 		if strings.Contains(mimeType, "png") {
 			extension = "png"
 		} else if strings.Contains(mimeType, "gif") {
@@ -336,7 +456,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 
 		decoded, err := base64.StdEncoding.DecodeString(parts[1])
 		if err != nil {
-			http.Error(w, "Failed to decode image", http.StatusInternalServerError)
+			http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
 			return
 		}
 
@@ -344,8 +464,8 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		filePath := filepath.Join("./uploads", filename)
 		err = os.WriteFile(filePath, decoded, 0644)
 		if err != nil {
-			logger.Error("Failed to save image", "error", err)
-			http.Error(w, "Failed to save image", http.StatusInternalServerError)
+			logger.Error("画像の保存に失敗しました", "error", err)
+			http.Error(w, "画像の保存に失敗しました", http.StatusInternalServerError)
 			return
 		}
 		url := "/uploads/" + filename
@@ -355,8 +475,8 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	query := `INSERT INTO posts (username, content, image_url, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
 	err = db.QueryRow(query, post.Username, post.Content, imageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
 	if err != nil {
-		logger.Error("Error inserting post", "error", err)
-		http.Error(w, "Could not create post", http.StatusInternalServerError)
+		logger.Error("投稿の挿入エラー", "error", err)
+		http.Error(w, "投稿を作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
@@ -383,8 +503,8 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 
 	label := r.URL.Query().Get("label")
 	if label != "" {
-		if label != "現地情報" && label != "その他" {
-			http.Error(w, "Invalid label filter. Must be '現地情報' or 'その他'", http.StatusBadRequest)
+		if label != "現地情報" && label != "その他" && label != "管理者" {
+			http.Error(w, "ラベルフィルターが不正です。「現地情報」、「その他」、「管理者」のいずれかである必要があります", http.StatusBadRequest)
 			return
 		}
 		query += fmt.Sprintf(" WHERE p.label = '%s'", label)
@@ -393,8 +513,8 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query(query)
 	if err != nil {
-		logger.Error("Error querying posts", "error", err)
-		http.Error(w, "Could not retrieve posts", http.StatusInternalServerError)
+		logger.Error("投稿のクエリエラー", "error", err)
+		http.Error(w, "投稿を取得できませんでした", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -405,7 +525,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 		var imageUrl sql.NullString
 		err := rows.Scan(&post.ID, &post.Username, &post.Content, &imageUrl, &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
 		if err != nil {
-			logger.Error("Error scanning post row", "error", err)
+			logger.Error("投稿行のスキャンエラー", "error", err)
 			continue
 		}
 		if imageUrl.Valid {
@@ -417,8 +537,8 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = rows.Err(); err != nil {
-		logger.Error("Error after iterating rows", "error", err)
-		http.Error(w, "Error retrieving posts", http.StatusInternalServerError)
+		logger.Error("行のイテレーション後のエラー", "error", err)
+		http.Error(w, "投稿の取得エラー", http.StatusInternalServerError)
 		return
 	}
 
@@ -437,8 +557,8 @@ func createReplyToPost(w http.ResponseWriter, r *http.Request, postID int) {
 	query := `INSERT INTO replies (post_id, username, content) VALUES ($1, $2, $3) RETURNING id, created_at`
 	err = db.QueryRow(query, postID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
-		logger.Error("Error inserting reply to post", "error", err)
-		http.Error(w, "Could not create reply", http.StatusInternalServerError)
+		logger.Error("投稿への返信の挿入エラー", "error", err)
+		http.Error(w, "返信を作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
@@ -456,21 +576,20 @@ func createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID in
 		return
 	}
 
-	// 親の返信からpost_idを取得する
 	var postID int
 	row := db.QueryRow("SELECT post_id FROM replies WHERE id = $1", parentReplyID)
 	err = row.Scan(&postID)
 	if err != nil {
-		logger.Error("Error getting post_id from parent reply", "error", err)
-		http.Error(w, "Parent reply not found", http.StatusNotFound)
+		logger.Error("親返信からのpost_id取得エラー", "error", err)
+		http.Error(w, "親となる返信が見つかりません", http.StatusNotFound)
 		return
 	}
 
 	query := `INSERT INTO replies (post_id, parent_reply_id, username, content) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
 	err = db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
-		logger.Error("Error inserting reply to reply", "error", err)
-		http.Error(w, "Could not create reply", http.StatusInternalServerError)
+		logger.Error("返信への返信の挿入エラー", "error", err)
+		http.Error(w, "返信を作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
@@ -502,8 +621,8 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
     `
 	rows, err := db.Query(query, postID)
 	if err != nil {
-		logger.Error("Error querying replies", "error", err)
-		http.Error(w, "Could not retrieve replies", http.StatusInternalServerError)
+		logger.Error("返信のクエリエラー", "error", err)
+		http.Error(w, "返信を取得できませんでした", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -515,26 +634,22 @@ func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
 		var parentUsername sql.NullString
 		err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername)
 		if err != nil {
-			logger.Error("Error scanning reply row", "error", err)
+			logger.Error("返信行のスキャンエラー", "error", err)
 			continue
 		}
 		if parentReplyID.Valid {
 			val := int(parentReplyID.Int64)
 			reply.ParentReplyID = &val
-		} else {
-			reply.ParentReplyID = nil
 		}
 		if parentUsername.Valid {
 			reply.ParentUsername = &parentUsername.String
-		} else {
-			reply.ParentUsername = nil
 		}
 		replies = append(replies, reply)
 	}
 
 	if err = rows.Err(); err != nil {
-		logger.Error("Error after iterating rows", "error", err)
-		http.Error(w, "Error retrieving replies", http.StatusInternalServerError)
+		logger.Error("行のイテレーション後のエラー", "error", err)
+		http.Error(w, "返信の取得エラー", http.StatusInternalServerError)
 		return
 	}
 
@@ -551,21 +666,20 @@ func createPostReaction(w http.ResponseWriter, r *http.Request, postID int) {
 	}
 
 	if reaction.ReactionType != "good" && reaction.ReactionType != "bad" {
-		http.Error(w, "Invalid reaction type. Must be 'good' or 'bad'", http.StatusBadRequest)
+		http.Error(w, "リアクションタイプが不正です。「good」または「bad」を指定してください", http.StatusBadRequest)
 		return
 	}
 
 	query := `INSERT INTO reactions (post_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
 	err = db.QueryRow(query, postID, reaction.ReactionType).Scan(&reaction.ID, &reaction.CreatedAt)
 	if err != nil {
-		logger.Error("Error inserting post reaction", "error", err)
-		http.Error(w, "Could not create reaction", http.StatusInternalServerError)
+		logger.Error("投稿へのリアクションの挿入エラー", "error", err)
+		http.Error(w, "リアクションを作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
 	val := postID
 	reaction.PostID = &val
-	reaction.ReplyID = nil
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(reaction)
@@ -580,27 +694,25 @@ func createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
 	}
 
 	if reaction.ReactionType != "good" && reaction.ReactionType != "bad" {
-		http.Error(w, "Invalid reaction type. Must be 'good' or 'bad'", http.StatusBadRequest)
+		http.Error(w, "リアクションタイプが不正です。「good」または「bad」を指定してください", http.StatusBadRequest)
 		return
 	}
 
 	query := `INSERT INTO reactions (reply_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
 	err = db.QueryRow(query, replyID, reaction.ReactionType).Scan(&reaction.ID, &reaction.CreatedAt)
 	if err != nil {
-		logger.Error("Error inserting reply reaction", "error", err)
-		http.Error(w, "Could not create reaction", http.StatusInternalServerError)
+		logger.Error("返信へのリアクションの挿入エラー", "error", err)
+		http.Error(w, "リアクションを作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
 	val := replyID
 	reaction.ReplyID = &val
-	reaction.PostID = nil
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(reaction)
 }
 
-// URLのパスセグメントを分割するヘルパー関数
 func splitPath(path string) []string {
 	var segments []string
 	for _, s := range strings.Split(path, "/") {
@@ -609,4 +721,60 @@ func splitPath(path string) []string {
 		}
 	}
 	return segments
+}
+
+func deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID int) {
+	var tableName string
+	var imageColumn string
+	if itemType == "posts" {
+		tableName = "posts"
+		imageColumn = "image_url"
+	} else if itemType == "replies" {
+		tableName = "replies"
+	} else {
+		http.Error(w, "アイテムタイプが不正です", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		logger.Error("トランザクションの開始に失敗しました", "error", err)
+		http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	if imageColumn != "" {
+		var imageURL sql.NullString
+		query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", imageColumn, tableName)
+		err := tx.QueryRow(query, itemID).Scan(&imageURL)
+		if err != nil && err != sql.ErrNoRows {
+			logger.Error("画像URLのクエリに失敗しました", "error", err)
+			http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+			return
+		}
+		if imageURL.Valid {
+			filename := filepath.Base(imageURL.String)
+			filePath := filepath.Join("./uploads", filename)
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				logger.Warn("画像ファイルの削除に失敗しました", "path", filePath, "error", err)
+			}
+		}
+	}
+
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", tableName)
+	_, err = tx.Exec(query, itemID)
+	if err != nil {
+		logger.Error("データベースからのアイテム削除に失敗しました", "error", err)
+		http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		logger.Error("トランザクションのコミットに失敗しました", "error", err)
+		http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
