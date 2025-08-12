@@ -530,7 +530,7 @@ export default function Home() {
                   <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
                     <div className="grid gap-4">
                       <div className="space-y-2">
-                        <h4 className="font-medium leading-none text-blue-200">予報のしくみ</h4>
+                        <h4 className="font-medium leading-none text-blue-200">予報の時間区分</h4>
                         <p className="text-sm text-slate-300">
                           このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを朝5時に行っています。
                         </p>
@@ -554,8 +554,8 @@ export default function Home() {
                         </p>
                       </div>
                       
-                      <p className="text-xs text-slate-400 pt-2 border-t border-slate-700">
-                       気温・天気・月齢・風は、予報対象日の日中のデータです。00:00〜04:59の時間帯は前日のデータが表示されます。
+                      <p className="text-xs text-slate-400">
+                       気温・天気・風向き・月齢は、予報対象日の日中のデータです。00:00〜04:59の時間帯は前日のデータが表示されます。
                       </p>
 
                       <div className="space-y-2 pt-2 border-t border-slate-700">
@@ -566,10 +566,16 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="space-y-2 pt-2 border-t border-slate-700">
-                         <h4 className="font-medium leading-none text-blue-200">湧きレベル</h4>
-                         <p className="text-sm text-slate-300">
-                          「湧きなし」「プチ湧き」「チョイ湧き」「湧き」「大湧き」「爆湧き」の6段階です。
-                        </p>
+                          <h4 className="font-medium leading-none text-blue-200">湧きレベル</h4>
+                          <p className="text-sm text-slate-300">
+                          「<span className="text-gray-300">湧きなし</span>」
+                          「<span className="text-blue-300">プチ湧き</span>」
+                          「<span className="text-cyan-300">チョイ湧き</span>」
+                          「<span className="text-green-300">湧き</span>」
+                          「<span className="text-yellow-300">大湧き</span>」
+                          「<span className="text-pink-300">爆湧き</span>」
+                          の6段階です。
+                          </p>
                       </div>
                     </div>
                   </DialogContent>
@@ -635,17 +641,17 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
+                    <Wind className="w-5 h-5 mr-1.5" />
+                    <p className="text-sm font-medium">風向き</p>
+                  </div>
+                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.wind_direction}</p>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+                  <div className="flex items-center text-blue-300 mb-1">
                     <Moon className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">月齢</p>
                   </div>
                   <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.moonAge.toFixed(1)}</p>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                  <div className="flex items-center text-blue-300 mb-1">
-                    <Wind className="w-5 h-5 mr-1.5" />
-                    <p className="text-sm font-medium">風</p>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.wind_direction}</p>
                 </div>
               </div>
               <div className="mt-8 flex justify-center">
@@ -717,20 +723,20 @@ export default function Home() {
                           </div>
                           <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
                             <div className="flex items-center">
+                              <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
+                              <span>風向き</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="font-medium">{prediction.wind_direction}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
+                            <div className="flex items-center">
                               <Moon className="w-4 h-4 inline mr-1.5 text-blue-400" />
                               <span>月齢</span>
                             </div>
                             <div className="text-center">
                               <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                            <div className="flex items-center">
-                              <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                              <span>風</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-medium">{prediction.wind_direction}</span>
                             </div>
                           </div>
                         </div>
