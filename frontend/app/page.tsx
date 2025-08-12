@@ -823,7 +823,7 @@ export default function Home() {
 
             {/* ラベルフィルター */}
             <div className="mb-7 flex flex-wrap items-center gap-2">
-              <span className="text-gray-300 text-xs font-bold">フィルター：</span>
+              <span className="text-gray-300 text-xs font-bold">ラベル：</span>
               <Button
                 variant={selectedFilterLabel === null ? 'default' : 'outline'}
                 onClick={() => setSelectedFilterLabel(null)}
@@ -844,6 +844,13 @@ export default function Home() {
                 className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === 'その他' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
               >
                 その他
+              </Button>
+              <Button
+                variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
+                onClick={() => setSelectedFilterLabel('管理者')}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === '管理者' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
+              >
+                管理者
               </Button>
             </div>
 
