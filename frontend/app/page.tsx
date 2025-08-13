@@ -97,7 +97,7 @@ const predictionLevels: PredictionLevel[] = [
 const getWeatherFromCode = (code: number): string => {
   if (code >= 0 && code <= 2) return '晴れ';
   if (code === 3) return '曇り';
-  if ((code >= 4 && code <= 5) || (code >= 10 && code <= 12) || (code >= 41 && code <= 49)) return '霧';
+  if ((code >= 4 && code <= 5) || (code >= 10 && code <= 12) || (code >= 41 && code <= 49)) return '曇り';
   if (code === 17 || code === 95 || code === 97) return '雷';
   if (code === 18) return 'にわか雨';
   if (code === 20 || (code >= 51 && code <= 55)) return '小雨';
@@ -146,13 +146,13 @@ export default function Home() {
 
       // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
       const mockData: ForecastData[] = [
-        { date: "2025-08-12", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-        { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
-        { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
-        { date: "2025-08-15", predicted_amount: 0.3, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
-        { date: "2025-08-16", predicted_amount: 0.6, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
-        { date: "2025-08-17", predicted_amount: 0.8, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
-        { date: "2025-08-18", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+        { date: "2025-05-26", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+        { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
+        { date: "2025-05-28", predicted_amount: 0.3, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
+        { date: "2025-05-29", predicted_amount: 0.6, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
+        { date: "2025-05-30", predicted_amount: 0.9, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
+        { date: "2025-05-31", predicted_amount: 1.2, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
+        { date: "2025-06-01", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
       ];
       const data = mockData;
 
@@ -170,23 +170,31 @@ export default function Home() {
           console.error("Invalid date received from API:", forecast.date);
           return null;
         }
+        
+        const month = date.getMonth(); // 0 = January, 1 = February, ..., 11 = December
+        const isSeason = month >= 1 && month <= 4; // Check if month is Feb, Mar, Apr, or May
 
-        let level = 0;
-        if (forecast.predicted_amount >= 1.25) {
-          level = 5; // 爆湧き
-        } else if (forecast.predicted_amount >= 1.0) {
-          level = 4; // 大湧き
-        } else if (forecast.predicted_amount >= 0.75) {
-          level = 3; // 湧き
-        } else if (forecast.predicted_amount >= 0.5) {
-          level = 2; // チョイ湧き
-        } else if (forecast.predicted_amount >= 0.25) {
-          level = 1; // プチ湧き
+        let level = -1; // Default to -1 (off-season)
+        
+        if (isSeason) {
+            if (forecast.predicted_amount >= 1.25) {
+                level = 5; // 爆湧き
+            } else if (forecast.predicted_amount >= 1.0) {
+                level = 4; // 大湧き
+            } else if (forecast.predicted_amount >= 0.75) {
+                level = 3; // 湧き
+            } else if (forecast.predicted_amount >= 0.5) {
+                level = 2; // チョイ湧き
+            } else if (forecast.predicted_amount >= 0.25) {
+                level = 1; // プチ湧き
+            } else {
+                level = 0; // 湧きなし
+            }
         }
 
         return {
           date,
-          level,
+          level, // Will be -1 if off-season
           temperature_max: forecast.temperature_max,
           temperature_min: forecast.temperature_min,
           weather: getWeatherFromCode(forecast.weather_code),
@@ -264,7 +272,8 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       fetchPosts();
-    } catch (error) {
+    } catch (error)
+    {
       console.error("Failed to create post:", error);
     }
   };
@@ -309,6 +318,7 @@ export default function Home() {
   };
 
   const renderHotaruikaIcons = (level: number, src: string, size = 'w-8 h-8', animated = true) => {
+    if (level <= 0) return [];
     return Array.from({ length: level }).map((_, index) => (
       <img
         key={index}
@@ -395,6 +405,15 @@ export default function Home() {
     return `${datePart} ${timePart}`;
   };
 
+  const getOffSeasonMessage = (date: Date) => {
+    const month = date.getMonth();
+    if (month === 0) { // 1月の場合b, ...
+      return "現在はホタルイカの身投げの時期ではありません。2月から予測を再開します";
+    }
+    // 6月〜12月の場合
+    return "現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。";
+  };
+
   const todayPrediction = predictions[0];
   const weekPredictions = predictions.slice(1);
 
@@ -418,7 +437,7 @@ export default function Home() {
         <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
           {/* 今日の予報スケルトン */}
           <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
-            <CardHeader className="text-center pt-8 pb-4">
+            <CardHeader className="text-center pt-8 pb-6">
               <Skeleton className="h-8 w-32 mx-auto mb-2" />
               <Skeleton className="h-4 w-24 mx-auto" />
             </CardHeader>
@@ -487,7 +506,7 @@ export default function Home() {
   if (error) {
     return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   }
-
+  
   const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
 
 
@@ -516,7 +535,7 @@ export default function Home() {
           <Card
             className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl"
           >
-            <CardHeader className="text-center pt-8 pb-4">
+            <CardHeader className="text-center pt-8 pb-6">
               <div className="flex justify-center items-center gap-2 mb-1">
                 <CardTitle className="text-2xl md:text-3xl font-bold text-white">
                   今日の予報
@@ -566,15 +585,13 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="space-y-2 pt-2 border-t border-slate-700">
-                          <h4 className="font-medium leading-none text-blue-200">湧きレベル</h4>
+                          <h4 className="font-medium leading-none text-blue-200">予測の表示</h4>
                           <p className="text-sm text-slate-300">
-                          「<span className="text-gray-300">湧きなし</span>」
-                          「<span className="text-blue-300">プチ湧き</span>」
-                          「<span className="text-cyan-300">チョイ湧き</span>」
-                          「<span className="text-green-300">湧き</span>」
-                          「<span className="text-yellow-300">大湧き</span>」
-                          「<span className="text-pink-300">爆湧き</span>」
-                          の6段階です。
+                            ホタルイカの身投げ予測は、シーズン期間（2月〜5月）のみ行われます。
+                            <br/>
+                            予測レベルは「<span className="text-gray-300">湧きなし</span>」「<span className="text-blue-300">プチ湧き</span>」「<span className="text-cyan-300">チョイ湧き</span>」「<span className="text-green-300">湧き</span>」「<span className="text-yellow-300">大湧き</span>」「<span className="text-pink-300">爆湧き</span>」の6段階です。
+                            <br/>
+                            シーズン期間外は「オフシーズン」と表示されます。
                           </p>
                       </div>
                     </div>
@@ -585,53 +602,64 @@ export default function Home() {
             </CardHeader>
 
             <CardContent className="text-center px-4 pb-8">
-              <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
-                {todayPrediction.level > 0 && (
-                  <div className={`
-                    text-3xl md:text-4xl font-bold mb-2
-                    ${predictionLevels[todayPrediction.level].color}
-                    ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                  `}>
-                    {predictionLevels[todayPrediction.level].name}
+              {todayPrediction.level === -1 ? (
+                <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm mb-6">
+                  <div className="flex flex-col justify-center items-center min-h-[160px] md:min-h-[180px]">
+                    <p className="text-3xl md:text-4xl font-bold text-gray-300">オフシーズン</p>
+                    <p className="text-sm text-gray-400 mt-2 px-4">
+                      {getOffSeasonMessage(todayPrediction.date)}
+                    </p>
                   </div>
-                )}
-
-                <div className="mb-4">
-                  {todayPrediction.level === 5 ? (
-                    <>
-                      <div className="flex flex-col items-center sm:hidden">
-                        <div className="flex justify-center gap-2">
-                          {todayIcons.slice(0, 3)}
-                        </div>
-                        <div className="flex justify-center gap-2 -mt-3">
-                          {todayIcons.slice(3, 5)}
-                        </div>
-                      </div>
-                      <div className="hidden sm:flex justify-center gap-2">
-                        {todayIcons}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
-                      {todayPrediction.level > 0 ? (
-                        todayIcons
-                      ) : (
-                        <div className={`
-                          text-3xl md:text-4xl font-bold mb-2
-                          ${predictionLevels[todayPrediction.level].color}
-                          ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                        `}>
-                          {predictionLevels[todayPrediction.level].name}
-                        </div>
-                      )}
+                </div>
+              ) : (
+                <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
+                  {todayPrediction.level > 0 && (
+                    <div className={`
+                      text-3xl md:text-4xl font-bold mb-2
+                      ${predictionLevels[todayPrediction.level].color}
+                      ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                    `}>
+                      {predictionLevels[todayPrediction.level].name}
                     </div>
                   )}
-                </div>
 
-                <p className="text-lg text-gray-300">
-                  {predictionLevels[todayPrediction.level].description}
-                </p>
-              </div>
+                  <div className="mb-4">
+                    {todayPrediction.level === 5 ? (
+                      <>
+                        <div className="flex flex-col items-center sm:hidden">
+                          <div className="flex justify-center gap-2">
+                            {todayIcons.slice(0, 3)}
+                          </div>
+                          <div className="flex justify-center gap-2 -mt-3">
+                            {todayIcons.slice(3, 5)}
+                          </div>
+                        </div>
+                        <div className="hidden sm:flex justify-center gap-2">
+                          {todayIcons}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
+                        {todayPrediction.level > 0 ? (
+                          todayIcons
+                        ) : (
+                          <div className={`
+                            text-3xl md:text-4xl font-bold mb-2
+                            ${predictionLevels[todayPrediction.level].color}
+                            ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                          `}>
+                            {predictionLevels[todayPrediction.level].name}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="text-lg text-gray-300">
+                    {predictionLevels[todayPrediction.level].description}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
                 <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
@@ -704,15 +732,25 @@ export default function Home() {
                         <p className="text-xs text-blue-300 mb-2 text-center">
                           深夜〜翌朝の予測
                         </p>
-                        <div className={`
-                          text-lg font-bold mb-3 text-center
-                          ${predictionLevels[prediction.level].color}
-                          ${prediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                        `}>
-                          {predictionLevels[prediction.level].name}
-                        </div>
-                        <div className="flex justify-center items-center h-10 mb-4">
-                          {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
+                        <div className="mb-4 min-h-[5rem] flex flex-col justify-center">
+                          {prediction.level === -1 ? (
+                            <div className="flex flex-col justify-center items-center text-center">
+                              <p className="text-lg font-bold text-gray-300">オフシーズン</p>
+                            </div>
+                          ) : (
+                            <>
+                              <div className={`
+                                text-lg font-bold mb-3 text-center
+                                ${predictionLevels[prediction.level].color}
+                                ${prediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                              `}>
+                                {predictionLevels[prediction.level].name}
+                              </div>
+                              <div className="flex justify-center items-center h-10">
+                                {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
+                              </div>
+                            </>
+                          )}
                         </div>
                         <div className="w-full space-y-2 text-xs text-gray-300">
                           <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
