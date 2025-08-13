@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle } from 'lucide-react';
+import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle, RefreshCw } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
 import { Skeleton } from "@/components/ui/skeleton"
@@ -116,6 +116,25 @@ const getWindDirection = (degrees: number): string => {
   return directions[index];
 };
 
+const getLastUpdateTime = (): Date => {
+  const now = new Date();
+  const updateHours = [2, 5, 8, 11, 14, 17, 20, 23];
+  const currentHour = now.getHours();
+
+  const lastUpdateHourToday = [...updateHours].reverse().find(hour => currentHour >= hour);
+
+  const lastUpdateDate = new Date(now);
+
+  if (lastUpdateHourToday !== undefined) {
+    lastUpdateDate.setHours(lastUpdateHourToday, 0, 0, 0);
+  } else {
+    lastUpdateDate.setDate(now.getDate() - 1);
+    lastUpdateDate.setHours(23, 0, 0, 0);
+  }
+  return lastUpdateDate;
+};
+
+
 export default function Home() {
   const router = useRouter();
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
@@ -130,6 +149,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchForecasts();
@@ -171,10 +191,10 @@ export default function Home() {
           return null;
         }
         
-        const month = date.getMonth(); // 0 = January, 1 = February, ..., 11 = December
-        const isSeason = month >= 1 && month <= 4; // Check if month is Feb, Mar, Apr, or May
+        const month = date.getMonth();
+        const isSeason = month >= 1 && month <= 4;
 
-        let level = -1; // Default to -1 (off-season)
+        let level = -1;
         
         if (isSeason) {
             if (forecast.predicted_amount >= 1.25) {
@@ -194,7 +214,7 @@ export default function Home() {
 
         return {
           date,
-          level, // Will be -1 if off-season
+          level,
           temperature_max: forecast.temperature_max,
           temperature_min: forecast.temperature_min,
           weather: getWeatherFromCode(forecast.weather_code),
@@ -204,6 +224,7 @@ export default function Home() {
       }).filter(p => p !== null) as DayPrediction[];
 
       setPredictions(mappedPredictions);
+      setLastUpdated(getLastUpdateTime());
     } catch (error) {
       console.error("Failed to fetch forecasts:", error);
       setError('データの取得に失敗しました。しばらくしてから再度お試しください。');
@@ -599,6 +620,12 @@ export default function Home() {
                 </Dialog>
               </div>
               <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
+              {todayPrediction.level !== -1 && lastUpdated && (
+                <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
+                  <RefreshCw className="w-3 h-3" />
+                  <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="text-center px-4 pb-8">
