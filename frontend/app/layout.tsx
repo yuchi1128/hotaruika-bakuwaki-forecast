@@ -1,5 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Noto_Sans_JP } from 'next/font/google';
+import localFont from 'next/font/local';
 
 export const metadata: Metadata = {
   title: 'ホタルイカ爆湧き予報',
@@ -9,6 +11,30 @@ export const metadata: Metadata = {
   },
 };
 
+// Noto Sans JP (Google Fonts) の設定
+const notoSansJp = Noto_Sans_JP({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-noto-sans-jp',
+});
+
+// Zen Kaku Gothic New (ローカルファイル) の設定
+const zenKaku = localFont({
+  src: [
+    {
+      path: '../public/fonts/ZenKakuGothicNew-Regular.ttf',
+      weight: '400',
+    },
+    {
+      path: '../public/fonts/ZenKakuGothicNew-Bold.ttf',
+      weight: '700',
+    },
+  ],
+  display: 'swap',
+  variable: '--font-zen-kaku',
+});
+
 export default function RootLayout({
   children,
 }: {
@@ -16,7 +42,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>
+      <body className={`${zenKaku.variable} ${notoSansJp.variable}`}>
         <div className="stars">
           {Array.from({ length: 50 }).map((_, i) => (
             <div

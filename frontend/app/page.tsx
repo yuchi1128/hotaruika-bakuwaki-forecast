@@ -146,7 +146,7 @@ export default function Home() {
 
       // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
       const mockData: ForecastData[] = [
-        { date: "2025-08-12", predicted_amount: 1.4, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+        { date: "2025-08-12", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
         { date: "2025-08-13", predicted_amount: 1.3, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
         { date: "2025-08-14", predicted_amount: 0.0, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
         { date: "2025-08-15", predicted_amount: 0.3, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
@@ -587,7 +587,11 @@ export default function Home() {
             <CardContent className="text-center px-4 pb-8">
               <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
                 {todayPrediction.level > 0 && (
-                  <div className={`text-3xl md:text-4xl font-bold mb-2 ${predictionLevels[todayPrediction.level].color}`}>
+                  <div className={`
+                    text-3xl md:text-4xl font-bold mb-2
+                    ${predictionLevels[todayPrediction.level].color}
+                    ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                  `}>
                     {predictionLevels[todayPrediction.level].name}
                   </div>
                 )}
@@ -612,7 +616,11 @@ export default function Home() {
                       {todayPrediction.level > 0 ? (
                         todayIcons
                       ) : (
-                        <div className={`text-3xl md:text-4xl font-bold ${predictionLevels[todayPrediction.level].color}`}>
+                        <div className={`
+                          text-3xl md:text-4xl font-bold mb-2
+                          ${predictionLevels[todayPrediction.level].color}
+                          ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                        `}>
                           {predictionLevels[todayPrediction.level].name}
                         </div>
                       )}
@@ -696,7 +704,11 @@ export default function Home() {
                         <p className="text-xs text-blue-300 mb-2 text-center">
                           深夜〜翌朝の予測
                         </p>
-                        <div className={`text-lg font-bold mb-3 text-center ${predictionLevels[prediction.level].color}`}>
+                        <div className={`
+                          text-lg font-bold mb-3 text-center
+                          ${predictionLevels[prediction.level].color}
+                          ${prediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
+                        `}>
                           {predictionLevels[prediction.level].name}
                         </div>
                         <div className="flex justify-center items-center h-10 mb-4">

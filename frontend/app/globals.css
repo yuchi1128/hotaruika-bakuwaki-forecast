@@ -1,25 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=swap');
+/* 以前の @import と @font-face は削除し、Tailwindのインポートのみにします */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@font-face {
-  font-family: 'Zen Kaku Gothic New';
-  src: url('/fonts/ZenKakuGothicNew-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Zen Kaku Gothic New';
-  src: url('/fonts/ZenKakuGothicNew-Bold.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-}
-
-body {
-  font-family: 'Zen Kaku Gothic New', sans-serif;
-}
 
 :root {
   --foreground-rgb: 255, 255, 255;
@@ -63,7 +45,8 @@ body {
   }
   body {
     @apply bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-foreground min-h-screen;
-    font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+    /* font-family を layout.tsx で定義したCSS変数を使うように変更 */
+    font-family: var(--font-zen-kaku), var(--font-noto-sans-jp), sans-serif;
     background-attachment: fixed;
   }
 }
@@ -72,20 +55,20 @@ body {
   .glow-effect {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
   }
-  
+
   .hotaruika-glow {
     animation: hotaruika-pulse 3s ease-in-out infinite;
   }
-  
+
   .floating {
     animation: floating 6s ease-in-out infinite;
   }
-  
+
   .sparkle {
     position: relative;
     overflow: hidden;
   }
-  
+
   .sparkle::before {
     content: '';
     position: absolute;
@@ -161,4 +144,13 @@ body {
   50% {
     opacity: 1;
   }
+}
+
+.text-glow-normal {
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
+               0 0 12px rgba(120, 180, 255, 0.4);
+}
+
+.text-glow-weak {
+  text-shadow: 0 0 6px rgba(209, 213, 219, 0.3);
 }
