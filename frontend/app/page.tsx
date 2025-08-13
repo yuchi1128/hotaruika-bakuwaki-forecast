@@ -90,8 +90,8 @@ const predictionLevels: PredictionLevel[] = [
   { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
   { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
   { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-500/[.14] border border-green-400/20 backdrop-blur-sm' },
-  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
-  { level: 5, name: '爆湧き', description: '最高の身投げが期待できます！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
+  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます！！', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
+  { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
 const getWeatherFromCode = (code: number): string => {
@@ -401,14 +401,14 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen relative z-10">
-        <header className="text-center py-12 px-4">
+        <header className="text-center pt-12 pb-8 md:pb-12 px-4">
           <div className="flex items-center justify-center gap-4 mb-4">
             <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
               ホタルイカ爆湧き予報
             </h1>
           </div>
-          <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
-          <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
+          <p className="text-sm md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
+          <div className="flex items-center justify-center gap-2 text-[11px] md:text-xs text-blue-300">
             <MapPin className="w-3 h-3" />
             <span>富山湾</span>
             <TrendingUp className="w-3 h-3 ml-3" />
@@ -494,14 +494,14 @@ export default function Home() {
   return (
     <div className="min-h-screen relative z-10">
       {/* ヘッダー */}
-      <header className="text-center py-12 px-4">
+      <header className="text-center pt-12 pb-8 md:pb-12 px-4">
         <div className="flex items-center justify-center gap-4 mb-4">
           <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
             ホタルイカ爆湧き予報
           </h1>
         </div>
-        <p className="text-base md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
-        <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
+        <p className="text-sm md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
+        <div className="flex items-center justify-center gap-2 text-[11px] md:text-xs text-blue-300">
           <MapPin className="w-3 h-3" />
           <span>富山湾</span>
           <TrendingUp className="w-3 h-3 ml-3" />
