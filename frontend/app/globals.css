@@ -43,11 +43,13 @@
   * {
     @apply border-border;
   }
+  html, body {
+    @apply h-full;
+  }
   body {
-    @apply bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-foreground min-h-screen;
+    @apply bg-slate-900;
     /* font-family を layout.tsx で定義したCSS変数を使うように変更 */
     font-family: var(--font-zen-kaku), var(--font-noto-sans-jp), sans-serif;
-    background-attachment: fixed;
   }
 }
 

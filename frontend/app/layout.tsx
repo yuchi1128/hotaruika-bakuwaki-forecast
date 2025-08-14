@@ -43,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${zenKaku.variable} ${notoSansJp.variable}`}>
+        <div className="fixed inset-0 z-[-1] bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
         <div className="stars">
           {Array.from({ length: 50 }).map((_, i) => (
             <div
@@ -56,7 +57,7 @@ export default function RootLayout({
             />
           ))}
         </div>
-        {children}
+        <main className="relative z-10">{children}</main>
       </body>
     </html>
   );
