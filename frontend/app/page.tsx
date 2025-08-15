@@ -1,31 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle, RefreshCw, Sparkles, Clock, Lightbulb } from 'lucide-react';
+import CustomSelect from '@/components/CustomSelect';
+import {
+  MessageCircle,
+  Send,
+  Calendar,
+  MapPin,
+  Cloudy,
+  TrendingUp,
+  Thermometer,
+  Moon,
+  Image as ImageIcon,
+  Wind,
+  HelpCircle,
+  RefreshCw,
+  Clock,
+  Lightbulb,
+  Search,
+  X,
+} from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"
+} from '@/components/ui/carousel';
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-
+} from '@/components/ui/dialog';
 
 interface PredictionLevel {
   level: number;
@@ -60,7 +76,7 @@ interface Reply {
   id: number;
   post_id: number;
   parent_reply_id: number | null;
-  username:string;
+  username: string;
   content: string;
   created_at: string;
   good_count: number;
@@ -123,7 +139,7 @@ const getLastUpdateTime = (): Date => {
   const updateHours = [2, 5, 8, 11, 14, 17, 20, 23];
   const currentHour = now.getHours();
 
-  const lastUpdateHourToday = [...updateHours].reverse().find(hour => currentHour >= hour);
+  const lastUpdateHourToday = [...updateHours].reverse().find((hour) => currentHour >= hour);
 
   const lastUpdateDate = new Date(now);
 
@@ -136,7 +152,6 @@ const getLastUpdateTime = (): Date => {
   return lastUpdateDate;
 };
 
-
 export default function Home() {
   const router = useRouter();
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
@@ -146,12 +161,29 @@ export default function Home() {
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [selectedLabel, setSelectedLabel] = useState<string>('その他');
+  const [selectedLabel, setSelectedLabel] = useState<string>('現地情報');
   const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // 検索
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // 並び替え
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
+
+  // 口コミのページネーション
+  const COMMENTS_PER_PAGE = 30;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const sortOptions = [
+    { value: 'newest', label: '新しい順' },
+    { value: 'oldest', label: '古い順' },
+    { value: 'good', label: 'Good数順' },
+    { value: 'bad', label: 'Bad数順' },
+  ];
 
   useEffect(() => {
     fetchForecasts();
@@ -161,10 +193,29 @@ export default function Home() {
     fetchPosts();
   }, [selectedFilterLabel]);
 
+  // フィルタ・検索・並び替え変更時は1ページ目へ
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilterLabel]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortOrder]);
+
   const fetchForecasts = async () => {
     setLoading(true);
     setError(null);
     try {
+
+      const response = await fetch(`http://localhost:8080/api/prediction`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: ForecastData[] = await response.json();
 
       // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
       // const mockData: ForecastData[] = [
@@ -178,57 +229,51 @@ export default function Home() {
       // ];
       // const data = mockData;
 
-      // The backend now serves the cached prediction data.
-      const response = await fetch(`http://localhost:8080/api/prediction`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: ForecastData[] = await response.json();
+      const mappedPredictions: DayPrediction[] = data
+        .map((forecast) => {
+          const date = new Date(forecast.date);
+          if (isNaN(date.getTime())) {
+            console.error('Invalid date received from API:', forecast.date);
+            return null;
+          }
 
+          const month = date.getMonth();
+          const isSeason = month >= 1 && month <= 4;
 
-      const mappedPredictions: DayPrediction[] = data.map(forecast => {
-        const date = new Date(forecast.date);
-        if (isNaN(date.getTime())) {
-          console.error("Invalid date received from API:", forecast.date);
-          return null;
-        }
-        
-        const month = date.getMonth();
-        const isSeason = month >= 1 && month <= 4;
+          let level = -1;
 
-        let level = -1;
-        
-        if (isSeason) {
+          if (isSeason) {
             if (forecast.predicted_amount >= 1.25) {
-                level = 5; // 爆湧き
+              level = 5; // 爆湧き
             } else if (forecast.predicted_amount >= 1.0) {
-                level = 4; // 大湧き
+              level = 4; // 大湧き
             } else if (forecast.predicted_amount >= 0.75) {
-                level = 3; // 湧き
+              level = 3; // 湧き
             } else if (forecast.predicted_amount >= 0.5) {
-                level = 2; // チョイ湧き
+              level = 2; // チョイ湧き
             } else if (forecast.predicted_amount >= 0.25) {
-                level = 1; // プチ湧き
+              level = 1; // プチ湧き
             } else {
-                level = 0; // 湧きなし
+              level = 0; // 湧きなし
             }
-        }
+          }
 
-        return {
-          date,
-          level,
-          temperature_max: forecast.temperature_max,
-          temperature_min: forecast.temperature_min,
-          weather: getWeatherFromCode(forecast.weather_code),
-          moonAge: forecast.moon_age,
-          wind_direction: getWindDirection(forecast.dominant_wind_direction),
-        };
-      }).filter(p => p !== null) as DayPrediction[];
+          return {
+            date,
+            level,
+            temperature_max: forecast.temperature_max,
+            temperature_min: forecast.temperature_min,
+            weather: getWeatherFromCode(forecast.weather_code),
+            moonAge: forecast.moon_age,
+            wind_direction: getWindDirection(forecast.dominant_wind_direction),
+          };
+        })
+        .filter((p) => p !== null) as DayPrediction[];
 
       setPredictions(mappedPredictions);
       setLastUpdated(getLastUpdateTime());
     } catch (error) {
-      console.error("Failed to fetch forecasts:", error);
+      console.error('Failed to fetch forecasts:', error);
       setError('データの取得に失敗しました。しばらくしてから再度お試しください。');
     } finally {
       setLoading(false);
@@ -239,7 +284,7 @@ export default function Home() {
     try {
       let url = 'http://localhost:8080/api/posts';
       if (selectedFilterLabel) {
-        url += `?label=${selectedFilterLabel}`;
+        url += `?label=${encodeURIComponent(selectedFilterLabel)}`;
       }
       const response = await fetch(url);
       if (!response.ok) {
@@ -247,24 +292,28 @@ export default function Home() {
       }
       const data: Post[] = await response.json();
 
-      const commentsWithReplies: Comment[] = await Promise.all(data.map(async post => {
-        const replies = await fetchRepliesForPost(post.id);
-        return {
-          ...post,
-          replies: replies.map(reply => ({
-            ...reply,
-            goodCount: reply.good_count,
-            badCount: reply.bad_count,
-            myReaction: getReaction('reply', reply.id),
-          })),
-          goodCount: post.good_count,
-          badCount: post.bad_count,
-          myReaction: getReaction('post', post.id),
-        };
-      }));
+      const commentsWithReplies: Comment[] = await Promise.all(
+        data.map(async (post) => {
+          const replies = await fetchRepliesForPost(post.id);
+          return {
+            ...post,
+            replies: replies.map((reply) => ({
+              ...reply,
+              goodCount: reply.good_count,
+              badCount: reply.bad_count,
+              myReaction: getReaction('reply', reply.id),
+            })),
+            goodCount: post.good_count,
+            badCount: post.bad_count,
+            myReaction: getReaction('post', post.id),
+          };
+        })
+      );
+
       setComments(commentsWithReplies);
+      setCurrentPage(1);
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
+      console.error('Failed to fetch posts:', error);
     }
   };
 
@@ -294,10 +343,9 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      fetchPosts();
-    } catch (error)
-    {
-      console.error("Failed to create post:", error);
+      await fetchPosts();
+    } catch (error) {
+      console.error('Failed to create post:', error);
     }
   };
 
@@ -314,9 +362,9 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      fetchPosts();
+      await fetchPosts();
     } catch (error) {
-      console.error("Failed to create reply:", error);
+      console.error('Failed to create reply:', error);
     }
   };
 
@@ -334,9 +382,9 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       saveReaction(type, targetId, reactionType);
-      fetchPosts();
+      await fetchPosts();
     } catch (error) {
-      console.error("Failed to create reaction:", error);
+      console.error('Failed to create reaction:', error);
     }
   };
 
@@ -380,7 +428,7 @@ export default function Home() {
         setSelectedLabel('その他');
       };
       reader.onerror = (error) => {
-        console.error("Error reading file:", error);
+        console.error('Error reading file:', error);
       };
     } else {
       await createPost(authorName, newComment, selectedLabel, null);
@@ -399,7 +447,7 @@ export default function Home() {
     return date.toLocaleDateString('ja-JP', {
       month: 'numeric',
       day: 'numeric',
-      weekday: 'short'
+      weekday: 'short',
     });
   };
 
@@ -408,7 +456,7 @@ export default function Home() {
     nextDay.setDate(date.getDate() + 1);
 
     const dateOptions: Intl.DateTimeFormatOptions = { month: 'numeric', day: 'numeric', weekday: 'short' };
-    
+
     const dateStr = date.toLocaleDateString('ja-JP', dateOptions);
     const nextDayStr = nextDay.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
 
@@ -419,26 +467,75 @@ export default function Home() {
     const datePart = date.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'numeric',
-      day: 'numeric'
+      day: 'numeric',
     });
     const timePart = date.toLocaleTimeString('ja-JP', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
     return `${datePart} ${timePart}`;
   };
 
   const getOffSeasonMessage = (date: Date) => {
     const month = date.getMonth();
-    if (month === 0) { // 1月の場合b, ...
-      return "現在はホタルイカの身投げの時期ではありません。2月から予測を再開します";
+    if (month === 0) {
+      return '現在はホタルイカの身投げの時期ではありません。2月から予測を再開します';
     }
-    // 6月〜12月の場合
-    return "現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。";
+    return '現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。';
   };
 
   const todayPrediction = predictions[0];
   const weekPredictions = predictions.slice(1);
+
+  // 検索とページネーションのためのフィルタリング
+  const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
+  const filteredComments = useMemo(() => {
+    if (!normalizedQuery) return comments;
+
+    return comments.filter((c) => {
+      const targets: string[] = [
+        c.username ?? '',
+        c.content ?? '',
+        ...c.replies.flatMap((r) => [r.username ?? '', r.content ?? '']),
+      ];
+      return targets.some((t) => (t || '').toLowerCase().includes(normalizedQuery));
+    });
+  }, [comments, normalizedQuery]);
+
+  // 並び替え（新しい順 デフォルト, 古い順, good数順, bad数順）
+  const sortedComments = useMemo(() => {
+    const arr = filteredComments.slice();
+    switch (sortOrder) {
+      case 'newest':
+        arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'good':
+        arr.sort((a, b) => b.goodCount - a.goodCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'bad':
+        arr.sort((a, b) => b.badCount - a.badCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+    }
+    return arr;
+  }, [filteredComments, sortOrder]);
+
+  // コメント件数の変動で現在のページが範囲外なら補正（並び替え後の件数で判断）
+  useEffect(() => {
+    const totalPagesCalc = Math.max(1, Math.ceil(sortedComments.length / COMMENTS_PER_PAGE));
+    if (currentPage > totalPagesCalc) {
+      setCurrentPage(totalPagesCalc);
+    }
+  }, [sortedComments.length, currentPage]);
+
+  // ページネーション用の派生値（並び替え後の配列に対して適用）
+  const totalComments = sortedComments.length;
+  const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
+  const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE;
+  const endIndex = Math.min(startIndex + COMMENTS_PER_PAGE, totalComments);
+  const paginatedComments = useMemo(() => sortedComments.slice(startIndex, endIndex), [sortedComments, startIndex, endIndex]);
 
   if (loading) {
     return (
@@ -458,7 +555,6 @@ export default function Home() {
           </div>
         </header>
         <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
-          {/* 今日の予報スケルトン */}
           <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
             <CardHeader className="text-center pt-8 pb-6">
               <Skeleton className="h-8 w-32 mx-auto mb-2" />
@@ -485,7 +581,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* 週間予報スケルトン */}
           <Card className="mb-16 bg-transparent border-none shadow-none">
             <CardHeader className="px-0">
               <div className="flex items-center gap-3">
@@ -496,7 +591,7 @@ export default function Home() {
             <CardContent className="p-0">
               <Carousel
                 opts={{
-                  align: "start",
+                  align: 'start',
                 }}
                 className="w-full max-w-6xl mx-auto"
               >
@@ -504,11 +599,10 @@ export default function Home() {
                   {[...Array(6)].map((_, index) => (
                     <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
                       <div className="flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 bg-white/5">
-                        {/* 上部コンテンツのラッパー */}
                         <div>
                           <Skeleton className="h-5 w-24 mx-auto mb-1" />
                           <Skeleton className="h-4 w-20 mx-auto mb-2" />
-                          
+
                           <div className="mb-4 min-h-[5rem] flex flex-col justify-center items-center">
                             <Skeleton className="h-5 w-16 mb-3" />
                             <Skeleton className="h-10 w-full" />
@@ -529,7 +623,6 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* 下部ボタンのラッパー */}
                         <div className="mt-4 w-full flex justify-center">
                           <Skeleton className="h-7 w-full" />
                         </div>
@@ -550,13 +643,11 @@ export default function Home() {
   if (error) {
     return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   }
-  
-  const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
 
+  const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
 
   return (
     <div className="min-h-screen relative z-10">
-      {/* ヘッダー */}
       <header className="text-center pt-12 pb-8 md:pb-12 px-4">
         <div className="flex items-center justify-center gap-4 mb-4">
           <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
@@ -570,144 +661,116 @@ export default function Home() {
           <TrendingUp className="w-3 h-3 ml-3" />
           <span>リアルタイム予測</span>
         </div>
-
       </header>
 
       <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
-        {/* 今日の予測 */}
         {todayPrediction && (
-          <Card
-            className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl"
-          >
-        <CardHeader className="text-center pt-8 pb-6">
-          <div className="flex justify-center items-center gap-2 mb-1">
-            <CardTitle className="text-2xl md:text-3xl font-bold text-white">
-              今日の予報
-            </CardTitle>
-            
-            <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-              <DialogTrigger asChild>
-                <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
-                  <HelpCircle className="w-5 h-5" />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-blue-200">
-                    <HelpCircle className="w-5 h-5" />
-                    <span>予報の説明</span>
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="mt-2 space-y-5 py-2 text-sm">
-                  {/* 予報の時間区分セクション */}
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-6 h-6 mt-1 text-blue-300 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-200 mb-2">予報の時間区分</h4>
-                      <div className="space-y-3 text-slate-300">
-                        <p>
-                          このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを<strong className="text-white">朝5時</strong>に行っています。
-                        </p>
-                        <div className="grid gap-1">
-                          <p className="font-semibold text-slate-200">
-                            <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">05:00〜23:59</span> の閲覧時
-                          </p>
-                          <p className="pl-3 border-l-2 border-blue-400">
-                            <strong className="text-white">今夜から翌朝にかけて</strong>の予報です。
+          <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
+            <CardHeader className="text-center pt-8 pb-6">
+              <div className="flex justify-center items-center gap-2 mb-1">
+                <CardTitle className="text-2xl md:text-3xl font-bold text-white">今日の予報</CardTitle>
+
+                <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
+                      <HelpCircle className="w-5 h-5" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-blue-200">
+                        <HelpCircle className="w-5 h-5" />
+                        <span>予報の説明</span>
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-2 space-y-5 py-2 text-sm">
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-6 h-6 mt-1 text-blue-300 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-semibold text-slate-200 mb-2">予報の時間区分</h4>
+                          <div className="space-y-3 text-slate-300">
+                            <p>このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを<strong className="text-white">朝5時</strong>に行っています。</p>
+                            <div className="grid gap-1">
+                              <p className="font-semibold text-slate-200">
+                                <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">05:00〜23:59</span> の閲覧時
+                              </p>
+                              <p className="pl-3 border-l-2 border-blue-400">
+                                <strong className="text-white">今夜から翌朝にかけて</strong>の予報です。
+                              </p>
+                            </div>
+                            <div className="grid gap-1">
+                              <p className="font-semibold text-slate-200">
+                                <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">00:00〜04:59</span> の閲覧時
+                              </p>
+                              <p className="pl-3 border-l-2 border-blue-400">
+                                <strong className="text-white">現在の朝</strong>の予報です。
+                              </p>
+                            </div>
+                            <p className="text-xs text-slate-400 pt-1">※気温・天気などの気象データは、予報対象日の日中のデータです。</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="w-6 h-6 mt-1 text-green-300 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
+                          <p className="text-slate-300 leading-relaxed">
+                            次の時刻に更新されます：<br />
+                            <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 23:00, 02:00</span>
                           </p>
                         </div>
-                        <div className="grid gap-1">
-                          <p className="font-semibold text-slate-200">
-                            <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">00:00〜04:59</span> の閲覧時
-                          </p>
-                          <p className="pl-3 border-l-2 border-blue-400">
-                            <strong className="text-white">現在の朝</strong>の予報です。
-                          </p>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Lightbulb className="w-6 h-6 mt-1 text-yellow-300 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-semibold text-slate-200 mb-1">予測の表示</h4>
+                          <div className="text-slate-300 leading-relaxed space-y-2">
+                            <p>予測はシーズン期間（2月〜5月）のみ行われ、期間外は「オフシーズン」と表示されます。</p>
+                            <p>
+                              予測レベルは以下の6段階です：<br />
+                              <span className="mr-1">「<span className="text-gray-300 font-semibold">湧きなし</span>」</span>
+                              <span className="mr-1">「<span className="text-blue-300 font-semibold">プチ湧き</span>」</span>
+                              <span className="mr-1">「<span className="text-cyan-300 font-semibold">チョイ湧き</span>」</span>
+                              <br className="sm:hidden" />
+                              <span className="mr-1">「<span className="text-green-300 font-semibold">湧き</span>」</span>
+                              <span className="mr-1">「<span className="text-yellow-300 font-semibold">大湧き</span>」</span>
+                              <span className="mr-1">「<span className="text-pink-300 font-semibold">爆湧き</span>」</span>
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-xs text-slate-400 pt-1">
-                          ※気温・天気などの気象データは、予報対象日の日中のデータです。
-                        </p>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* 予報の更新セクション */}
-                  <div className="flex items-start gap-3">
-                    <RefreshCw className="w-6 h-6 mt-1 text-green-300 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
-                      <p className="text-slate-300 leading-relaxed">
-                        次の時刻に更新されます：<br/>
-                        <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* 予測の表示セクション */}
-                  <div className="flex items-start gap-3">
-                    <Lightbulb className="w-6 h-6 mt-1 text-yellow-300 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-200 mb-1">予測の表示</h4>
-                      <div className="text-slate-300 leading-relaxed space-y-2">
-                        <p>
-                          予測はシーズン期間（2月〜5月）のみ行われ、期間外は「オフシーズン」と表示されます。
-                        </p>
-                        <p>
-                          予測レベルは以下の6段階です：<br />
-                          <span className="mr-1">
-                            「<span className="text-gray-300 font-semibold">湧きなし</span>」
-                          </span>
-                          <span className="mr-1">
-                            「<span className="text-blue-300 font-semibold">プチ湧き</span>」
-                          </span>
-                          <span className="mr-1">
-                            「<span className="text-cyan-300 font-semibold">チョイ湧き</span>」
-                          </span>
-                          <br className="sm:hidden" />
-                          <span className="mr-1">
-                            「<span className="text-green-300 font-semibold">湧き</span>」
-                          </span>
-                          <span className="mr-1">
-                            「<span className="text-yellow-300 font-semibold">大湧き</span>」
-                          </span>
-                          <span className="mr-1">
-                            「<span className="text-pink-300 font-semibold">爆湧き</span>」
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
+              {todayPrediction.level !== -1 && lastUpdated && (
+                <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
+                  <RefreshCw className="w-3 h-3" />
+                  <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-              </DialogContent>
-            </Dialog>           
-          </div>
-          <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
-          {todayPrediction.level !== -1 && lastUpdated && (
-            <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
-              <RefreshCw className="w-3 h-3" />
-              <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          )}
-        </CardHeader>
+              )}
+            </CardHeader>
             <CardContent className="text-center px-4 pb-8">
               {todayPrediction.level === -1 ? (
                 <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm mb-6">
                   <div className="flex flex-col justify-center items-center min-h-[160px] md:min-h-[180px]">
                     <p className="text-3xl md:text-4xl font-bold text-gray-300">オフシーズン</p>
-                    <p className="text-sm text-gray-400 mt-2 px-4">
-                      {getOffSeasonMessage(todayPrediction.date)}
-                    </p>
+                    <p className="text-sm text-gray-400 mt-2 px-4">{getOffSeasonMessage(todayPrediction.date)}</p>
                   </div>
                 </div>
               ) : (
                 <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
                   {todayPrediction.level > 0 && (
-                    <div className={`
+                    <div
+                      className={`
                       text-3xl md:text-4xl font-bold mb-2
                       ${predictionLevels[todayPrediction.level].color}
                       ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                    `}>
+                    `}
+                    >
                       {predictionLevels[todayPrediction.level].name}
                     </div>
                   )}
@@ -716,27 +779,23 @@ export default function Home() {
                     {todayPrediction.level === 5 ? (
                       <>
                         <div className="flex flex-col items-center sm:hidden">
-                          <div className="flex justify-center gap-2">
-                            {todayIcons.slice(0, 3)}
-                          </div>
-                          <div className="flex justify-center gap-2 -mt-3">
-                            {todayIcons.slice(3, 5)}
-                          </div>
+                          <div className="flex justify-center gap-2">{todayIcons.slice(0, 3)}</div>
+                          <div className="flex justify-center gap-2 -mt-3">{todayIcons.slice(3, 5)}</div>
                         </div>
-                        <div className="hidden sm:flex justify-center gap-2">
-                          {todayIcons}
-                        </div>
+                        <div className="hidden sm:flex justify-center gap-2">{todayIcons}</div>
                       </>
                     ) : (
                       <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
                         {todayPrediction.level > 0 ? (
                           todayIcons
                         ) : (
-                          <div className={`
+                          <div
+                            className={`
                             text-3xl md:text-4xl font-bold mb-2
                             ${predictionLevels[todayPrediction.level].color}
                             ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                          `}>
+                          `}
+                          >
                             {predictionLevels[todayPrediction.level].name}
                           </div>
                         )}
@@ -744,9 +803,7 @@ export default function Home() {
                     )}
                   </div>
 
-                  <p className="text-lg text-gray-300">
-                    {predictionLevels[todayPrediction.level].description}
-                  </p>
+                  <p className="text-lg text-gray-300">{predictionLevels[todayPrediction.level].description}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
@@ -780,11 +837,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-8 flex justify-center">
-                <Button
-                  onClick={() => handleCardClick(todayPrediction.date)}
-                  variant="outline"
-                  className="bg-white/[0.06] border border-white/10 text-slate-200 hover:bg-white/10 transition-colors duration-300 px-6 py-2 rounded-lg"
-                >
+                <Button onClick={() => handleCardClick(todayPrediction.date)} variant="outline" className="bg-white/[0.06] border border-white/10 text-slate-200 hover:bg白/10 transition-colors duration-300 px-6 py-2 rounded-lg">
                   詳細を見る
                 </Button>
               </div>
@@ -792,10 +845,9 @@ export default function Home() {
           </Card>
         )}
 
-        {/* 週間予測 */}
         <Card className="mb-16 bg-transparent border-none shadow-none">
           <CardHeader className="px-0">
-            <CardTitle className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
+            <CardTitle className="text-xl md:text-2xl font-bold text白 flex items-center gap-3">
               <Calendar className="w-7 h-7 text-blue-300" />
               週間予報
             </CardTitle>
@@ -803,7 +855,7 @@ export default function Home() {
           <CardContent className="p-0">
             <Carousel
               opts={{
-                align: "start",
+                align: 'start',
                 loop: true,
               }}
               className="w-full max-w-6xl mx-auto"
@@ -811,16 +863,10 @@ export default function Home() {
               <CarouselContent className="-ml-2 md:-ml-4">
                 {weekPredictions.map((prediction, index) => (
                   <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
-                    <div
-                      className={`flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 backdrop-blur-sm bg-white/5`}
-                    >
+                    <div className="flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 backdrop-blur-sm bg-white/5">
                       <div>
-                        <p className="text-base font-semibold text-blue-200 mb-1 text-center">
-                          {formatDateForWeek(prediction.date)}
-                        </p>
-                        <p className="text-xs text-blue-300 mb-2 text-center">
-                          深夜〜翌朝の予測
-                        </p>
+                        <p className="text-base font-semibold text-blue-200 mb-1 text-center">{formatDateForWeek(prediction.date)}</p>
+                        <p className="text-xs text-blue-300 mb-2 text-center">深夜〜翌朝の予測</p>
                         <div className="mb-4 min-h-[5rem] flex flex-col justify-center">
                           {prediction.level === -1 ? (
                             <div className="flex flex-col justify-center items-center text-center">
@@ -828,16 +874,16 @@ export default function Home() {
                             </div>
                           ) : (
                             <>
-                              <div className={`
+                              <div
+                                className={`
                                 text-lg font-bold mb-3 text-center
                                 ${predictionLevels[prediction.level].color}
                                 ${prediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                              `}>
+                              `}
+                              >
                                 {predictionLevels[prediction.level].name}
                               </div>
-                              <div className="flex justify-center items-center h-10">
-                                {renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}
-                              </div>
+                              <div className="flex justify-center items-center h-10">{renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}</div>
                             </>
                           )}
                         </div>
@@ -882,7 +928,10 @@ export default function Home() {
                       </div>
                       <div className="mt-4 w-full flex justify-center">
                         <Button
-                          onClick={(e) => { e.stopPropagation(); handleCardClick(prediction.date); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCardClick(prediction.date);
+                          }}
                           variant="outline"
                           className="h-7 text-xs font-medium bg-white/5 border-blue-500/40 text-blue-100 hover:bg-white/15 hover:border-blue-400/50 transition-all duration-200 px-5"
                         >
@@ -899,7 +948,6 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* 口コミ掲示板 */}
         <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
           <CardHeader>
             <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
@@ -909,7 +957,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             {/* コメント投稿フォーム */}
-            <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
+            <div className="mb-9 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <Input
                   placeholder="お名前"
@@ -919,7 +967,7 @@ export default function Home() {
                 />
               </div>
               <Textarea
-                placeholder="ホタルイカについてご自由にお書きください！　現地の情報の場合、場所と一緒にお書きください！"
+                placeholder="ホタルイカについてご自由にお書きください！"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="mb-4 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
@@ -930,35 +978,39 @@ export default function Home() {
                   <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
                   画像を選択
                 </label>
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
+                <Input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 {selectedImage && <span className="text-sm text-gray-300">{selectedImage.name}</span>}
               </div>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <span className="text-gray-300 text-xs font-bold">ラベル：</span>
+
                 <Button
-                  variant={selectedLabel === '現地情報' ? 'default' : 'outline'}
+                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold antialiased ${
+                    selectedLabel === '現地情報'
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'border-purple-500 text-purple-300 hover:bg-purple-900/20'
+                  }`}
                   onClick={() => setSelectedLabel('現地情報')}
-                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedLabel === '現地情報' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}`}
+                  variant={selectedLabel === '現地情報' ? 'default' : 'outline'}
                 >
                   現地情報
                 </Button>
+
                 <Button
-                  variant={selectedLabel === 'その他' ? 'default' : 'outline'}
+                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold antialiased ${
+                    selectedLabel === 'その他'
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'border-purple-500 text-purple-300 hover:bg-purple-900/20'
+                  }`}
                   onClick={() => setSelectedLabel('その他')}
-                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedLabel === 'その他' ? "bg-purple-600 hover:bg-purple-700" : "border-purple-500 text-purple-300 hover:bg-purple-900/20"}`}
+                  variant={selectedLabel === 'その他' ? 'default' : 'outline'}
                 >
                   その他
                 </Button>
               </div>
               <Button
                 onClick={handleSubmitComment}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-bold"
                 disabled={!newComment.trim() || !authorName.trim()}
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -967,55 +1019,137 @@ export default function Home() {
             </div>
 
             {/* ラベルフィルター */}
-            <div className="mb-7 flex flex-wrap items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="text-gray-300 text-xs font-bold">ラベル：</span>
               <Button
-                variant={selectedFilterLabel === null ? 'default' : 'outline'}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === null ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
                 onClick={() => setSelectedFilterLabel(null)}
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === null ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
+                variant={selectedFilterLabel === null ? 'default' : 'outline'}
               >
                 全て
               </Button>
               <Button
-                variant={selectedFilterLabel === '現地情報' ? 'default' : 'outline'}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '現地情報' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
                 onClick={() => setSelectedFilterLabel('現地情報')}
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === '現地情報' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
-                >
+                variant={selectedFilterLabel === '現地情報' ? 'default' : 'outline'}
+              >
                 現地情報
               </Button>
               <Button
-                variant={selectedFilterLabel === 'その他' ? 'default' : 'outline'}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === 'その他' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
                 onClick={() => setSelectedFilterLabel('その他')}
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === 'その他' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
+                variant={selectedFilterLabel === 'その他' ? 'default' : 'outline'}
               >
                 その他
               </Button>
               <Button
-                variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '管理者' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
                 onClick={() => setSelectedFilterLabel('管理者')}
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm ${selectedFilterLabel === '管理者' ? "bg-blue-600 hover:bg-blue-700" : "border-blue-500 text-blue-300 hover:bg-blue-900/20"}`}
+                variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
               >
                 管理者
               </Button>
             </div>
 
-            {/* コメント一覧 */}
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  handleReaction={handleReaction}
-                  formatTime={formatTime}
-                  createReply={createReply}
+            {/* 検索 */}
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-gray-300 text-xs font-bold whitespace-nowrap">検索：</span>
+              <div className="relative w-full md:w-2/3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="名前・投稿内容で検索"
+                  className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 />
-              ))}
+                {searchQuery && (
+                  <button
+                    aria-label="検索をクリア"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-gray-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* 並び替え */}
+            <div className="mb-5 flex items-center gap-2">
+              <span className="text-gray-300 text-xs font-bold whitespace-nowrap">並び替え：</span>
+              <CustomSelect
+                options={sortOptions}
+                value={sortOrder}
+                onChange={(value) => setSortOrder(value as 'newest' | 'oldest' | 'good' | 'bad')}
+              />
+            </div>
+
+            {/* ページネーションコントロール（上部） */}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex + 1}〜${endIndex}件 / 全${totalComments}件`}</div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  前へ
+                </Button>
+                <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
+                <Button
+                  variant="outline"
+                  className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || totalComments === 0}
+                >
+                  次へ
+                </Button>
+              </div>
+            </div>
+
+            {/* コメント一覧（検索＋並び替え＋30件ごとに表示） */}
+            <div className="space-y-4">
+              {paginatedComments.length === 0 ? (
+                <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する口コミはありません' : '口コミはまだありません'}</div>
+              ) : (
+                paginatedComments.map((comment) => (
+                  <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} formatTime={formatTime} createReply={createReply} />
+                ))
+              )}
+            </div>
+
+            {/* ページネーションコントロール（下部） */}
+            {totalComments > 0 && (
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <div className="text-xs text-gray-400">
+                  {startIndex + 1}〜{endIndex}件 / 全{totalComments}件
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    前へ
+                  </Button>
+                  <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
+                  <Button
+                    variant="outline"
+                    className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    次へ
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* フッター */}
       <footer className="text-center py-8 text-gray-400 border-t border-blue-500/20">
         <p className="mb-2">© 2026 ホタルイカ爆湧き予測サイト</p>
       </footer>
