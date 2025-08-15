@@ -1,7 +1,8 @@
-import DetailClientView from './DetailClientView'; // クライアントコンポーネント
-import type { HourlyWeather, TideData } from './types'; 
+import DetailClientView from './DetailClientView';
+import type { HourlyWeather, TideData } from './types';
+import { ShieldAlert } from 'lucide-react';
 
-// --- データ取得関数 ---
+// --- データ取得関数 (変更なし) ---
 async function fetchWeatherData(targetDate: string): Promise<HourlyWeather[]> {
   const startDate = targetDate;
   const endDate = new Date(targetDate);
@@ -47,6 +48,45 @@ async function fetchTideData(targetDate: string): Promise<TideData> {
 export default async function DetailPage({ params }: { params: { date: string } }) {
   const { date } = params;
 
+  // --- 日付の妥当性チェック ---
+  const now = new Date();
+  const targetDate = new Date(date);
+  now.setHours(0, 0, 0, 0);
+
+  const oneMonthAgo = new Date(now);
+  oneMonthAgo.setMonth(now.getMonth() - 1);
+
+  const oneMonthForward = new Date(now);
+  oneMonthForward.setMonth(now.getMonth() + 1);
+
+  // 指定された日付が範囲外ならエラー画面を表示
+  if (targetDate < oneMonthAgo || targetDate > oneMonthForward) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto bg-slate-900/70 backdrop-blur-sm border border-blue-500/30 rounded-2xl shadow-xl text-center p-8 space-y-6">
+          <div className="flex justify-center">
+            <ShieldAlert className="w-12 h-12 text-blue-300" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-100">
+              データ範囲外です
+            </h2>
+            <p className="text-slate-400 max-w-sm mx-auto">
+              予報データは現在から前後1ヶ月の範囲で表示できます。
+            </p>
+          </div>
+          <a 
+            href="/" 
+            className="inline-block bg-slate-800 text-white px-6 py-2 rounded-full font-medium hover:bg-slate-700 transition-colors border border-slate-600"
+          >
+            ホームに戻る
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // --- データ取得と画面表示 ---
   try {
     const [weatherData, tideData] = await Promise.all([
       fetchWeatherData(date),
