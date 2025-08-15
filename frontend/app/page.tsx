@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle, RefreshCw } from 'lucide-react';
+import { Heart, MessageCircle, Send, Calendar, MapPin, Waves, Cloudy, TrendingUp, Thermometer, Moon, ThumbsUp, ThumbsDown, Image as ImageIcon, Wind, HelpCircle, RefreshCw, Sparkles, Clock, Lightbulb } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,6 +22,8 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 
 
@@ -164,24 +166,24 @@ export default function Home() {
     setError(null);
     try {
 
-      // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
-      const mockData: ForecastData[] = [
-        { date: "2025-05-26", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-        { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
-        { date: "2025-05-28", predicted_amount: 0.3, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
-        { date: "2025-05-29", predicted_amount: 0.6, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
-        { date: "2025-05-30", predicted_amount: 0.9, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
-        { date: "2025-05-31", predicted_amount: 1.2, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
-        { date: "2025-06-01", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-      ];
-      const data = mockData;
+      // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
+      // const mockData: ForecastData[] = [
+      //   { date: "2025-05-26", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      //   { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
+      //   { date: "2025-05-28", predicted_amount: 0.3, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
+      //   { date: "2025-05-29", predicted_amount: 0.6, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
+      //   { date: "2025-05-30", predicted_amount: 0.9, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
+      //   { date: "2025-05-31", predicted_amount: 1.2, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
+      //   { date: "2025-06-01", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      // ];
+      // const data = mockData;
 
-      // // The backend now serves the cached prediction data.
-      // const response = await fetch(`http://localhost:8080/api/prediction`);
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! status: ${response.status}`);
-      // }
-      // const data: ForecastData[] = await response.json();
+      // The backend now serves the cached prediction data.
+      const response = await fetch(`http://localhost:8080/api/prediction`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: ForecastData[] = await response.json();
 
 
       const mappedPredictions: DayPrediction[] = data.map(forecast => {
@@ -577,78 +579,117 @@ export default function Home() {
           <Card
             className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl"
           >
-            <CardHeader className="text-center pt-8 pb-6">
-              <div className="flex justify-center items-center gap-2 mb-1">
-                <CardTitle className="text-2xl md:text-3xl font-bold text-white">
-                  今日の予報
-                </CardTitle>
-                <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-                  <DialogTrigger asChild>
-                    <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
-                      <HelpCircle className="w-5 h-5" />
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <h4 className="font-medium leading-none text-blue-200">予報の時間区分</h4>
-                        <p className="text-sm text-slate-300">
-                          このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを朝5時に行っています。
+        <CardHeader className="text-center pt-8 pb-6">
+          <div className="flex justify-center items-center gap-2 mb-1">
+            <CardTitle className="text-2xl md:text-3xl font-bold text-white">
+              今日の予報
+            </CardTitle>
+            
+            <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+              <DialogTrigger asChild>
+                <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
+                  <HelpCircle className="w-5 h-5" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-blue-200">
+                    <HelpCircle className="w-5 h-5" />
+                    <span>予報の説明</span>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="mt-2 space-y-5 py-2 text-sm">
+                  {/* 予報の時間区分セクション */}
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-6 h-6 mt-1 text-blue-300 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-slate-200 mb-2">予報の時間区分</h4>
+                      <div className="space-y-3 text-slate-300">
+                        <p>
+                          このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを<strong className="text-white">朝5時</strong>に行っています。
                         </p>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <p className="text-sm font-semibold text-slate-200">
-                          <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded">05:00〜23:59</span> の「今日の予報」
-                        </p>
-                        <p className="text-sm text-slate-300 pl-3 border-l-2 border-blue-400">
-                          今夜から<strong className="text-white">翌朝にかけて</strong>の予報です。
-                        </p>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <p className="text-sm font-semibold text-slate-200">
-                          <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded">00:00〜04:59</span> の「今日の予報」
-                        </p>
-                        <p className="text-sm text-slate-300 pl-3 border-l-2 border-blue-400">
-                          <strong className="text-white">現在の朝</strong>の予報です。
-                        </p>
-                      </div>
-                      
-                      <p className="text-xs text-slate-400">
-                       気温・天気・風向き・月齢は、予報対象日の日中のデータです。00:00〜04:59の時間帯は前日のデータが表示されます。
-                      </p>
-
-                      <div className="space-y-2 pt-2 border-t border-slate-700">
-                        <h4 className="font-medium leading-none text-blue-200">予報の更新</h4>
-                        <p className="text-sm text-slate-300">
-                         次の時刻に更新されます:<br/>
-                         <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00</span>
-                        </p>
-                      </div>
-                      <div className="space-y-2 pt-2 border-t border-slate-700">
-                          <h4 className="font-medium leading-none text-blue-200">予測の表示</h4>
-                          <p className="text-sm text-slate-300">
-                            ホタルイカの身投げ予測は、シーズン期間（2月〜5月）のみ行われます。
-                            <br/>
-                            予測レベルは「<span className="text-gray-300">湧きなし</span>」「<span className="text-blue-300">プチ湧き</span>」「<span className="text-cyan-300">チョイ湧き</span>」「<span className="text-green-300">湧き</span>」「<span className="text-yellow-300">大湧き</span>」「<span className="text-pink-300">爆湧き</span>」の6段階です。
-                            <br/>
-                            シーズン期間外は「オフシーズン」と表示されます。
+                        <div className="grid gap-1">
+                          <p className="font-semibold text-slate-200">
+                            <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">05:00〜23:59</span> の閲覧時
                           </p>
+                          <p className="pl-3 border-l-2 border-blue-400">
+                            <strong className="text-white">今夜から翌朝にかけて</strong>の予報です。
+                          </p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="font-semibold text-slate-200">
+                            <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">00:00〜04:59</span> の閲覧時
+                          </p>
+                          <p className="pl-3 border-l-2 border-blue-400">
+                            <strong className="text-white">現在の朝</strong>の予報です。
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-400 pt-1">
+                          ※気温・天気などの気象データは、予報対象日の日中のデータです。
+                        </p>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
-              {todayPrediction.level !== -1 && lastUpdated && (
-                <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
-                  <RefreshCw className="w-3 h-3" />
-                  <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              )}
-            </CardHeader>
+                  </div>
+                  
+                  {/* 予報の更新セクション */}
+                  <div className="flex items-start gap-3">
+                    <RefreshCw className="w-6 h-6 mt-1 text-green-300 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
+                      <p className="text-slate-300 leading-relaxed">
+                        次の時刻に更新されます：<br/>
+                        <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00</span>
+                      </p>
+                    </div>
+                  </div>
 
+                  {/* 予測の表示セクション */}
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="w-6 h-6 mt-1 text-yellow-300 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-slate-200 mb-1">予測の表示</h4>
+                      <div className="text-slate-300 leading-relaxed space-y-2">
+                        <p>
+                          予測はシーズン期間（2月〜5月）のみ行われ、期間外は「オフシーズン」と表示されます。
+                        </p>
+                        <p>
+                          予測レベルは以下の6段階です：<br />
+                          <span className="mr-1">
+                            「<span className="text-gray-300 font-semibold">湧きなし</span>」
+                          </span>
+                          <span className="mr-1">
+                            「<span className="text-blue-300 font-semibold">プチ湧き</span>」
+                          </span>
+                          <span className="mr-1">
+                            「<span className="text-cyan-300 font-semibold">チョイ湧き</span>」
+                          </span>
+                          <br className="sm:hidden" />
+                          <span className="mr-1">
+                            「<span className="text-green-300 font-semibold">湧き</span>」
+                          </span>
+                          <span className="mr-1">
+                            「<span className="text-yellow-300 font-semibold">大湧き</span>」
+                          </span>
+                          <span className="mr-1">
+                            「<span className="text-pink-300 font-semibold">爆湧き</span>」
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </DialogContent>
+            </Dialog>           
+          </div>
+          <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
+          {todayPrediction.level !== -1 && lastUpdated && (
+            <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
+              <RefreshCw className="w-3 h-3" />
+              <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          )}
+        </CardHeader>
             <CardContent className="text-center px-4 pb-8">
               {todayPrediction.level === -1 ? (
                 <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm mb-6">
