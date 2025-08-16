@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // APIのベースURL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -30,7 +29,7 @@ interface Reply {
 }
 
 export default function AdminPage() {
-  const [token, setToken] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -39,29 +38,41 @@ export default function AdminPage() {
   const [newPostUsername, setNewPostUsername] = useState('管理者');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ページロード時にログイン状態を確認
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token');
-    if (storedToken) {
-      setToken(storedToken);
-    }
+    checkLoginStatus();
   }, []);
 
+  const checkLoginStatus = async () => {
+    try {
+      // 認証が必要なエンドポイントにリクエストを送ることでCookieの有効性を確認
+      const res = await fetch(`${API_URL}/api/posts`, { credentials: 'include' });
+      if (res.ok) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
+    } catch (err) {
+      setIsLoggedIn(false);
+    }
+  };
+
   useEffect(() => {
-    if (token) {
+    if (isLoggedIn) {
       fetchAllData();
     }
-  }, [token]);
+  }, [isLoggedIn]);
 
   const fetchAllData = async () => {
     try {
-      const postsRes = await fetch(`${API_URL}/api/posts`);
+      const postsRes = await fetch(`${API_URL}/api/posts`, { credentials: 'include' });
       if (!postsRes.ok) throw new Error('Failed to fetch posts');
       const postsData: Post[] = await postsRes.json();
       setPosts(postsData);
 
       const allReplies: {[key: number]: Reply[]} = {};
       for (const post of postsData) {
-        const repliesRes = await fetch(`${API_URL}/api/posts/${post.id}/replies`);
+        const repliesRes = await fetch(`${API_URL}/api/posts/${post.id}/replies`, { credentials: 'include' });
         if (repliesRes.ok) {
           const repliesData: Reply[] = await repliesRes.json();
           allReplies[post.id] = repliesData;
@@ -81,32 +92,40 @@ export default function AdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
+        credentials: 'include',
       });
       if (!res.ok) {
         throw new Error('Login failed. Please check your password.');
       }
-      const data = await res.json();
-      localStorage.setItem('admin_token', data.token);
-      setToken(data.token);
+      setIsLoggedIn(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    setToken(null);
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/api/admin/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error("Logout request failed:", err);
+    } finally {
+      setIsLoggedIn(false);
+      setPassword('');
+    }
   };
 
   const handleDelete = async (type: 'post' | 'reply', id: number) => {
-    if (!token) return;
     const endpoint = type === 'post' ? `/api/posts/${id}` : `/api/replies/${id}`;
     try {
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
         throw new Error(`Failed to delete ${type}.`);
       }
       fetchAllData();
@@ -117,21 +136,22 @@ export default function AdminPage() {
 
   const handleAdminPost = async (e: FormEvent) => {
     e.preventDefault();
-    if (!token || !newPostContent) return;
+    if (!newPostContent) return;
     try {
       const res = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           username: newPostUsername,
           content: newPostContent,
           label: '管理者',
         }),
+        credentials: 'include',
       });
       if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
         throw new Error('Failed to create admin post.');
       }
       setNewPostContent('');
@@ -146,7 +166,7 @@ export default function AdminPage() {
     post.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (!token) {
+  if (!isLoggedIn) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <Card className="w-full max-w-md">
