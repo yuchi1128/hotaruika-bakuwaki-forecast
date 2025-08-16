@@ -24,6 +24,7 @@ import {
   Lightbulb,
   Search,
   X,
+  ChevronRight,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/utils';
@@ -42,6 +43,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface PredictionLevel {
   level: number;
@@ -181,8 +184,8 @@ export default function Home() {
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
     { value: 'oldest', label: '古い順' },
-    { value: 'good', label: 'Good数順' },
-    { value: 'bad', label: 'Bad数順' },
+    { value: 'good', label: '高評価順' },
+    { value: 'bad', label: '低評価順' },
   ];
 
   useEffect(() => {
@@ -211,7 +214,7 @@ export default function Home() {
     setError(null);
     try {
 
-      const response = await fetch(`http://localhost:8080/api/prediction`);
+      const response = await fetch(`${API_URL}/api/prediction`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -282,7 +285,7 @@ export default function Home() {
 
   const fetchPosts = async () => {
     try {
-      let url = 'http://localhost:8080/api/posts';
+      let url = `${API_URL}/api/posts`;
       if (selectedFilterLabel) {
         url += `?label=${encodeURIComponent(selectedFilterLabel)}`;
       }
@@ -319,7 +322,7 @@ export default function Home() {
 
   const fetchRepliesForPost = async (postId: number): Promise<Reply[]> => {
     try {
-      const response = await fetch(`http://localhost:8080/api/posts/${postId}/replies`);
+      const response = await fetch(`${API_URL}/api/posts/${postId}/replies`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -333,7 +336,7 @@ export default function Home() {
 
   const createPost = async (username: string, content: string, label: string, imageBase64: string | null) => {
     try {
-      const response = await fetch('http://localhost:8080/api/posts', {
+      const response = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -352,7 +355,7 @@ export default function Home() {
   const createReply = async (targetId: number, type: 'post' | 'reply', username: string, content: string) => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/replies` : `/api/replies/${targetId}/replies`;
-      const response = await fetch(`http://localhost:8080${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -371,7 +374,7 @@ export default function Home() {
   const createReaction = async (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/reaction` : `/api/replies/${targetId}/reaction`;
-      const response = await fetch(`http://localhost:8080${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -425,7 +428,7 @@ export default function Home() {
         setNewComment('');
         setAuthorName('');
         setSelectedImage(null);
-        setSelectedLabel('その他');
+        setSelectedLabel('現地情報');
       };
       reader.onerror = (error) => {
         console.error('Error reading file:', error);
@@ -435,7 +438,7 @@ export default function Home() {
       setNewComment('');
       setAuthorName('');
       setSelectedImage(null);
-      setSelectedLabel('その他');
+      setSelectedLabel('現地情報');
     }
   };
 
@@ -837,8 +840,32 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-8 flex justify-center">
-                <Button onClick={() => handleCardClick(todayPrediction.date)} variant="outline" className="bg-white/[0.06] border border-white/10 text-slate-200 hover:bg白/10 transition-colors duration-300 px-6 py-2 rounded-lg">
-                  詳細を見る
+                <Button
+                  onClick={() => handleCardClick(todayPrediction.date)}
+                  variant="ghost"
+                  aria-label={`詳細を見る: ${formatDate(todayPrediction.date)}`}
+                  title="この日の詳細を表示"
+                  className="
+                    group relative h-10 md:h-9 px-4 rounded-xl text-xs font-medium
+                    bg-gradient-to-b from-white/10 to-white/[0.06]
+                    border border-blue-400/30 text-blue-100
+                    ring-1 ring-inset ring-blue-500/10
+                    shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]
+                    backdrop-blur-md
+                    transition-[background,border-color,box-shadow] duration-200
+                    hover:from-white/[0.12] hover:to-white/[0.06]
+                    hover:border-blue-300/40
+                    hover:ring-blue-400/15
+                    hover:shadow-[0_0_10px_-4px_rgba(56,189,248,0.28)]
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50
+                    active:bg-white/[0.08]
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                  "
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>詳細を見る</span>
+                    <ChevronRight className="w-4 h-4 text-blue-300 transition-transform duration-200 group-hover:translate-x-[1px]" />
+                  </span>
                 </Button>
               </div>
             </CardContent>
@@ -932,10 +959,27 @@ export default function Home() {
                             e.stopPropagation();
                             handleCardClick(prediction.date);
                           }}
-                          variant="outline"
-                          className="h-7 text-xs font-medium bg-white/5 border-blue-500/40 text-blue-100 hover:bg-white/15 hover:border-blue-400/50 transition-all duration-200 px-5"
+                          variant="ghost"
+                          aria-label={`詳細: ${formatDateForWeek(prediction.date)}`}
+                          title="この日の詳細を表示"
+                          className="
+                            group relative h-8 md:h-7 px-3 rounded-xl text-xs font-medium
+                            bg-gradient-to-b from-white/10 to-white/[0.06]
+                            border border-blue-400/30 text-blue-100
+                            ring-1 ring-inset ring-blue-500/10
+                            shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]
+                            backdrop-blur-md
+                            transition-transform duration-150
+                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45
+                            active:bg-white/[0.07]
+                            hover:bg-white/15
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          "
                         >
-                          詳細
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>詳細</span>
+                            <ChevronRight className="w-4 h-4 text-blue-300 transition-transform duration-150 group-hover:translate-x-[1px]" />
+                          </span>
                         </Button>
                       </div>
                     </div>
@@ -1010,10 +1054,24 @@ export default function Home() {
               </div>
               <Button
                 onClick={handleSubmitComment}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-bold"
                 disabled={!newComment.trim() || !authorName.trim()}
+                className="
+                  group relative inline-flex items-center gap-2
+                  rounded-xl px-4 py-2.5 text-sm font-semibold text-white
+                  bg-gradient-to-r from-indigo-600/90 via-fuchsia-600/90 to-rose-600/90
+                  backdrop-blur-md
+                  ring-1 ring-white/10
+                  shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_10px_26px_-14px_rgba(0,0,0,0.65)]
+                  transition-all duration-200
+                  hover:brightness-105 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_16px_32px_-14px_rgba(0,0,0,0.7)]
+                  active:scale-[0.99]
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none
+                  before:bg-gradient-to-tr before:from-white/12 before:via-transparent before:to-transparent
+                "
               >
-                <Send className="w-4 h-4 mr-2" />
+                <Send className="w-4 h-4 -ml-0.5 transition-transform duration-200 group-hover:translate-x-0.5" />
                 投稿する
               </Button>
             </div>

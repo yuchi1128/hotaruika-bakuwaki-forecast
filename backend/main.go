@@ -26,7 +26,6 @@ var db *sql.DB
 var logger *slog.Logger
 var jwtKey []byte
 
-// predictionCacheは、キャッシュされた予測データと、安全な並行アクセスのためのミューテックスを保持する
 var predictionCache struct {
 	sync.RWMutex
 	data []byte
@@ -150,6 +149,7 @@ func main() {
 	mux.HandleFunc("/api/replies/", replyDetailHandler)
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 	mux.HandleFunc("/api/admin/login", adminLoginHandler)
+	mux.HandleFunc("/api/admin/logout", adminLogoutHandler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "こんにちは、バックエンドです！")
@@ -262,24 +262,33 @@ func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "admin_token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+		// Secure: true, // 本番環境ではtrueにすることを強く推奨します
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Authorizationヘッダーが必要です", http.StatusUnauthorized)
+		cookie, err := r.Cookie("admin_token")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				http.Error(w, "認証されていません", http.StatusUnauthorized)
+				return
+			}
+			http.Error(w, "不正なリクエストです", http.StatusBadRequest)
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			http.Error(w, "トークンの形式が不正です", http.StatusUnauthorized)
-			return
-		}
-
+		tokenString := cookie.Value
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return jwtKey, nil
@@ -308,18 +317,16 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		getPosts(w, r)
 	case http.MethodPost:
-		authHeader := r.Header.Get("Authorization")
 		isAdmin := false
-		if authHeader != "" {
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString != authHeader {
-				claims := &Claims{}
-				token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-					return jwtKey, nil
-				})
-				if err == nil && token.Valid && claims.Role == "admin" {
-					isAdmin = true
-				}
+		cookie, err := r.Cookie("admin_token")
+		if err == nil {
+			tokenString := cookie.Value
+			claims := &Claims{}
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+				return jwtKey, nil
+			})
+			if err == nil && token.Valid && claims.Role == "admin" {
+				isAdmin = true
 			}
 		}
 		createPost(w, r, isAdmin)
@@ -487,7 +494,7 @@ func createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 }
 
 func getPosts(w http.ResponseWriter, r *http.Request) {
-	query := `
+	baseQuery := `
         SELECT
             p.id, p.username, p.content, p.image_url, p.label, p.created_at,
             COALESCE(r_good.count, 0) as good_count,
@@ -500,6 +507,8 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
             SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id
         ) r_bad ON p.id = r_bad.post_id
     `
+	var args []interface{}
+	var query string
 
 	label := r.URL.Query().Get("label")
 	if label != "" {
@@ -507,11 +516,13 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "ラベルフィルターが不正です。「現地情報」、「その他」、「管理者」のいずれかである必要があります", http.StatusBadRequest)
 			return
 		}
-		query += fmt.Sprintf(" WHERE p.label = '%s'", label)
+		query = baseQuery + " WHERE p.label = $1 ORDER BY p.created_at DESC"
+		args = append(args, label)
+	} else {
+		query = baseQuery + " ORDER BY p.created_at DESC"
 	}
-	query += " ORDER BY p.created_at DESC"
 
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		logger.Error("投稿のクエリエラー", "error", err)
 		http.Error(w, "投稿を取得できませんでした", http.StatusInternalServerError)
@@ -777,4 +788,23 @@ func deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID 
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func adminLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "admin_token",
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "logged out"})
 }
