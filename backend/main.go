@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/robfig/cron/v3"
 	"github.com/rs/cors"
 )
@@ -38,7 +38,7 @@ type Post struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
 	Content   string    `json:"content"`
-	ImageURL  *string   `json:"image_url"`
+	ImageURLs []string  `json:"image_urls"`
 	Label     string    `json:"label"`
 	CreatedAt time.Time `json:"created_at"`
 	GoodCount int       `json:"good_count"`
@@ -442,52 +442,53 @@ func createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 		}
 	}
 
-	var imageURL *string
-	if post.ImageURL != nil && *post.ImageURL != "" {
-		dataURL := *post.ImageURL
-		parts := strings.SplitN(dataURL, ";base64,", 2)
-		if len(parts) != 2 {
-			http.Error(w, "画像データのフォーマットが不正です", http.StatusBadRequest)
-			return
-		}
+	var imageURLs []string
+	if len(post.ImageURLs) > 0 {
+		for _, dataURL := range post.ImageURLs {
+			parts := strings.SplitN(dataURL, ";base64,", 2)
+			if len(parts) != 2 {
+				http.Error(w, "画像データのフォーマットが不正です", http.StatusBadRequest)
+				return
+			}
 
-		mimeType := strings.TrimPrefix(parts[0], "data:")
-		extension := "jpg"
-		if strings.Contains(mimeType, "png") {
-			extension = "png"
-		} else if strings.Contains(mimeType, "gif") {
-			extension = "gif"
-		} else if strings.Contains(mimeType, "jpeg") {
-			extension = "jpeg"
-		}
+			mimeType := strings.TrimPrefix(parts[0], "data:")
+			extension := "jpg"
+			if strings.Contains(mimeType, "png") {
+				extension = "png"
+			} else if strings.Contains(mimeType, "gif") {
+				extension = "gif"
+			} else if strings.Contains(mimeType, "jpeg") {
+				extension = "jpeg"
+			}
 
-		decoded, err := base64.StdEncoding.DecodeString(parts[1])
-		if err != nil {
-			http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
-			return
-		}
+			decoded, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
+				return
+			}
 
-		filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
-		filePath := filepath.Join("./uploads", filename)
-		err = os.WriteFile(filePath, decoded, 0644)
-		if err != nil {
-			logger.Error("画像の保存に失敗しました", "error", err)
-			http.Error(w, "画像の保存に失敗しました", http.StatusInternalServerError)
-			return
+			filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
+			filePath := filepath.Join("./uploads", filename)
+			err = os.WriteFile(filePath, decoded, 0644)
+			if err != nil {
+				logger.Error("画像の保存に失敗しました", "error", err)
+				http.Error(w, "画像の保存に失敗しました", http.StatusInternalServerError)
+				return
+			}
+			url := "/uploads/" + filename
+			imageURLs = append(imageURLs, url)
 		}
-		url := "/uploads/" + filename
-		imageURL = &url
 	}
 
-	query := `INSERT INTO posts (username, content, image_url, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
-	err = db.QueryRow(query, post.Username, post.Content, imageURL, post.Label).Scan(&post.ID, &post.CreatedAt)
+	query := `INSERT INTO posts (username, content, image_urls, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	err = db.QueryRow(query, post.Username, post.Content, pq.Array(imageURLs), post.Label).Scan(&post.ID, &post.CreatedAt)
 	if err != nil {
 		logger.Error("投稿の挿入エラー", "error", err)
 		http.Error(w, "投稿を作成できませんでした", http.StatusInternalServerError)
 		return
 	}
 
-	post.ImageURL = imageURL
+	post.ImageURLs = imageURLs
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(post)
@@ -496,7 +497,7 @@ func createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
 func getPosts(w http.ResponseWriter, r *http.Request) {
 	baseQuery := `
         SELECT
-            p.id, p.username, p.content, p.image_url, p.label, p.created_at,
+            p.id, p.username, p.content, p.image_urls, p.label, p.created_at,
             COALESCE(r_good.count, 0) as good_count,
             COALESCE(r_bad.count, 0) as bad_count
         FROM posts p
@@ -533,16 +534,10 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	posts := []Post{}
 	for rows.Next() {
 		var post Post
-		var imageUrl sql.NullString
-		err := rows.Scan(&post.ID, &post.Username, &post.Content, &imageUrl, &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
+		err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount)
 		if err != nil {
 			logger.Error("投稿行のスキャンエラー", "error", err)
 			continue
-		}
-		if imageUrl.Valid {
-			post.ImageURL = &imageUrl.String
-		} else {
-			post.ImageURL = nil
 		}
 		posts = append(posts, post)
 	}
@@ -739,7 +734,7 @@ func deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID 
 	var imageColumn string
 	if itemType == "posts" {
 		tableName = "posts"
-		imageColumn = "image_url"
+		imageColumn = "image_urls"
 	} else if itemType == "replies" {
 		tableName = "replies"
 	} else {
@@ -756,19 +751,21 @@ func deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID 
 	defer tx.Rollback()
 
 	if imageColumn != "" {
-		var imageURL sql.NullString
+		var imageURLs pq.StringArray
 		query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", imageColumn, tableName)
-		err := tx.QueryRow(query, itemID).Scan(&imageURL)
+		err := tx.QueryRow(query, itemID).Scan(&imageURLs)
 		if err != nil && err != sql.ErrNoRows {
 			logger.Error("画像URLのクエリに失敗しました", "error", err)
 			http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
 			return
 		}
-		if imageURL.Valid {
-			filename := filepath.Base(imageURL.String)
-			filePath := filepath.Join("./uploads", filename)
-			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-				logger.Warn("画像ファイルの削除に失敗しました", "path", filePath, "error", err)
+		if len(imageURLs) > 0 {
+			for _, url := range imageURLs {
+				filename := filepath.Base(url)
+				filePath := filepath.Join("./uploads", filename)
+				if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+					logger.Warn("画像ファイルの削除に失敗しました", "path", filePath, "error", err)
+				}
 			}
 		}
 	}

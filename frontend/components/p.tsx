@@ -39,7 +39,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogTrigger,
   DialogHeader,
   DialogTitle,
@@ -69,7 +68,7 @@ interface Post {
   id: number;
   username: string;
   content: string;
-  image_urls: string[];
+  image_url: string | null;
   label: string;
   created_at: string;
   good_count: number;
@@ -164,7 +163,7 @@ export default function Home() {
   const [authorName, setAuthorName] = useState('');
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState('');
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedLabel, setSelectedLabel] = useState<string>('現地情報');
   const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -335,14 +334,14 @@ export default function Home() {
     }
   };
 
-  const createPost = async (username: string, content: string, label: string, imageBase64s: string[]) => {
+  const createPost = async (username: string, content: string, label: string, imageBase64: string | null) => {
     try {
       const response = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, content, label, image_urls: imageBase64s }),
+        body: JSON.stringify({ username, content, label, image_url: imageBase64 }),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -411,48 +410,36 @@ export default function Home() {
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      if (selectedImages.length + files.length > 4) {
-        alert('写真は最大4枚までです。');
-        const remainingSlots = 4 - selectedImages.length;
-        if (remainingSlots > 0) {
-          setSelectedImages(prev => [...prev, ...files.slice(0, remainingSlots)]);
-        }
-      } else {
-        setSelectedImages(prev => [...prev, ...files]);
-      }
-      // 同じファイルを選択できるようにvalueをリセット
-      event.target.value = '';
+    if (event.target.files && event.target.files[0]) {
+      setSelectedImage(event.target.files[0]);
     }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !authorName.trim()) return;
 
-    let imageBase64s: string[] = [];
-    if (selectedImages.length > 0) {
-      imageBase64s = await Promise.all(
-        selectedImages.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-          });
-        })
-      );
+    let imageBase64: string | null = null;
+    if (selectedImage) {
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImage);
+      reader.onload = async () => {
+        imageBase64 = reader.result as string;
+        await createPost(authorName, newComment, selectedLabel, imageBase64);
+        setNewComment('');
+        setAuthorName('');
+        setSelectedImage(null);
+        setSelectedLabel('現地情報');
+      };
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+      };
+    } else {
+      await createPost(authorName, newComment, selectedLabel, null);
+      setNewComment('');
+      setAuthorName('');
+      setSelectedImage(null);
+      setSelectedLabel('現地情報');
     }
-
-    await createPost(authorName, newComment, selectedLabel, imageBase64s);
-    setNewComment('');
-    setAuthorName('');
-    setSelectedImages([]);
-    setSelectedLabel('現地情報');
   };
 
   const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
@@ -585,7 +572,7 @@ export default function Home() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                    <div className="flex items-center mb-1">
+                    <div className="flex items-center mb-1.5">
                       <Skeleton className="w-5 h-5 mr-1.5 rounded-full" />
                       <Skeleton className="h-4 w-12" />
                     </div>
@@ -684,7 +671,7 @@ export default function Home() {
           <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
             <CardHeader className="text-center pt-8 pb-6">
               <div className="flex justify-center items-center gap-2 mb-1">
-                <CardTitle className="text-2xl md:text-3xl font-bold text-white">今日の予報</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl font-bold text白 flex items-center gap-2">今日の予報</CardTitle>
 
                 <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
                   <DialogTrigger asChild>
@@ -698,7 +685,6 @@ export default function Home() {
                         <HelpCircle className="w-5 h-5" />
                         <span>予報の説明</span>
                       </DialogTitle>
-                      <DialogDescription className="sr-only">予報の見方や更新タイミングについて説明します。</DialogDescription>
                     </DialogHeader>
                     <div className="mt-2 space-y-5 py-2 text-sm">
                       <div className="flex items-start gap-3">
@@ -773,7 +759,7 @@ export default function Home() {
             <CardContent className="text-center px-4 pb-8">
               {todayPrediction.level === -1 ? (
                 <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm mb-6">
-                  <div className="flex flex-col justify-center items-center min-h-[160px] md:min-h-[180px]">
+                  <div className="flex flex-col justify中心 items-center min-h-[160px] md:min-h-[180px]">
                     <p className="text-3xl md:text-4xl font-bold text-gray-300">オフシーズン</p>
                     <p className="text-sm text-gray-400 mt-2 px-4">{getOffSeasonMessage(todayPrediction.date)}</p>
                   </div>
@@ -823,29 +809,29 @@ export default function Home() {
                   <p className="text-lg text-gray-300">{predictionLevels[todayPrediction.level].description}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg白/5 p-4 rounded-2xl border border-white/10">
+                <div className="flex flex-col items-center justify-center bg白/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
                     <Thermometer className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">気温</p>
                   </div>
                   <p className="text-lg sm:text-xl font-bold text-white">{`${todayPrediction.temperature_max}℃/${todayPrediction.temperature_min}℃`}</p>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+                <div className="flex flex-col items-center justify-center bg白/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
                     <Cloudy className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">天気</p>
                   </div>
                   <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.weather}</p>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+                <div className="flex flex-col items-center justify-center bg白/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
                     <Wind className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">風向き</p>
                   </div>
                   <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.wind_direction}</p>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
+                <div className="flex flex-col items-center justify-center bg白/5 p-3 rounded-lg">
                   <div className="flex items-center text-blue-300 mb-1">
                     <Moon className="w-5 h-5 mr-1.5" />
                     <p className="text-sm font-medium">月齢</p>
@@ -986,7 +972,7 @@ export default function Home() {
                             transition-transform duration-150
                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45
                             active:bg-white/[0.07]
-                            hover:bg-white/15
+                            hover:bg白/15
                             disabled:opacity-50 disabled:cursor-not-allowed
                           "
                         >
@@ -1021,34 +1007,23 @@ export default function Home() {
                   placeholder="お名前"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  className="h-8 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+                  className="h-9 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 />
               </div>
               <Textarea
                 placeholder="ホタルイカについてご自由にお書きください！"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="mb-4 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+                className="mb-4 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 rows={5}
               />
-              <div className="mb-4">
-                <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200 mb-2">
+              <div className="flex items-center gap-2 mb-4">
+                <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200">
                   <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
-                  <span>画像を選択 ({selectedImages.length}/4)</span>
+                  画像を選択
                 </label>
-                <Input id="image-upload" type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" disabled={selectedImages.length >= 4} />
-                {selectedImages.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {selectedImages.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-24 object-cover rounded-md" />
-                        <button onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                {selectedImage && <span className="text-sm text-gray-300">{selectedImage.name}</span>}
               </div>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <span className="text-gray-300 text-xs font-bold">ラベル：</span>
@@ -1126,7 +1101,7 @@ export default function Home() {
                 その他
               </Button>
               <Button
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '管理者' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
+                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text白/90 antialiased ${selectedFilterLabel === '管理者' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
                 onClick={() => setSelectedFilterLabel('管理者')}
                 variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
               >
