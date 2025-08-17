@@ -9,11 +9,11 @@ import {
 } from '@/components/ui/dialog';
 import { HelpCircle } from 'lucide-react';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Waves, Thermometer, Wind, Sun, Moon, Droplet, CloudRain, Snowflake, ArrowUp, ArrowDown, Cloudy, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Waves, Thermometer, Wind, Sun, Moon, Droplet, CloudRain, Snowflake, ArrowUp, ArrowDown, Cloudy, MapPin, Navigation } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -200,6 +200,42 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
   const [hoverTideX, setHoverTideX] = useState<string | null>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
+  const [showScrollLeft, setShowScrollLeft] = useState(false);
+  const [showScrollRight, setShowScrollRight] = useState(false);
+
+  const hourlyForecastRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (!hourlyForecastRef.current) return;
+    const container = hourlyForecastRef.current;
+    const scrollAmount = container.clientWidth * 0.7;
+    container.scrollBy({ 
+      left: direction === 'left' ? -scrollAmount : scrollAmount, 
+      behavior: 'smooth' 
+    });
+  };
+
+  const checkScrollButtons = () => {
+    if (!hourlyForecastRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = hourlyForecastRef.current;
+    setShowScrollLeft(scrollLeft > 0);
+    setShowScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+  };
+
+  useEffect(() => {
+    const container = hourlyForecastRef.current;
+    if (!container) return;
+
+    checkScrollButtons();
+    container.addEventListener('scroll', checkScrollButtons);
+    window.addEventListener('resize', checkScrollButtons);
+
+    return () => {
+      container.removeEventListener('scroll', checkScrollButtons);
+      window.removeEventListener('resize', checkScrollButtons);
+    };
+  }, [weather, isMobile]);
+
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -221,9 +257,38 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
   const helpDate = formatDateForHelp(helpDateObj);
   const helpNextDate = formatDateForHelp(helpNextDateObj);
 
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
-  const isTodayPage = date === todayStr;
+  const now = useMemo(() => new Date(), []);
+
+  const isTodayPage = useMemo(() => {
+    if (!weather || weather.length === 0) return false;
+    const startTime = new Date(weather[0].time).getTime();
+    const endTime = new Date(weather[weather.length - 1].time).getTime() + 60 * 60 * 1000;
+    const nowTime = now.getTime();
+    return nowTime >= startTime && nowTime < endTime;
+  }, [weather, now]);
+
+  useEffect(() => {
+    if (isTodayPage && hourlyForecastRef.current) {
+      setTimeout(() => {
+        if (!hourlyForecastRef.current) return;
+        const currentHourElement = hourlyForecastRef.current.querySelector('[data-is-current-hour="true"]');
+        if (currentHourElement) {
+          const container = hourlyForecastRef.current;
+          const element = currentHourElement as HTMLElement;
+          
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+
+          const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft;
+
+          container.scrollTo({
+            left: scrollLeft,
+            behavior: 'auto'
+          });
+        }
+      }, 100);
+    }
+  }, [isTodayPage, weather, isMobile]);
 
   const weatherChartData = weather.map((w, index) => ({
     index,
@@ -247,8 +312,13 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
 
   const xAxisTickFormatter = (index: number) => {
     const dataPoint = weatherChartData[index];
-    if (dataPoint) return `${dataPoint.hour}時`;
-    return '';
+    if (!dataPoint) return '';
+
+    const pointDate = new Date(weather[index].time);
+    const baseDate = new Date(date);
+    const isNextDay = pointDate.toDateString() !== baseDate.toDateString();
+
+    return `${isNextDay ? '翌' : ''}${dataPoint.hour}時`;
   };
 
   const weatherTempTicks = useMemo(() => {
@@ -419,9 +489,20 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
         </div>
       </header>
       <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
-        <div>
-          <CardTitle className="text-lg sm:text-xl text-blue-100 mb-3 ml-1">時間ごとの予報</CardTitle>
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+
+        <div className="relative">
+          <CardTitle className="mt-6 text-lg sm:text-xl text-blue-100 mb-3 ml-1">時間ごとの予報</CardTitle>
+
+          {isMobile && showScrollLeft && (
+            <button
+              onClick={() => handleScroll('left')}
+              className="absolute left-[-12px] top-1/2 -translate-y-1/2 z-20 bg-slate-800/50 hover:bg-slate-700/80 text-white p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-sm transition-opacity duration-300"
+            >
+              <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+          )}
+
+          <div className="overflow-x-auto rounded-lg border border-white/10" ref={hourlyForecastRef}>
             <div className="flex">
               {weather.map((w, i) => {
                 const itemDate = new Date(w.time);
@@ -444,46 +525,60 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                 const windIndex = Math.round(w.wind_direction / 22.5) % 16;
                 const roundedDegrees = windIndex * 22.5;
 
+                // 翌日判定（基準日の翌日であればバッジを表示）
+                const isNextDay = itemDate.toDateString() !== new Date(date).toDateString();
+
                 return (
                   <div
                     key={i}
-                    className={`flex-shrink-0 w-20 sm:w-24 flex flex-col items-center justify-around p-2 sm:p-3 text-center h-48 sm:h-52 border-r border-white/10 last:border-r-0 transition-all duration-300 backdrop-blur-sm
+                    data-is-current-hour={isCurrentHour}
+                    className={`flex-shrink-0 w-16 sm:w-24 flex flex-col items-center justify-around p-1.5 sm:p-3 text-center h-40 sm:h-52 border-r border-white/10 last:border-r-0 transition-all duration-300 backdrop-blur-sm
                       ${isPast ? 'opacity-50' : ''}
                       ${isDay ? 'bg-sky-900/40 border-t-sky-500/70' : 'bg-slate-950/40 border-t-indigo-500/70'}
                       border-t-4`}
                   >
                     {/* 時刻＋現在バッジ */}
-                    <div className="flex flex-col items-center justify-end h-8 pb-1">
+                    <div className="flex flex-col items-center justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
                       {isCurrentHour && (
-                        <p className="relative top-1 text-[11px] font-semibold text-red-300">現在</p>
+                        <p className="relative top-0.5 sm:top-1 text-[10px] sm:text-[11px] font-semibold text-red-300">現在</p>
                       )}
-                      <p className={`font-semibold text-sm sm:text-lg ${isDay ? 'text-sky-100' : 'text-slate-300'}`}>
-                        {itemDate.toLocaleTimeString('ja-JP', { hour: 'numeric' })}
-                      </p>
+                      <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1">
+                        {isNextDay && (
+                          <span
+                            className="justify-self-end transform origin-right scale-75 rounded bg-amber-500/15 text-amber-300 border border-amber-400/30 px-1 py-0.5 text-[11px]"
+                            aria-label="翌日の予報"
+                          >
+                            翌
+                          </span>
+                        )}
+                        <p className={`col-start-2 font-semibold text-[13px] sm:text-lg ${isDay ? 'text-sky-100' : 'text-slate-300'}`}>
+                          {itemDate.toLocaleTimeString('ja-JP', { hour: 'numeric' })}
+                        </p>
+                      </div>
                     </div>
 
                     {/* 天気アイコン */}
-                    <div className="my-1 sm:my-2">
+                    <div className="my-1 sm:my-2 scale-90 sm:scale-100">
                       {getWeatherFromCode(w.weather_code, w.time).icon}
                     </div>
 
                     {/* 気温 */}
-                    <p className="font-bold text-lg sm:text-xl">{w.temperature.toFixed(1)}℃</p>
+                    <p className="font-bold text-base sm:text-xl">{w.temperature.toFixed(1)}℃</p>
 
                     {/* 降水量 */}
-                    <div className="text-xs text-slate-300 flex items-center gap-1">
-                      <Droplet className="w-3 h-3 text-blue-400" />
+                    <div className="text-[10px] sm:text-xs text-slate-300 flex items-center gap-1">
+                      <Droplet className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-400" />
                       <span>{w.precipitation.toFixed(1)}mm</span>
                     </div>
 
                     {/* 風速・風向 */}
-                    <div className="flex flex-col items-center gap-1 text-xs text-slate-300">
+                    <div className="flex flex-col items-center gap-1 text-[10px] sm:text-xs text-slate-300">
                       <div className="flex items-center gap-1">
-                        <Wind className="w-3 h-3" />
+                        <Wind className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         <span>{w.wind_speed.toFixed(1)}m/s</span>
                       </div>
                       <Navigation
-                        className="w-4 h-4 text-slate-400"
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400"
                         style={{ transform: `rotate(${roundedDegrees - 45 + 180}deg)` }}
                       />
                     </div>
@@ -492,6 +587,15 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
               })}
             </div>
           </div>
+
+          {isMobile && showScrollRight && (
+            <button
+              onClick={() => handleScroll('right')}
+              className="absolute right-[-12px] top-1/2 -translate-y-1/2 z-20 bg-slate-800/50 hover:bg-slate-700/80 text-white p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-sm transition-opacity duration-300"
+            >
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">

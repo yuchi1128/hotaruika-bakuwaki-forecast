@@ -1007,14 +1007,14 @@ export default function Home() {
                   placeholder="お名前"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  className="h-9 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+                  className="h-8 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 />
               </div>
               <Textarea
                 placeholder="ホタルイカについてご自由にお書きください！"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="mb-4 bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+                className="mb-4 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 rows={5}
               />
               <div className="flex items-center gap-2 mb-4">
