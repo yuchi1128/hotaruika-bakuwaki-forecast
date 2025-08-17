@@ -2,6 +2,9 @@
 # ビルド用のベースイメージ
 FROM golang:1.24-alpine AS builder
 
+# ca-certificatesをインストール
+RUN apk --no-cache add ca-certificates
+
 # ワーキングディレクトリを設定
 WORKDIR /app
 
@@ -25,12 +28,11 @@ FROM scratch
 # ワーキングディレクトリを設定
 WORKDIR /app
 
+# ビルダーステージから証明書をコピー
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
 # ビルダーステージからコンパイル済みのバイナリのみをコピー
 COPY --from=builder /app/server .
-
-# 画像アップロード用のディレクトリをワーキングディレクトリ内に作成
-# (Cloud Storage等を使わない場合)
-COPY --from=builder /app/uploads ./uploads
 
 # ポートを公開
 EXPOSE 8080

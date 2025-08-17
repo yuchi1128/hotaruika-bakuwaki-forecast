@@ -6,12 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X } from 'lucide-react';
+import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 
 interface Post {
   id: number;
   username: string;
   content: string;
-  image_url: string | null;
+  image_urls: string[];
   label: string;
   created_at: string;
   good_count: number;
@@ -62,8 +63,10 @@ export default function CommentItem({
 
   // 画像拡大用
   const [showImageModal, setShowImageModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const handleImageClick = () => {
+  const handleImageClick = (index: number) => {
+    setCurrentImageIndex(index);
     setShowImageModal(true);
     document.body.style.overflow = 'hidden'; // 背景スクロール禁止
   };
@@ -193,18 +196,18 @@ export default function CommentItem({
             </div>
             <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[11px]">{comment.label}</Badge>
           </div>
+
           <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{comment.content}</p>
-          {comment.image_url && (
+
+          {comment.image_urls && comment.image_urls.length > 0 && (
             <>
-              <div className="mb-3 max-w-full overflow-x-auto flex items-start">
-                <img
-                  src={`${API_URL}${comment.image_url}`}
-                  alt="投稿画像"
-                  className="max-w-full max-h-48 object-contain rounded-lg border border-purple-500/20 bg-[#222] cursor-pointer"
-                  style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.20)' }}
-                  onClick={handleImageClick}
-                />
-              </div>
+              {/* X（旧Twitter）風レイアウト */}
+              <TwitterLikeMediaGrid
+                images={comment.image_urls}
+                baseUrl={API_URL}
+                onOpen={(i) => handleImageClick(i)}
+              />
+
               {showImageModal && (
                 <div
                   className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
@@ -222,8 +225,26 @@ export default function CommentItem({
                     >
                       <X className="w-5 h-5" />
                     </button>
+
+                    {comment.image_urls.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => (prev - 1 + comment.image_urls.length) % comment.image_urls.length)}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
+                        >
+                          &#10094;
+                        </button>
+                        <button
+                          onClick={() => setCurrentImageIndex(prev => (prev + 1) % comment.image_urls.length)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
+                        >
+                          &#10095;
+                        </button>
+                      </>
+                    )}
+
                     <img
-                      src={`${API_URL}${comment.image_url}`}
+                      src={`${API_URL}${comment.image_urls[currentImageIndex]}`}
                       alt="拡大画像"
                       className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
                       style={{ background: '#222', boxShadow: '0 2px 24px rgba(0,0,0,0.30)' }}
@@ -233,6 +254,7 @@ export default function CommentItem({
               )}
             </>
           )}
+
           <div>
             <div className="flex items-center gap-4">
               <Button
@@ -276,6 +298,7 @@ export default function CommentItem({
               </Button>
             )}
           </div>
+
           {isReplying && (
             <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
               <div className="md:w-1/2 mb-2">
@@ -318,6 +341,7 @@ export default function CommentItem({
               </div>
             </div>
           )}
+
           {showReplies && (
             <div className="mt-2 mb-2 space-y-3">
               {renderReplies(comment.replies)}

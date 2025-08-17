@@ -21,7 +21,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./backend:/app
+      - ./backend/uploads:/app/uploads
     depends_on:
       - db
     environment:
