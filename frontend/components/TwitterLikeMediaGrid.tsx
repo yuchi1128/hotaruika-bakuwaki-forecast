@@ -35,7 +35,7 @@ export default function TwitterLikeMediaGrid({
   // 1枚: 16:9 でトリミング
   if (visibleCount === 1) {
     return (
-      <div className={`mb-3 ${className}`}>
+      <div className={`mb-3 w-full md:max-w-[600px] lg:max-w-[720px] ${className}`}>
         <div className={`${wrapperCommon} rounded-lg`} style={{ ...boxShadow }}>
           <div className="relative w-full pt-[56.25%]"> {/* 16:9 */}
             <img
@@ -54,7 +54,7 @@ export default function TwitterLikeMediaGrid({
   // 2枚: 横に2分割（同じ高さ）
   if (visibleCount === 2) {
     return (
-      <div className={`mb-3 ${className}`}>
+      <div className={`mb-3 w-full md:max-w-[600px] lg:max-w-[720px] ${className}`}>
         <div className="grid grid-cols-2 gap-1 h-60 sm:h-72">
           {[0, 1].map((i) => (
             <div
@@ -81,7 +81,7 @@ export default function TwitterLikeMediaGrid({
   // 3枚: 左が縦長（2段分）、右に上下2枚
   if (visibleCount === 3) {
     return (
-      <div className={`mb-3 ${className}`}>
+      <div className={`mb-3 w-full md:max-w-[600px] lg:max-w-[720px] ${className}`}>
         <div className="grid grid-cols-2 grid-rows-2 gap-1 h-60 sm:h-72">
           <div
             className={`${wrapperCommon} row-span-2 rounded-l-lg`}
@@ -134,7 +134,7 @@ export default function TwitterLikeMediaGrid({
 
   // 4枚以上: 2x2 グリッド。5枚目以降は "+N" オーバーレイ
   return (
-    <div className={`mb-3 ${className}`}>
+    <div className={`mb-3 w-full md:max-w-[600px] lg:max-w-[720px] ${className}`}>
       <div className="grid grid-cols-2 grid-rows-2 gap-1 h-72 sm:h-80">
         {[0, 1, 2, 3].map((i) => {
           const isLast = i === 3 && total > 4;

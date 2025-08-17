@@ -206,6 +206,7 @@ export default function CommentItem({
                 images={comment.image_urls}
                 baseUrl={API_URL}
                 onOpen={(i) => handleImageClick(i)}
+                className="md:max-w-[500px] lg:max-w-[580px]"
               />
 
               {showImageModal && (

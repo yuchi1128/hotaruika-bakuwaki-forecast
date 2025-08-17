@@ -39,6 +39,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTrigger,
   DialogHeader,
   DialogTitle,
@@ -697,6 +698,7 @@ export default function Home() {
                         <HelpCircle className="w-5 h-5" />
                         <span>予報の説明</span>
                       </DialogTitle>
+                      <DialogDescription className="sr-only">予報の見方や更新タイミングについて説明します。</DialogDescription>
                     </DialogHeader>
                     <div className="mt-2 space-y-5 py-2 text-sm">
                       <div className="flex items-start gap-3">
