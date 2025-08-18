@@ -155,8 +155,20 @@ func main() {
 		fmt.Fprintf(w, "こんにちは、バックエンドです！")
 	})
 
+	// CORS設定
+	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
+	var allowedOrigins []string
+	if allowedOriginsStr != "" {
+		allowedOrigins = strings.Split(allowedOriginsStr, ",")
+		logger.Info("CORS AllowedOriginsを環境変数から設定しました", "origins", allowedOrigins)
+	} else {
+		// 環境変数が設定されていない場合のデフォルト値
+		allowedOrigins = []string{"http://localhost:3000", "http://localhost:3001", "https://bakuwaki-yoho.com"}
+		logger.Warn("環境変数ALLOWED_ORIGINSが設定されていません。デフォルト値を使用します。")
+	}
+
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3001", "https://bakuwaki-yoho.com"},
+		AllowedOrigins:   allowedOrigins, // ここを環境変数から読み込むように変更
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,

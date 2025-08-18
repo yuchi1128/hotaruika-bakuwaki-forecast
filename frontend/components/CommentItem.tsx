@@ -87,25 +87,30 @@ export default function CommentItem({
       setIsReplying(false);
       setReplyingTo(null);
     } catch (error) {
-      console.error("Reply submission failed:", error);
+      console.error('Reply submission failed:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const renderReplies = (replies: Reply[], level: number = 0) => {
-    return replies.map(reply => (
-      <div key={reply.id} className={`ml-${level * 6} bg-slate-700/20 rounded-lg p-2 md:p-3 border-l border-dotted border-slate-600 mt-1 md:mt-3`}>
+    return replies.map((reply) => (
+      <div
+        key={reply.id}
+        className={`ml-${level * 6} bg-slate-700/20 rounded-lg p-2 md:p-3 border-l border-dotted border-slate-600 mt-1 md:mt-3`}
+      >
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-xs sm:text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">{reply.username}</span>
-              <span className="text-[11px] sm:text-xs text-gray-400">{formatTime(new Date(reply.created_at))}</span>
+              <span className="font-semibold text-blue-200 text-xs sm:text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+                {reply.username}
+              </span>
+              <span className="text-[11px] sm:text-xs text-gray-400">
+                {formatTime(new Date(reply.created_at))}
+              </span>
             </div>
             <p className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
-              {reply.parent_username && (
-                <span className="text-blue-300 mr-1">@{reply.parent_username}</span>
-              )}
+              {reply.parent_username && <span className="text-blue-300 mr-1">@{reply.parent_username}</span>}
               {reply.content}
             </p>
             <Button
@@ -191,22 +196,28 @@ export default function CommentItem({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-purple-200 text-sm sm:text-base max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">{comment.username}</span>
-              <span className="text-[11px] sm:text-xs text-gray-400">{formatTime(new Date(comment.created_at))}</span>
+              <span className="font-semibold text-purple-200 text-sm sm:text-base max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+                {comment.username}
+              </span>
+              <span className="text-[11px] sm:text-xs text-gray-400">
+                {formatTime(new Date(comment.created_at))}
+              </span>
             </div>
-            <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[11px]">{comment.label}</Badge>
+            <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[11px]">
+              {comment.label}
+            </Badge>
           </div>
 
           <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{comment.content}</p>
 
           {comment.image_urls && comment.image_urls.length > 0 && (
             <>
-              {/* X（旧Twitter）風レイアウト */}
               <TwitterLikeMediaGrid
                 images={comment.image_urls}
                 baseUrl={API_URL}
                 onOpen={(i) => handleImageClick(i)}
-                className="md:max-w-[500px] lg:max-w-[580px]"
+                className="md:max-w-[460px] lg:max-w-[500px]"
+                maxVH={35}
               />
 
               {showImageModal && (
@@ -215,9 +226,9 @@ export default function CommentItem({
                   onClick={handleCloseImageModal}
                 >
                   <div
-                    className="relative bg-transparent rounded-lg shadow-lg flex items-center justify-center"
+                    className="relative bg-transparent rounded-lg flex items-center justify-center"
                     style={{ maxWidth: '90vw', maxHeight: '90vh' }}
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 z-10"
@@ -230,13 +241,15 @@ export default function CommentItem({
                     {comment.image_urls.length > 1 && (
                       <>
                         <button
-                          onClick={() => setCurrentImageIndex(prev => (prev - 1 + comment.image_urls.length) % comment.image_urls.length)}
+                          onClick={() =>
+                            setCurrentImageIndex((prev) => (prev - 1 + comment.image_urls.length) % comment.image_urls.length)
+                          }
                           className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
                         >
                           &#10094;
                         </button>
                         <button
-                          onClick={() => setCurrentImageIndex(prev => (prev + 1) % comment.image_urls.length)}
+                          onClick={() => setCurrentImageIndex((prev) => (prev + 1) % comment.image_urls.length)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
                         >
                           &#10095;
@@ -248,7 +261,6 @@ export default function CommentItem({
                       src={`${API_URL}${comment.image_urls[currentImageIndex]}`}
                       alt="拡大画像"
                       className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
-                      style={{ background: '#222', boxShadow: '0 2px 24px rgba(0,0,0,0.30)' }}
                     />
                   </div>
                 </div>
@@ -307,14 +319,14 @@ export default function CommentItem({
                   placeholder="お名前"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  className="h-8 text-sx w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                  className="h-8 text-sm w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
                 />
               </div>
               <Textarea
                 placeholder="返信を書く..."
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                className="mb-2 text-sx bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                className="mb-2 text-sm bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
                 rows={2}
               />
               <div className="flex gap-2">
@@ -343,11 +355,7 @@ export default function CommentItem({
             </div>
           )}
 
-          {showReplies && (
-            <div className="mt-2 mb-2 space-y-3">
-              {renderReplies(comment.replies)}
-            </div>
-          )}
+          {showReplies && <div className="mt-2 mb-2 space-y-3">{renderReplies(comment.replies)}</div>}
         </div>
       </div>
     </div>

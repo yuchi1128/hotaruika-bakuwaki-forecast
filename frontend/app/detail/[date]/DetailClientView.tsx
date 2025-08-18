@@ -352,6 +352,24 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
     }
   }
 
+  // 翌0時のインデックスを特定して、必ず点線を描画する
+  const nextMidnightIndex = useMemo(() => {
+    if (!weather.length) return -1;
+    const baseDateStr = new Date(date).toDateString();
+    for (let i = 0; i < weather.length; i++) {
+      const d = new Date(weather[i].time);
+      if (d.toDateString() !== baseDateStr && d.getHours() === 0) {
+        return i;
+      }
+    }
+    return -1;
+  }, [weather, date]);
+
+  const hasNextMidnightTick = useMemo(
+    () => nextMidnightIndex >= 0 && weatherTicks.includes(nextMidnightIndex),
+    [nextMidnightIndex, weatherTicks]
+  );
+
   const tideChartData = tide.tide.map((t) => ({
     time: t.time,
     level: t.cm,
@@ -469,7 +487,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                   <div>
                     <h4 className="font-semibold text-slate-200 mb-1">潮汐情報</h4>
                     <p className="text-slate-300 leading-relaxed">
-                      <strong className="text-white">{helpDate}</strong> の1日分（0時〜24時）の潮位グラフです。
+                      <strong className="text白">{helpDate}</strong> の1日分（0時〜24時）の潮位グラフです。
                     </p>
                   </div>
                 </div>
@@ -538,9 +556,9 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                       border-t-4`}
                   >
                     {/* 時刻＋現在バッジ */}
-                    <div className="flex flex-col items-center justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
+                    <div className="flex flex-col items中心 justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
                       {isCurrentHour && (
-                        <p className="relative top-0.5 sm:top-1 text-[10px] sm:text-[11px] font-semibold text-red-300">現在</p>
+                        <p className="relative top-0.5 sm:top-1 text-[10px] sm:text[11px] font-semibold text-red-300">現在</p>
                       )}
                       <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1">
                         {isNextDay && (
@@ -626,6 +644,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                       fontSize={isMobile ? 10 : 12}
                       type="number"
                       ticks={weatherTicks}
+                      interval={0} // 追加: tick 間引きを防止
                       domain={[0, Math.max(0, weatherChartData.length - 1)]}
                     />
                     <YAxis
@@ -660,6 +679,17 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                     <Legend wrapperStyle={{ fontSize: isMobile ? '12px' : '14px' }} formatter={renderLegendWithUnit} />
                     {isTodayPage && currentDecimalIndex !== -1 && (
                       <ReferenceArea yAxisId="left" x1={0} x2={currentDecimalIndex} stroke="none" fill="#64748b" fillOpacity={0.2} />
+                    )}
+
+                    {/* 追加: 翌0時の点線を常に描画 */}
+                    {nextMidnightIndex >= 0 && !hasNextMidnightTick && (
+                      <ReferenceLine
+                        yAxisId="left"
+                        x={nextMidnightIndex}
+                        stroke="#94a3b8"        // Grid に合わせた色
+                        strokeDasharray="3 3"   // Grid に合わせたパターン
+                        strokeOpacity={0.2}     // Grid に合わせた濃さ
+                      />
                     )}
                     {isTodayPage && currentDecimalIndex !== -1 && (
                       <ReferenceLine yAxisId="left" x={currentDecimalIndex} stroke="red" strokeDasharray="3 3">
@@ -752,7 +782,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                       data={tideChartData}
-                      margin={isMobile ? { top: 5, right: 15, left: 5, bottom: 15 } : { top: 5, right: 25, left: 10, bottom: 5 }}
+                      margin={isMobile ? { top: 10, right: 15, left: 5, bottom: 15 } : { top: 12, right: 25, left: 10, bottom: 8 }}
                       onMouseMove={(state: any) => {
                         if (state && state.activeLabel) setHoverTideX(state.activeLabel as string);
                       }}
@@ -765,7 +795,10 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                           <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+
+                      {/* 1) 横グリッドを無効化（縦は残す） */}
+                      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} horizontal={false} />
+
                       <XAxis
                         dataKey="time"
                         ticks={tideTicks}
@@ -775,7 +808,10 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                         tick={{ fill: '#9ca3af' }}
                         fontSize={isMobile ? 10 : 12}
                       />
+
+                      {/* 2) YAxis に yAxisId を明示 */}
                       <YAxis
+                        yAxisId="0"
                         tick={{ fill: '#9ca3af', fontSize: 10 }}
                         unit="cm"
                         ticks={tideYTicks}
@@ -783,10 +819,26 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                         width={isMobile ? 40 : 45}
                         allowDecimals
                       />
+
                       <Tooltip
                         content={<TideTooltip />}
                         cursor={{ stroke: '#a78bfa', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }}
                       />
+
+                      {/* 3) Y 軸 tick ごとに横点線を前面に描画（Grid の代わり） */}
+                      {tideYTicks.map((y) => (
+                        <ReferenceLine
+                          key={`tide-y-${y}`}
+                          yAxisId="0"
+                          y={y}
+                          stroke="#94a3b8"
+                          strokeDasharray="3 3"
+                          strokeOpacity={0.2}
+                          isFront
+                        />
+                      ))}
+
+                      {/* 既存の過去領域・現在線・ホバー線など（必要に応じて残す） */}
                       {tideReferenceAreas}
                       {isTodayPage && currentTideTimeX && (
                         <ReferenceLine x={currentTideTimeX} stroke="red" strokeDasharray="3 3">
@@ -794,6 +846,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                         </ReferenceLine>
                       )}
                       {hoverTideX && <ReferenceLine x={hoverTideX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />}
+
                       <Area
                         type="monotone"
                         dataKey="level"
@@ -810,7 +863,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                         dot={false}
                         activeDot={{ r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 }}
                       />
-                      
+
                       {tide.flood.map((t) => (
                         <ReferenceDot
                           key={`flood-${t.time}`}
@@ -821,7 +874,7 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                           r={4}
                           fill="#facc15"
                           stroke="#fff"
-                          isFront={true}
+                          isFront
                         />
                       ))}
                       {tide.edd.map((t) => (
@@ -834,10 +887,9 @@ export default function DetailClientView({ date, weather, tide }: DetailClientVi
                           r={4}
                           fill="#38bdf8"
                           stroke="#fff"
-                          isFront={true}
+                          isFront
                         />
                       ))}
-
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
