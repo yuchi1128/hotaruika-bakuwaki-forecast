@@ -2,47 +2,66 @@ import DetailClientView from './DetailClientView';
 import type { HourlyWeather, TideData } from './types';
 import { ShieldAlert } from 'lucide-react';
 
-// --- データ取得関数 (変更なし) ---
-async function fetchWeatherData(targetDate: string): Promise<HourlyWeather[]> {
-  const startDate = targetDate;
-  const endDate = new Date(targetDate);
-  endDate.setDate(endDate.getDate() + 1);
-  const endDateStr = endDate.toISOString().split('T')[0];
-  
-  const weatherApiUrl = `https://api.open-meteo.com/v1/forecast?latitude=36.76&longitude=137.24&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m&timezone=Asia%2FTokyo&wind_speed_unit=ms&start_date=${startDate}&end_date=${endDateStr}`;
-  const response = await fetch(weatherApiUrl, { next: { revalidate: 3600 } }); 
-  if (!response.ok) throw new Error('気象データの取得に失敗');
-  const apiData = await response.json();
+// --- データ取得関数 ---
+async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData }> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+  const apiUrl = `${apiBaseUrl}/api/detail/${date}`;
 
-  const formattedData: HourlyWeather[] = apiData.hourly.time.map((t: string, i: number) => ({
-    time: t,
-    temperature: apiData.hourly.temperature_2m[i],
-    precipitation: apiData.hourly.precipitation[i],
-    precipitation_probability: apiData.hourly.precipitation_probability[i],
-    weather_code: apiData.hourly.weather_code[i],
-    wind_speed: apiData.hourly.wind_speed_10m[i],
-    wind_direction: apiData.hourly.wind_direction_10m[i],
-  }));
-  
-  const startIndex = formattedData.findIndex(d => d.time === `${startDate}T00:00`);
-  const endIndex = formattedData.findIndex(d => d.time === `${endDateStr}T04:00`);
+  const response = await fetch(apiUrl, { next: { revalidate: 3600 } });
 
-  if (startIndex !== -1 && endIndex !== -1) {
-    return formattedData.slice(startIndex, endIndex + 1);
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`詳細データの取得に失敗: ${response.status} ${errorBody}`);
   }
 
-  return formattedData.slice(0, 24);
-};
-
-async function fetchTideData(targetDate: string): Promise<TideData> {
-  const [year, month, day] = targetDate.split('-');
-  const tideApiUrl = `https://tide736.net/api/get_tide.php?pc=16&hc=3&yr=${year}&mn=${month}&dy=${day}&rg=day`;
-  const response = await fetch(tideApiUrl, { next: { revalidate: 3600 } });
-  if (!response.ok) throw new Error('潮汐データの取得に失敗');
   const apiData = await response.json();
-  return apiData.tide.chart[`${year}-${month}-${day}`];
-};
 
+  const weatherData: HourlyWeather[] = apiData.weather.hourly.time.map((t: string, i: number) => ({
+    time: t,
+    temperature: apiData.weather.hourly.temperature_2m[i],
+    precipitation: apiData.weather.hourly.precipitation[i],
+    precipitation_probability: apiData.weather.hourly.precipitation_probability[i],
+    weather_code: apiData.weather.hourly.weather_code[i],
+    wind_speed: apiData.weather.hourly.wind_speed_10m[i],
+    wind_direction: apiData.weather.hourly.wind_direction_10m[i],
+  }));
+
+  const [year, month, day] = date.split('-');
+  const tideData: TideData = apiData.tide.tide.chart[`${year}-${month}-${day}`];
+
+  const startDate = date;
+  const endDate = new Date(date);
+  endDate.setDate(endDate.getDate() + 1);
+  const endDateStr = endDate.toISOString().split('T')[0];
+
+  const startIndex = weatherData.findIndex(d => d.time === `${startDate}T00:00`);
+  const endIndex = weatherData.findIndex(d => d.time === `${endDateStr}T04:00`);
+
+  const slicedWeatherData = (startIndex !== -1 && endIndex !== -1) 
+    ? weatherData.slice(startIndex, endIndex + 1)
+    : weatherData.slice(0, 24);
+
+  return { weather: slicedWeatherData, tide: tideData };
+}
+
+// --- 最終更新日時取得関数 ---
+const getLastUpdateTime = (): Date => {
+  const now = new Date();
+  const updateHours = [2, 5, 8, 11, 14, 17, 20, 23];
+  const currentHour = now.getHours();
+
+  const lastUpdateHourToday = [...updateHours].reverse().find((hour) => currentHour >= hour);
+
+  const lastUpdateDate = new Date(now);
+
+  if (lastUpdateHourToday !== undefined) {
+    lastUpdateDate.setHours(lastUpdateHourToday, 0, 0, 0);
+  } else {
+    lastUpdateDate.setDate(now.getDate() - 1);
+    lastUpdateDate.setHours(23, 0, 0, 0);
+  }
+  return lastUpdateDate;
+};
 
 // --- ページ本体 (サーバーコンポーネント) ---
 export default async function DetailPage({ params }: { params: { date: string } }) {
@@ -53,14 +72,13 @@ export default async function DetailPage({ params }: { params: { date: string } 
   const targetDate = new Date(date);
   now.setHours(0, 0, 0, 0);
 
-  const oneMonthAgo = new Date(now);
-  oneMonthAgo.setMonth(now.getMonth() - 1);
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - 1); // 昨日
 
-  const oneMonthForward = new Date(now);
-  oneMonthForward.setMonth(now.getMonth() + 1);
+  const endDate = new Date(now);
+  endDate.setDate(now.getDate() + 6); // 6日後
 
-  // 指定された日付が範囲外ならエラー画面を表示
-  if (targetDate < oneMonthAgo || targetDate > oneMonthForward) {
+  if (targetDate < startDate || targetDate > endDate) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md mx-auto bg-slate-900/70 backdrop-blur-sm border border-blue-500/30 rounded-2xl shadow-xl text-center p-8 space-y-6">
@@ -72,7 +90,7 @@ export default async function DetailPage({ params }: { params: { date: string } 
               データ範囲外です
             </h2>
             <p className="text-slate-400 max-w-sm mx-auto">
-              予報データは現在から前後1ヶ月の範囲で表示できます。
+              予報データは今日から1週間後までの範囲で表示できます。
             </p>
           </div>
           <a 
@@ -88,12 +106,15 @@ export default async function DetailPage({ params }: { params: { date: string } 
 
   // --- データ取得と画面表示 ---
   try {
-    const [weatherData, tideData] = await Promise.all([
-      fetchWeatherData(date),
-      fetchTideData(date),
-    ]);
+    const { weather, tide } = await fetchDetailData(date);
+    const lastUpdated = getLastUpdateTime();
 
-    return <DetailClientView date={date} weather={weatherData} tide={tideData} />;
+    return <DetailClientView 
+      date={date} 
+      weather={weather} 
+      tide={tide} 
+      lastUpdatedISO={lastUpdated.toISOString()} 
+    />;
 
   } catch (error) {
     console.error(error);

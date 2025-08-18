@@ -2,8 +2,8 @@
 # ビルド用のベースイメージ
 FROM golang:1.24-alpine AS builder
 
-# ca-certificatesをインストール
-RUN apk --no-cache add ca-certificates
+# ca-certificatesとtzdataをインストール
+RUN apk --no-cache add ca-certificates tzdata
 
 # ワーキングディレクトリを設定
 WORKDIR /app
@@ -28,8 +28,9 @@ FROM scratch
 # ワーキングディレクトリを設定
 WORKDIR /app
 
-# ビルダーステージから証明書をコピー
+# ビルダーステージから証明書とタイムゾーン情報をコピー
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # ビルダーステージからコンパイル済みのバイナリのみをコピー
 COPY --from=builder /app/server .
