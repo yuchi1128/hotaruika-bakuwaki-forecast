@@ -76,7 +76,7 @@ export default async function DetailPage({ params }: { params: { date: string } 
   startDate.setDate(now.getDate() - 1); // 昨日
 
   const endDate = new Date(now);
-  endDate.setDate(now.getDate() + 6); // 6日後
+  endDate.setDate(now.getDate() + 7); // 6日後
 
   if (targetDate < startDate || targetDate > endDate) {
     return (
