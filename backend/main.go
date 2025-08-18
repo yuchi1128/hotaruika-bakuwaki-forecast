@@ -31,6 +31,11 @@ var predictionCache struct {
 	data []byte
 }
 
+var detailCache struct {
+	sync.RWMutex
+	data map[string][]byte
+}
+
 var predictionURL string
 
 // Postはフォーラムの投稿を表す
@@ -130,20 +135,27 @@ func main() {
 		}
 	}
 
-	// --- 予測データの取得とキャッシュ ---
-	fetchAndCachePredictionData()
+	// --- データの取得とキャッシュ ---
+	detailCache.data = make(map[string][]byte)
+	go fetchAndCachePredictionData() // 即時実行
+	go fetchAndCacheDetailData()   // 即時実行
+
 	c := cron.New()
-	_, err = c.AddFunc("0 2,5,8,11,14,17,20,23 * * *", fetchAndCachePredictionData)
+	_, err = c.AddFunc("0 2,5,8,11,14,17,20,23 * * *", func() {
+		go fetchAndCachePredictionData()
+		go fetchAndCacheDetailData()
+	})
 	if err != nil {
 		logger.Error("cronジョブの追加に失敗しました", "error", err)
 		os.Exit(1)
 	}
 	c.Start()
-	logger.Info("予測データ取得のためのcronスケジューラを開始しました。")
+	logger.Info("データ取得のためのcronスケジューラを開始しました。")
 
 	// --- HTTPサーバー設定 ---
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/prediction", getPredictionHandler)
+	mux.HandleFunc("/api/detail/", getDetailHandler)
 	mux.HandleFunc("/api/posts", postsHandler)
 	mux.HandleFunc("/api/posts/", postDetailHandler)
 	mux.HandleFunc("/api/replies/", replyDetailHandler)
@@ -168,7 +180,7 @@ func main() {
 	}
 
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   allowedOrigins, // ここを環境変数から読み込むように変更
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
@@ -233,6 +245,140 @@ func getPredictionHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := io.Copy(w, bytes.NewReader(data))
 	if err != nil {
 		logger.Error("予測レスポンスの書き込みに失敗しました", "error", err)
+	}
+}
+
+func fetchAndCacheDetailData() {
+	logger.Info("詳細データの取得を開始します")
+	var wg sync.WaitGroup
+	// JSTのタイムゾーンを取得
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		logger.Error("JSTタイムゾーンの読み込みに失敗しました", "error", err)
+		return
+	}
+
+	for i := 0; i < 7; i++ { // 今日から7日先まで取得
+		wg.Add(1)
+		go func(dayOffset int) {
+			defer wg.Done()
+			targetDate := time.Now().In(jst).AddDate(0, 0, dayOffset)
+			dateStr := targetDate.Format("2006-01-02")
+
+			// 各APIからデータを取得
+			weatherData, err := fetchWeatherData(targetDate)
+			if err != nil {
+				logger.Error("気象データの取得に失敗しました", "date", dateStr, "error", err)
+				return
+			}
+
+			tideData, err := fetchTideData(targetDate)
+			if err != nil {
+				logger.Error("潮汐データの取得に失敗しました", "date", dateStr, "error", err)
+				return
+			}
+
+			// データを結合
+			combinedData := map[string]interface{}{
+				"weather": weatherData,
+				"tide":    tideData,
+			}
+
+			// JSONにシリアライズ
+			jsonData, err := json.Marshal(combinedData)
+			if err != nil {
+				logger.Error("詳細データのJSONシリアライズに失敗しました", "date", dateStr, "error", err)
+				return
+			}
+
+			// キャッシュに保存
+			detailCache.Lock()
+			detailCache.data[dateStr] = jsonData
+			detailCache.Unlock()
+			logger.Info("詳細データを正常に取得しキャッシュしました", "date", dateStr)
+		}(i)
+	}
+	wg.Wait()
+	logger.Info("詳細データの取得が完了しました")
+}
+
+func fetchWeatherData(targetDate time.Time) (map[string]interface{}, error) {
+	startDate := targetDate.Format("2006-01-02")
+	endDate := targetDate.AddDate(0, 0, 1).Format("2006-01-02")
+	weatherApiUrl := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=36.76&longitude=137.24&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m&timezone=Asia%%2FTokyo&wind_speed_unit=ms&start_date=%s&end_date=%s", startDate, endDate)
+
+	resp, err := http.Get(weatherApiUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("気象APIが正常なステータスを返しませんでした: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func fetchTideData(targetDate time.Time) (map[string]interface{}, error) {
+	year := targetDate.Year()
+	month := int(targetDate.Month())
+	day := targetDate.Day()
+	tideApiUrl := fmt.Sprintf("https://tide736.net/api/get_tide.php?pc=16&hc=3&yr=%d&mn=%d&dy=%d&rg=day", year, month, day)
+
+	resp, err := http.Get(tideApiUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("潮汐APIが正常なステータスを返しませんでした: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func getDetailHandler(w http.ResponseWriter, r *http.Request) {
+	pathSegments := splitPath(r.URL.Path)
+	if len(pathSegments) < 3 || pathSegments[2] == "" {
+		http.Error(w, "日付が指定されていません", http.StatusBadRequest)
+		return
+	}
+	dateStr := pathSegments[2]
+
+	detailCache.RLock()
+	data, ok := detailCache.data[dateStr]
+	detailCache.RUnlock()
+
+	if !ok {
+		logger.Warn("要求された詳細データがキャッシュにありません", "date", dateStr)
+		http.Error(w, "指定された日付のデータは見つかりません", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, err := io.Copy(w, bytes.NewReader(data))
+	if err != nil {
+		logger.Error("詳細レスポンスの書き込みに失敗しました", "error", err)
 	}
 }
 

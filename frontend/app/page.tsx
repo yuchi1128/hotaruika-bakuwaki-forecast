@@ -422,7 +422,6 @@ export default function Home() {
       } else {
         setSelectedImages(prev => [...prev, ...files]);
       }
-      // 同じファイルを選択できるようにvalueをリセット
       event.target.value = '';
     }
   };
