@@ -25,9 +25,10 @@ import {
   Search,
   X,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
-import { saveReaction, getReaction } from '@/lib/utils';
+import { saveReaction, getReaction } from '@/lib/client-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
@@ -156,6 +157,7 @@ const getLastUpdateTime = (): Date => {
   return lastUpdateDate;
 };
 
+
 export default function Home() {
   const router = useRouter();
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
@@ -171,17 +173,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  // 検索
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-
-  // 並び替え
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
-
-  // 口コミのページネーション
   const COMMENTS_PER_PAGE = 30;
   const [currentPage, setCurrentPage] = useState<number>(1);
-
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
     { value: 'oldest', label: '古い順' },
@@ -197,7 +193,6 @@ export default function Home() {
     fetchPosts();
   }, [selectedFilterLabel]);
 
-  // フィルタ・検索・並び替え変更時は1ページ目へ
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedFilterLabel]);
@@ -214,25 +209,11 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-
       const response = await fetch(`${API_URL}/api/prediction`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: ForecastData[] = await response.json();
-
-      // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
-      // const mockData: ForecastData[] = [
-      //   { date: "2025-05-26", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-      //   { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
-      //   { date: "2025-05-28", predicted_amount: 0.3, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
-      //   { date: "2025-05-29", predicted_amount: 0.6, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
-      //   { date: "2025-05-30", predicted_amount: 0.9, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
-      //   { date: "2025-05-31", predicted_amount: 1.2, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
-      //   { date: "2025-06-01", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
-      // ];
-      // const data = mockData;
-
       const mappedPredictions: DayPrediction[] = data
         .map((forecast) => {
           const date = new Date(forecast.date);
@@ -240,28 +221,24 @@ export default function Home() {
             console.error('Invalid date received from API:', forecast.date);
             return null;
           }
-
           const month = date.getMonth();
           const isSeason = month >= 1 && month <= 4;
-
           let level = -1;
-
           if (isSeason) {
             if (forecast.predicted_amount >= 1.25) {
-              level = 5; // 爆湧き
+              level = 5;
             } else if (forecast.predicted_amount >= 1.0) {
-              level = 4; // 大湧き
+              level = 4;
             } else if (forecast.predicted_amount >= 0.75) {
-              level = 3; // 湧き
+              level = 3;
             } else if (forecast.predicted_amount >= 0.5) {
-              level = 2; // チョイ湧き
+              level = 2;
             } else if (forecast.predicted_amount >= 0.25) {
-              level = 1; // プチ湧き
+              level = 1;
             } else {
-              level = 0; // 湧きなし
+              level = 0;
             }
           }
-
           return {
             date,
             level,
@@ -273,7 +250,6 @@ export default function Home() {
           };
         })
         .filter((p) => p !== null) as DayPrediction[];
-
       setPredictions(mappedPredictions);
       setLastUpdated(getLastUpdateTime());
     } catch (error) {
@@ -295,7 +271,6 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: Post[] = await response.json();
-
       const commentsWithReplies: Comment[] = await Promise.all(
         data.map(async (post) => {
           const replies = await fetchRepliesForPost(post.id);
@@ -313,7 +288,6 @@ export default function Home() {
           };
         })
       );
-
       setComments(commentsWithReplies);
       setCurrentPage(1);
     } catch (error) {
@@ -431,27 +405,34 @@ export default function Home() {
   };
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !authorName.trim()) return;
+    if (!newComment.trim() || !authorName.trim() || isSubmittingComment) return;
 
-    let imageBase64s: string[] = [];
-    if (selectedImages.length > 0) {
-      imageBase64s = await Promise.all(
-        selectedImages.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-          });
-        })
-      );
+    setIsSubmittingComment(true);
+
+    try {
+      let imageBase64s: string[] = [];
+      if (selectedImages.length > 0) {
+        imageBase64s = await Promise.all(
+          selectedImages.map(file => {
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = error => reject(error);
+            });
+          })
+        );
+      }
+      await createPost(authorName, newComment, selectedLabel, imageBase64s);
+      setNewComment('');
+      setAuthorName('');
+      setSelectedImages([]);
+      setSelectedLabel('現地情報');
+    } catch (error) {
+      console.error('Failed to submit comment:', error);
+    } finally {
+      setIsSubmittingComment(false);
     }
-
-    await createPost(authorName, newComment, selectedLabel, imageBase64s);
-    setNewComment('');
-    setAuthorName('');
-    setSelectedImages([]);
-    setSelectedLabel('現地情報');
   };
 
   const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
@@ -469,12 +450,9 @@ export default function Home() {
   const formatDate = (date: Date) => {
     const nextDay = new Date(date);
     nextDay.setDate(date.getDate() + 1);
-
     const dateOptions: Intl.DateTimeFormatOptions = { month: 'numeric', day: 'numeric', weekday: 'short' };
-
     const dateStr = date.toLocaleDateString('ja-JP', dateOptions);
     const nextDayStr = nextDay.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
-
     return `${dateStr}深夜 〜 ${nextDayStr}朝の身投げ`;
   };
 
@@ -502,11 +480,9 @@ export default function Home() {
   const todayPrediction = predictions[0];
   const weekPredictions = predictions.slice(1);
 
-  // 検索とページネーションのためのフィルタリング
   const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
   const filteredComments = useMemo(() => {
     if (!normalizedQuery) return comments;
-
     return comments.filter((c) => {
       const targets: string[] = [
         c.username ?? '',
@@ -517,7 +493,6 @@ export default function Home() {
     });
   }, [comments, normalizedQuery]);
 
-  // 並び替え（新しい順 デフォルト, 古い順, good数順, bad数順）
   const sortedComments = useMemo(() => {
     const arr = filteredComments.slice();
     switch (sortOrder) {
@@ -537,7 +512,6 @@ export default function Home() {
     return arr;
   }, [filteredComments, sortOrder]);
 
-  // コメント件数の変動で現在のページが範囲外なら補正（並び替え後の件数で判断）
   useEffect(() => {
     const totalPagesCalc = Math.max(1, Math.ceil(sortedComments.length / COMMENTS_PER_PAGE));
     if (currentPage > totalPagesCalc) {
@@ -545,7 +519,6 @@ export default function Home() {
     }
   }, [sortedComments.length, currentPage]);
 
-  // ページネーション用の派生値（並び替え後の配列に対して適用）
   const totalComments = sortedComments.length;
   const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
   const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE;
@@ -663,6 +636,18 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative z-10">
+      <Dialog open={isSubmittingComment}>
+        <DialogContent
+          showCloseButton={false}
+          className="w-auto bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg flex items-center justify-center p-6"
+        >
+          <DialogTitle className="sr-only">送信中</DialogTitle>
+          <DialogDescription className="sr-only">口コミをサーバーに送信しています。しばらくお待ちください。</DialogDescription>
+          <Loader2 className="mr-3 h-5 w-5 animate-spin text-blue-300" />
+          <span>口コミを投稿中です...</span>
+        </DialogContent>
+      </Dialog>
+      
       <header className="text-center pt-12 pb-8 md:pb-12 px-4">
         <div className="flex items-center justify-center gap-4 mb-4">
           <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
@@ -1078,7 +1063,7 @@ export default function Home() {
               </div>
               <Button
                 onClick={handleSubmitComment}
-                disabled={!newComment.trim() || !authorName.trim()}
+                disabled={!newComment.trim() || !authorName.trim() || isSubmittingComment}
                 className="
                   group relative inline-flex items-center gap-2
                   rounded-xl px-4 py-2.5 text-sm font-semibold text-white
@@ -1095,8 +1080,17 @@ export default function Home() {
                   before:bg-gradient-to-tr before:from-white/12 before:via-transparent before:to-transparent
                 "
               >
-                <Send className="w-4 h-4 -ml-0.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                投稿する
+                {isSubmittingComment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 -ml-0.5 animate-spin" />
+                    投稿中...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 -ml-0.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    投稿する
+                  </>
+                )}
               </Button>
             </div>
 

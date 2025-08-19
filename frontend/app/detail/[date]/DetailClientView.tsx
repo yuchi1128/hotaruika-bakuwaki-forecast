@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, Waves, Thermometer, Wind, Sun, Moon, Droplet, CloudRain, Snowflake, ArrowUp, ArrowDown, Cloudy, MapPin, Navigation } from 'lucide-react';
 import {
-  LineChart,
   Line,
   Bar,
   XAxis,
