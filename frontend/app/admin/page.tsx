@@ -259,7 +259,7 @@ export default function AdminPage() {
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
           <h1 className="text-3xl font-bold text-slate-900">管理者ダッシュボード</h1>
-          <Button onClick={handleLogout} variant="outline">ログアウト</Button>
+          <Button onClick={handleLogout} variant="outline" className="text-white">ログアウト</Button>
         </header>
 
         {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-6">Error: {error}</p>}
@@ -368,7 +368,7 @@ function PostCard({ post, onDelete }: { post: PostWithReplies, onDelete: (type: 
         <p className="whitespace-pre-wrap text-slate-800">{post.content}</p>
         {post.image_urls && post.image_urls.length > 0 && (
           <div className="mt-4">
-            <TwitterLikeMediaGrid images={post.image_urls.map(url => `${API_URL}${url}`)} />
+            <TwitterLikeMediaGrid images={post.image_urls.map(url => `${url}`)} />
           </div>
         )}
       </CardContent>

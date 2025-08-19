@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { HelpCircle, RefreshCw } from 'lucide-react';
 
@@ -472,6 +473,9 @@ export default function DetailClientView({ date, weather, tide, lastUpdatedISO }
                     <HelpCircle className="w-5 h-5" />
                     <span>このページの見方</span>
                   </DialogTitle>
+                  <DialogDescription className="sr-only">
+                    このダイアログはページの説明です。使い方や更新タイミングなどが書かれています。
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="mt-2 space-y-5 py-2 text-sm">
                   <div className="flex items-start gap-3">
@@ -487,7 +491,7 @@ export default function DetailClientView({ date, weather, tide, lastUpdatedISO }
                   <div className="flex items-start gap-3">
                     <RefreshCw className="w-6 h-6 mt-1 text-green-300 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
+                      <h4 className="font-semibold text-slate-200 mb-1">データの更新</h4>
                       <p className="text-slate-300 leading-relaxed">
                         次の時刻に更新されます：<br />
                       <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 23:00, 02:00</span>

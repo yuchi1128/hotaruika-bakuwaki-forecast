@@ -270,7 +270,7 @@ export default function CommentItem({
                       )}
 
                       <img
-                        src={`${API_URL}${comment.image_urls[currentImageIndex]}`}
+                        src={`${comment.image_urls[currentImageIndex]}`}
                         alt="拡大画像"
                         className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
                       />
