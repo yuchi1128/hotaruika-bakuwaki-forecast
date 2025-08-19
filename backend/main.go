@@ -21,6 +21,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/lib/pq"
 	"github.com/rs/cors"
+	"github.com/cenkalti/backoff/v4"
 )
 
 var db *sql.DB
@@ -348,38 +349,44 @@ func deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ★★★ MODIFIED: エラーハンドリングを修正 ★★★
 func getPosts(w http.ResponseWriter, r *http.Request) {
-	baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
-	var args []interface{}
-	query := ""
-	label := r.URL.Query().Get("label")
-	if label != "" {
-		query = baseQuery + " WHERE p.label = $1 ORDER BY p.created_at DESC"
-		args = append(args, label)
-	} else {
-		query = baseQuery + " ORDER BY p.created_at DESC"
-	}
+	var posts []Post
 
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		logger.Error("投稿のクエリエラー", "error", err)
-		http.Error(w, "投稿の取得に失敗しました", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	posts := []Post{}
-	for rows.Next() {
-		var post Post
-		if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount); err != nil {
-			logger.Error("投稿行のスキャンエラー", "error", err)
-			continue // エラーがあっても処理を続ける
+	operation := func() error {
+		baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
+		var args []interface{}
+		query := ""
+		label := r.URL.Query().Get("label")
+		if label != "" {
+			query = baseQuery + " WHERE p.label = $1 ORDER BY p.created_at DESC"
+			args = append(args, label)
+		} else {
+			query = baseQuery + " ORDER BY p.created_at DESC"
 		}
-		posts = append(posts, post)
+
+		rows, err := db.Query(query, args...)
+		if err != nil {
+			logger.Error("投稿のクエリエラー（リトライ中）", "error", err)
+			return err
+		}
+		defer rows.Close()
+
+		posts = []Post{}
+		for rows.Next() {
+			var post Post
+			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount); err != nil {
+				logger.Error("投稿行のスキャンエラー", "error", err)
+				continue
+			}
+			posts = append(posts, post)
+		}
+		return rows.Err()
 	}
-	if err = rows.Err(); err != nil {
-		logger.Error("行イテレーション後のエラー", "error", err)
+	
+	err := backoff.Retry(operation, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
+
+	if err != nil {
+		logger.Error("投稿の取得に失敗しました（リトライ上限到達）", "error", err)
 		http.Error(w, "投稿の取得に失敗しました", http.StatusInternalServerError)
 		return
 	}
@@ -388,38 +395,47 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
-// ★★★ MODIFIED: エラーハンドリングを修正 ★★★
 func getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
-	query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
-	
-	rows, err := db.Query(query, postID)
-	if err != nil {
-		logger.Error("返信のクエリエラー", "error", err)
-		http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
+	var replies []Reply
 
-	replies := []Reply{}
-	for rows.Next() {
-		var reply Reply
-		var parentReplyID sql.NullInt64
-		var parentUsername sql.NullString
-		if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
-			logger.Error("返信行のスキャンエラー", "error", err)
-			continue
+	// リトライ処理を定義
+	operation := func() error {
+		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
+		
+		rows, err := db.Query(query, postID)
+		if err != nil {
+			logger.Error("返信のクエリエラー（リトライ中）", "error", err)
+			return err // エラーを返してリトライさせる
 		}
-		if parentReplyID.Valid {
-			val := int(parentReplyID.Int64)
-			reply.ParentReplyID = &val
+		defer rows.Close()
+
+		// repliesスライスをリセット
+		replies = []Reply{}
+		for rows.Next() {
+			var reply Reply
+			var parentReplyID sql.NullInt64
+			var parentUsername sql.NullString
+			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+				logger.Error("返信行のスキャンエラー", "error", err)
+				continue
+			}
+			if parentReplyID.Valid {
+				val := int(parentReplyID.Int64)
+				reply.ParentReplyID = &val
+			}
+			if parentUsername.Valid {
+				reply.ParentUsername = &parentUsername.String
+			}
+			replies = append(replies, reply)
 		}
-		if parentUsername.Valid {
-			reply.ParentUsername = &parentUsername.String
-		}
-		replies = append(replies, reply)
+		return rows.Err() // forループ後のエラーチェック
 	}
-	if err = rows.Err(); err != nil {
-		logger.Error("行イテレーション後のエラー", "error", err)
+
+	// 最大3回までリトライを実行
+	err := backoff.Retry(operation, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
+
+	if err != nil {
+		logger.Error("返信の取得に失敗しました（リトライ上限到達）", "error", err)
 		http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
 		return
 	}
