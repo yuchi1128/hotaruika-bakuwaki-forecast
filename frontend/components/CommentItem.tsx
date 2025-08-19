@@ -81,6 +81,11 @@ export default function CommentItem({
     setIsSubmitting(true);
     try {
       await createReply(targetId, type, authorName, replyContent);
+      
+      if (type === 'post') {
+        setShowReplies(true);
+      }
+
       setReplyContent('');
       setAuthorName('');
       setIsReplying(false);

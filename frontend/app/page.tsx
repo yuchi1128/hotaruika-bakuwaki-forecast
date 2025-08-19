@@ -340,7 +340,7 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      await fetchPosts();
+      return fetchPosts();
     } catch (error) {
       console.error('Failed to create reply:', error);
     }
