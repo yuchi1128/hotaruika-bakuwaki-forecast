@@ -27,7 +27,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
-import { saveReaction, getReaction } from '@/lib/utils';
+// import { saveReaction, getReaction } from '@/lib/utils';
+import { saveReaction, getReaction } from '@/lib/client-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
