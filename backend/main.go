@@ -547,7 +547,7 @@ func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name: "admin_token", Value: tokenString, Expires: expirationTime, HttpOnly: true, Path: "/", SameSite: http.SameSiteLaxMode,
+		Name: "admin_token", Value: tokenString, Expires: expirationTime, HttpOnly: true, Path: "/", SameSite: http.SameSiteLaxMode, Secure: true,
 	})
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
