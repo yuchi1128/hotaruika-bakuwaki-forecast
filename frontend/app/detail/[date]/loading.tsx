@@ -31,7 +31,7 @@ export default function DetailLoading() {
           </div>
           <div className="overflow-hidden rounded-lg border border-white/10">
             <div className="flex">
-              {[...Array(10)].map((_, i) => (
+              {[...Array(28)].map((_, i) => (
                 <div
                   key={i}
                   className="flex-shrink-0 w-16 sm:w-24 flex flex-col items-center justify-around p-1.5 sm:p-3 text-center h-40 sm:h-52 border-r border-white/10 last:border-r-0 bg-slate-950/40"
