@@ -21,8 +21,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-// Define interfaces directly in the component file for now.
-// These could be moved to a shared types file later.
 interface PredictionLevel {
   level: number;
   name: string;

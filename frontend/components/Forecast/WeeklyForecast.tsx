@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/carousel";
 import { Calendar, Thermometer, Cloudy, Wind, Moon, ChevronRight } from "lucide-react";
 
-// Define interfaces directly in the component file for now.
 interface PredictionLevel {
   level: number;
   name: string;

@@ -134,7 +134,6 @@ export default function TwitterLikeMediaGrid({
     );
   }
 
-  // 4枚以上: 2x2 グリッド。5枚目以降は "+N" オーバーレイ —元のまま
   return (
     <div className={`mb-3 w-full md:max-w-[600px] lg:max-w-[720px] ${className}`}>
       <div className="grid grid-cols-2 grid-rows-2 gap-1 h-[15.3rem]  sm:h-80">
