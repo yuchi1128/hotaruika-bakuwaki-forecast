@@ -493,6 +493,7 @@ func fetchAndCacheDetailData() {
 	}
 	for i := -1; i < 7; i++ {
 		wg.Add(1)
+		time.Sleep(250 * time.Millisecond)
 		go func(dayOffset int) {
 			defer wg.Done()
 			targetDate := time.Now().In(jst).AddDate(0, 0, dayOffset)
