@@ -1,53 +1,30 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import CustomSelect from '@/components/CustomSelect';
-import {
-  MessageCircle,
-  Send,
-  Calendar,
-  MapPin,
-  Cloudy,
-  TrendingUp,
-  Thermometer,
-  Moon,
-  Image as ImageIcon,
-  Wind,
-  HelpCircle,
-  RefreshCw,
-  Clock,
-  Lightbulb,
-  Search,
-  X,
-  ChevronRight,
-  Loader2,
-} from 'lucide-react';
-import CommentItem from '@/components/CommentItem';
 import { saveReaction, getReaction } from '@/lib/client-utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  getWeatherFromCode,
+  getWindDirection,
+  getLastUpdateTime,
+  formatDateForWeek,
+  formatDate,
+  formatTime,
+  getOffSeasonMessage,
+} from '@/lib/utils';
+
+import LoadingScreen from '@/components/common/LoadingScreen';
+import AppHeader from '@/components/common/AppHeader';
+import AppFooter from '@/components/common/AppFooter';
+import TodayForecast from '@/components/Forecast/TodayForecast';
+import WeeklyForecast from '@/components/Forecast/WeeklyForecast';
+import CommentSection from '@/components/Community/CommentSection';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// Interfaces
 interface PredictionLevel {
   level: number;
   name: string;
@@ -117,93 +94,20 @@ const predictionLevels: PredictionLevel[] = [
   { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
-const getWeatherFromCode = (code: number): string => {
-  if (code >= 0 && code <= 2) return '晴れ';
-  if (code === 3) return '曇り';
-  if ((code >= 4 && code <= 5) || (code >= 10 && code <= 12) || (code >= 41 && code <= 49)) return '曇り';
-  if (code === 17 || code === 95 || code === 97) return '雷';
-  if (code === 18) return 'にわか雨';
-  if (code === 20 || (code >= 51 && code <= 55)) return '小雨';
-  if (code === 21 || code === 24 || code === 25 || code === 61 || code === 80) return '雨';
-  if (code === 63 || code === 81) return '雨';
-  if (code === 65 || code === 82) return '激しい雨';
-  if (code === 22 || code === 26 || (code >= 71 && code <= 75)) return '雪';
-  if (code === 23) return 'みぞれ';
-  if (code === 27) return 'ひょう';
-  return '不明';
-};
-
-const getWindDirection = (degrees: number): string => {
-  const directions = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
-};
-
-const getLastUpdateTime = (): Date => {
-  const now = new Date();
-  const updateHours = [2, 5, 8, 11, 14, 17, 20, 23];
-  const currentHour = now.getHours();
-
-  const lastUpdateHourToday = [...updateHours].reverse().find((hour) => currentHour >= hour);
-
-  const lastUpdateDate = new Date(now);
-
-  if (lastUpdateHourToday !== undefined) {
-    lastUpdateDate.setHours(lastUpdateHourToday, 0, 0, 0);
-  } else {
-    lastUpdateDate.setDate(now.getDate() - 1);
-    lastUpdateDate.setHours(23, 0, 0, 0);
-  }
-  return lastUpdateDate;
-};
-
-
 export default function Home() {
   const router = useRouter();
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [authorName, setAuthorName] = useState('');
-  const [replyTo, setReplyTo] = useState<number | null>(null);
-  const [replyContent, setReplyContent] = useState('');
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState<string>('現地情報');
-  const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
-  const COMMENTS_PER_PAGE = 30;
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const sortOptions = [
-    { value: 'newest', label: '新しい順' },
-    { value: 'oldest', label: '古い順' },
-    { value: 'good', label: '高評価順' },
-    { value: 'bad', label: '低評価順' },
-  ];
 
   useEffect(() => {
     fetchForecasts();
-  }, []);
-
-  useEffect(() => {
     fetchPosts();
-  }, [selectedFilterLabel]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedFilterLabel]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [sortOrder]);
+  }, []);
 
   const fetchForecasts = async () => {
     setLoading(true);
@@ -214,6 +118,19 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: ForecastData[] = await response.json();
+
+      // // 開発用にモックデータを使用する場合は、以下のコメントアウトを解除し、API取得部分をコメントアウトしてください。
+      // const mockData: ForecastData[] = [
+      //   { date: "2025-05-26", predicted_amount: 1.3, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      //   { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 25.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
+      //   { date: "2025-05-28", predicted_amount: 0.3, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
+      //   { date: "2025-05-29", predicted_amount: 0.6, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },
+      //   { date: "2025-05-30", predicted_amount: 0.9, moon_age: 22.3, weather_code: 63, temperature_max: 24.9, temperature_min: 23.4, precipitation_probability_max: 98, dominant_wind_direction: 120 },
+      //   { date: "2025-05-31", predicted_amount: 1.2, moon_age: 23.3, weather_code: 80, temperature_max: 31.2, temperature_min: 23.6, precipitation_probability_max: 80, dominant_wind_direction: 224 },
+      //   { date: "2025-06-01", predicted_amount: 1.1, moon_age: 24.3, weather_code: 63, temperature_max: 25.8, temperature_min: 24.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+      // ];
+      // const data = mockData;
+
       const mappedPredictions: DayPrediction[] = data
         .map((forecast) => {
           const date = new Date(forecast.date);
@@ -260,11 +177,11 @@ export default function Home() {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (label?: string | null) => {
     try {
       let url = `${API_URL}/api/posts`;
-      if (selectedFilterLabel) {
-        url += `?label=${encodeURIComponent(selectedFilterLabel)}`;
+      if (label) {
+        url += `?label=${encodeURIComponent(label)}`;
       }
       const response = await fetch(url);
       if (!response.ok) {
@@ -289,7 +206,6 @@ export default function Home() {
         })
       );
       setComments(commentsWithReplies);
-      setCurrentPage(1);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
     }
@@ -310,6 +226,7 @@ export default function Home() {
   };
 
   const createPost = async (username: string, content: string, label: string, imageBase64s: string[]) => {
+    setIsSubmittingComment(true);
     try {
       const response = await fetch(`${API_URL}/api/posts`, {
         method: 'POST',
@@ -324,6 +241,8 @@ export default function Home() {
       await fetchPosts();
     } catch (error) {
       console.error('Failed to create post:', error);
+    } finally {
+        setIsSubmittingComment(false);
     }
   };
 
@@ -340,7 +259,7 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return fetchPosts();
+      await fetchPosts();
     } catch (error) {
       console.error('Failed to create reply:', error);
     }
@@ -384,259 +303,20 @@ export default function Home() {
     router.push(`/detail/${dateString}`);
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      if (selectedImages.length + files.length > 4) {
-        alert('写真は最大4枚までです。');
-        const remainingSlots = 4 - selectedImages.length;
-        if (remainingSlots > 0) {
-          setSelectedImages(prev => [...prev, ...files.slice(0, remainingSlots)]);
-        }
-      } else {
-        setSelectedImages(prev => [...prev, ...files]);
-      }
-      event.target.value = '';
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmitComment = async () => {
-    if (!newComment.trim() || !authorName.trim() || isSubmittingComment) return;
-
-    setIsSubmittingComment(true);
-
-    try {
-      let imageBase64s: string[] = [];
-      if (selectedImages.length > 0) {
-        imageBase64s = await Promise.all(
-          selectedImages.map(file => {
-            return new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = error => reject(error);
-            });
-          })
-        );
-      }
-      await createPost(authorName, newComment, selectedLabel, imageBase64s);
-      setNewComment('');
-      setAuthorName('');
-      setSelectedImages([]);
-      setSelectedLabel('現地情報');
-    } catch (error) {
-      console.error('Failed to submit comment:', error);
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const handleReaction = (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
-    createReaction(targetId, type, reactionType);
-  };
-
-  const formatDateForWeek = (date: Date) => {
-    return date.toLocaleDateString('ja-JP', {
-      month: 'numeric',
-      day: 'numeric',
-      weekday: 'short',
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-    const dateOptions: Intl.DateTimeFormatOptions = { month: 'numeric', day: 'numeric', weekday: 'short' };
-    const dateStr = date.toLocaleDateString('ja-JP', dateOptions);
-    const nextDayStr = nextDay.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' });
-    return `${dateStr}深夜 〜 ${nextDayStr}朝の身投げ`;
-  };
-
-  const formatTime = (date: Date) => {
-    const datePart = date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    });
-    const timePart = date.toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${datePart} ${timePart}`;
-  };
-
-  const getOffSeasonMessage = (date: Date) => {
-    const month = date.getMonth();
-    if (month === 0) {
-      return '現在はホタルイカの身投げの時期ではありません。2月から予測を再開します';
-    }
-    return '現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。';
-  };
-
-  const todayPrediction = predictions[0];
-  const weekPredictions = predictions.slice(1);
-
-  const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
-  const filteredComments = useMemo(() => {
-    if (!normalizedQuery) return comments;
-    return comments.filter((c) => {
-      const targets: string[] = [
-        c.username ?? '',
-        c.content ?? '',
-        ...c.replies.flatMap((r) => [r.username ?? '', r.content ?? '']),
-      ];
-      return targets.some((t) => (t || '').toLowerCase().includes(normalizedQuery));
-    });
-  }, [comments, normalizedQuery]);
-
-  const sortedComments = useMemo(() => {
-    const arr = filteredComments.slice();
-    switch (sortOrder) {
-      case 'newest':
-        arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'oldest':
-        arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        break;
-      case 'good':
-        arr.sort((a, b) => b.goodCount - a.goodCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'bad':
-        arr.sort((a, b) => b.badCount - a.badCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-    }
-    return arr;
-  }, [filteredComments, sortOrder]);
-
-  useEffect(() => {
-    const totalPagesCalc = Math.max(1, Math.ceil(sortedComments.length / COMMENTS_PER_PAGE));
-    if (currentPage > totalPagesCalc) {
-      setCurrentPage(totalPagesCalc);
-    }
-  }, [sortedComments.length, currentPage]);
-
-  const totalComments = sortedComments.length;
-  const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
-  const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE;
-  const endIndex = Math.min(startIndex + COMMENTS_PER_PAGE, totalComments);
-  const paginatedComments = useMemo(() => sortedComments.slice(startIndex, endIndex), [sortedComments, startIndex, endIndex]);
-
   if (loading) {
-    return (
-      <div className="min-h-screen relative z-10">
-        <header className="text-center pt-12 pb-8 md:pb-12 px-4">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-              ホタルイカ爆湧き予報
-            </h1>
-          </div>
-          <p className="text-sm md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
-          <div className="flex items-center justify-center gap-2 text-[11px] md:text-xs text-blue-300">
-            <MapPin className="w-3 h-3" />
-            <span>富山湾</span>
-            <TrendingUp className="w-3 h-3 ml-3" />
-            <span>リアルタイム予測</span>
-          </div>
-        </header>
-        <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
-          <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
-            <CardHeader className="text-center pt-8 pb-6">
-              <Skeleton className="h-8 w-32 mx-auto mb-2" />
-              <Skeleton className="h-4 w-24 mx-auto" />
-            </CardHeader>
-            <CardContent className="text-center px-4 pb-8">
-              <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 mb-6">
-                <Skeleton className="h-10 w-40 mx-auto mb-4" />
-                <Skeleton className="h-24 w-full mb-4" />
-                <Skeleton className="h-6 w-64 mx-auto" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                    <div className="flex items-center mb-1">
-                      <Skeleton className="w-5 h-5 mr-1.5 rounded-full" />
-                      <Skeleton className="h-4 w-12" />
-                    </div>
-                    <Skeleton className="h-6 w-20" />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className="h-10 w-32 mx-auto mt-6" />
-            </CardContent>
-          </Card>
-
-          <Card className="mb-16 bg-transparent border-none shadow-none">
-            <CardHeader className="px-0">
-              <div className="flex items-center gap-3">
-                <Skeleton className="w-7 h-7" />
-                <Skeleton className="h-8 w-48" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Carousel
-                opts={{
-                  align: 'start',
-                }}
-                className="w-full max-w-6xl mx-auto"
-              >
-                <CarouselContent className="-ml-2 md:-ml-4">
-                  {[...Array(6)].map((_, index) => (
-                    <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
-                      <div className="flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 bg-white/5">
-                        <div>
-                          <Skeleton className="h-5 w-24 mx-auto mb-1" />
-                          <Skeleton className="h-4 w-20 mx-auto mb-2" />
-
-                          <div className="mb-4 min-h-[5rem] flex flex-col justify-center items-center">
-                            <Skeleton className="h-5 w-16 mb-3" />
-                            <Skeleton className="h-10 w-full" />
-                          </div>
-
-                          <div className="w-full space-y-2 text-xs">
-                            {[...Array(4)].map((_, i) => (
-                              <div key={i} className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                                <div className="flex items-center">
-                                  <Skeleton className="w-4 h-4 mr-1.5 rounded-full" />
-                                  <Skeleton className="h-3 w-8" />
-                                </div>
-                                <div className="text-center">
-                                  <Skeleton className="h-4 w-12 mx-auto" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="mt-4 w-full flex justify-center">
-                          <Skeleton className="h-7 w-full" />
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="absolute left-[-12px] sm:left-[-20px] top-1/2 -translate-y-1/2 flex xl:hidden bg-slate-800/50 hover:bg-slate-700/80 border-slate-600 z-10" />
-                <CarouselNext className="absolute right-[-12px] sm:right-[-20px] top-1/2 -translate-y-1/2 flex xl:hidden bg-slate-800/50 hover:bg-slate-700/80 border-slate-600 z-10" />
-              </Carousel>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (error) {
     return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
   }
 
-  const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
+  const todayPrediction = predictions[0];
+  const weekPredictions = predictions.slice(1);
 
   return (
     <div className="min-h-screen relative z-10">
-      <Dialog open={isSubmittingComment}>
+       <Dialog open={isSubmittingComment}>
         <DialogContent
           showCloseButton={false}
           className="w-auto bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg flex items-center justify-center p-6"
@@ -647,598 +327,43 @@ export default function Home() {
           <span>口コミを投稿中です...</span>
         </DialogContent>
       </Dialog>
-      
-      <header className="text-center pt-12 pb-8 md:pb-12 px-4">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
-            ホタルイカ爆湧き予報
-          </h1>
-        </div>
-        <p className="text-sm md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
-        <div className="flex items-center justify-center gap-2 text-[11px] md:text-xs text-blue-300">
-          <MapPin className="w-3 h-3" />
-          <span>富山湾</span>
-          <TrendingUp className="w-3 h-3 ml-3" />
-          <span>リアルタイム予測</span>
-        </div>
-      </header>
+
+      <AppHeader />
 
       <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
         {todayPrediction && (
-          <Card className="mb-8 glow-effect bg-gradient-to-br from-gray-900 via-blue-900/50 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl">
-            <CardHeader className="text-center pt-8 pb-6">
-              <div className="flex justify-center items-center gap-2 mb-1">
-                <CardTitle className="text-2xl md:text-3xl font-bold text-white">今日の予報</CardTitle>
-
-                <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
-                  <DialogTrigger asChild>
-                    <button className="text-blue-300 hover:text-blue-100 transition-colors" aria-label="予報の説明を見る">
-                      <HelpCircle className="w-5 h-5" />
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2 text-blue-200">
-                        <HelpCircle className="w-5 h-5" />
-                        <span>予報の説明</span>
-                      </DialogTitle>
-                      <DialogDescription className="sr-only">予報の見方や更新タイミングについて説明します。</DialogDescription>
-                    </DialogHeader>
-                    <div className="mt-2 space-y-5 py-2 text-sm">
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-6 h-6 mt-1 text-blue-300 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-slate-200 mb-2">予報の時間区分</h4>
-                          <div className="space-y-3 text-slate-300">
-                            <p>このサイトでは、ホタルイカの身投げが深夜から明け方にかけて発生するため、日付の切り替えを<strong className="text-white">朝5時</strong>に行っています。</p>
-                            <div className="grid gap-1">
-                              <p className="font-semibold text-slate-200">
-                                <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">05:00〜23:59</span> の閲覧時
-                              </p>
-                              <p className="pl-3 border-l-2 border-blue-400">
-                                <strong className="text-white">今夜から翌朝にかけて</strong>の予報です。
-                              </p>
-                            </div>
-                            <div className="grid gap-1">
-                              <p className="font-semibold text-slate-200">
-                                <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded text-xs">00:00〜04:59</span> の閲覧時
-                              </p>
-                              <p className="pl-3 border-l-2 border-blue-400">
-                                <strong className="text-white">現在の朝</strong>の予報です。
-                              </p>
-                            </div>
-                            <p className="text-xs text-slate-400 pt-1">※気温・天気などの気象データは、予報対象日の日中のデータです。</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <RefreshCw className="w-6 h-6 mt-1 text-green-300 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
-                          <p className="text-slate-300 leading-relaxed">
-                            次の時刻に更新されます：<br />
-                            <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 23:00, 02:00</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Lightbulb className="w-6 h-6 mt-1 text-yellow-300 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-slate-200 mb-1">予測の表示</h4>
-                          <div className="text-slate-300 leading-relaxed space-y-2">
-                            <p>予測はシーズン期間（2月〜5月）のみ行われ、期間外は「オフシーズン」と表示されます。</p>
-                            <p>
-                              予測レベルは以下の6段階です：<br />
-                              <span className="mr-1">「<span className="text-gray-300 font-semibold">湧きなし</span>」</span>
-                              <span className="mr-1">「<span className="text-blue-300 font-semibold">プチ湧き</span>」</span>
-                              <span className="mr-1">「<span className="text-cyan-300 font-semibold">チョイ湧き</span>」</span>
-                              <br className="sm:hidden" />
-                              <span className="mr-1">「<span className="text-green-300 font-semibold">湧き</span>」</span>
-                              <span className="mr-1">「<span className="text-yellow-300 font-semibold">大湧き</span>」</span>
-                              <span className="mr-1">「<span className="text-pink-300 font-semibold">爆湧き</span>」</span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <p className="text-blue-300">{formatDate(todayPrediction.date)}</p>
-              {todayPrediction.level !== -1 && lastUpdated && (
-                <div className="flex items-center justify-center gap-1 text-xs text-blue-200/80 mt-1">
-                  <RefreshCw className="w-3 h-3" />
-                  <span>最終更新 {lastUpdated.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent className="text-center px-4 pb-8">
-              {todayPrediction.level === -1 ? (
-                <div className="inline-block px-4 sm:px-8 py-4 rounded-2xl bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm mb-6">
-                  <div className="flex flex-col justify-center items-center min-h-[160px] md:min-h-[180px]">
-                    <p className="text-3xl md:text-4xl font-bold text-gray-300">オフシーズン</p>
-                    <p className="text-sm text-gray-400 mt-2 px-4">{getOffSeasonMessage(todayPrediction.date)}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
-                  {todayPrediction.level > 0 && (
-                    <div
-                      className={`
-                      text-3xl md:text-4xl font-bold mb-2
-                      ${predictionLevels[todayPrediction.level].color}
-                      ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                    `}
-                    >
-                      {predictionLevels[todayPrediction.level].name}
-                    </div>
-                  )}
-
-                  <div className="mb-4">
-                    {todayPrediction.level === 5 ? (
-                      <>
-                        <div className="flex flex-col items-center sm:hidden">
-                          <div className="flex justify-center gap-2">{todayIcons.slice(0, 3)}</div>
-                          <div className="flex justify-center gap-2 -mt-3">{todayIcons.slice(3, 5)}</div>
-                        </div>
-                        <div className="hidden sm:flex justify-center gap-2">{todayIcons}</div>
-                      </>
-                    ) : (
-                      <div className="flex justify-center items-center gap-2 min-h-[80px] md:min-h-[96px]">
-                        {todayPrediction.level > 0 ? (
-                          todayIcons
-                        ) : (
-                          <div
-                            className={`
-                            text-3xl md:text-4xl font-bold mb-2
-                            ${predictionLevels[todayPrediction.level].color}
-                            ${todayPrediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                          `}
-                          >
-                            {predictionLevels[todayPrediction.level].name}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-lg text-gray-300">{predictionLevels[todayPrediction.level].description}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                  <div className="flex items-center text-blue-300 mb-1">
-                    <Thermometer className="w-5 h-5 mr-1.5" />
-                    <p className="text-sm font-medium">気温</p>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">
-                    <span className="text-orange-300">{todayPrediction.temperature_max}</span>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-blue-300">{todayPrediction.temperature_min}</span>
-                    <span className="text-gray-400 text-[17px] align-top">℃</span>
-                  </p>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                  <div className="flex items-center text-blue-300 mb-1">
-                    <Cloudy className="w-5 h-5 mr-1.5" />
-                    <p className="text-sm font-medium">天気</p>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.weather}</p>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                  <div className="flex items-center text-blue-300 mb-1">
-                    <Wind className="w-5 h-5 mr-1.5" />
-                    <p className="text-sm font-medium">風向き</p>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.wind_direction}</p>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 p-3 rounded-lg">
-                  <div className="flex items-center text-blue-300 mb-1">
-                    <Moon className="w-5 h-5 mr-1.5" />
-                    <p className="text-sm font-medium">月齢</p>
-                  </div>
-                  <p className="text-lg sm:text-xl font-bold text-white">{todayPrediction.moonAge.toFixed(1)}</p>
-                </div>
-              </div>
-              <div className="mt-8 flex justify-center">
-                <Button
-                  onClick={() => handleCardClick(todayPrediction.date)}
-                  variant="ghost"
-                  aria-label={`詳細を見る: ${formatDate(todayPrediction.date)}`}
-                  title="この日の詳細を表示"
-                  className="
-                    group relative h-10 md:h-9 px-4 rounded-xl text-xs font-medium
-                    bg-gradient-to-b from-white/10 to-white/[0.06]
-                    border border-blue-400/30 text-blue-100
-                    ring-1 ring-inset ring-blue-500/10
-                    shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]
-                    backdrop-blur-md
-                    transition-[background,border-color,box-shadow] duration-200
-                    hover:from-white/[0.12] hover:to-white/[0.06]
-                    hover:border-blue-300/40
-                    hover:ring-blue-400/15
-                    hover:shadow-[0_0_10px_-4px_rgba(56,189,248,0.28)]
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50
-                    active:bg-white/[0.08]
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                  "
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <span>詳細を見る</span>
-                    <ChevronRight className="w-4 h-4 text-blue-300 transition-transform duration-200 group-hover:translate-x-[1px]" />
-                  </span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TodayForecast 
+            todayPrediction={todayPrediction}
+            predictionLevels={predictionLevels}
+            lastUpdated={lastUpdated}
+            handleCardClick={handleCardClick}
+            formatDate={formatDate}
+            getOffSeasonMessage={getOffSeasonMessage}
+            renderHotaruikaIcons={renderHotaruikaIcons}
+            isHelpDialogOpen={isHelpDialogOpen}
+            setIsHelpDialogOpen={setIsHelpDialogOpen}
+          />
         )}
 
-        <Card className="mb-16 bg-transparent border-none shadow-none">
-          <CardHeader className="px-0">
-            <CardTitle className="text-xl md:text-2xl font-bold text白 flex items-center gap-3">
-              <Calendar className="w-7 h-7 text-blue-300" />
-              週間予報
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Carousel
-              opts={{
-                align: 'start',
-                loop: true,
-              }}
-              className="w-full max-w-6xl mx-auto"
-            >
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {weekPredictions.map((prediction, index) => (
-                  <CarouselItem key={index} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6">
-                    <div className="flex flex-col justify-between p-4 rounded-2xl border h-full border-blue-500/20 backdrop-blur-sm bg-white/5">
-                      <div>
-                        <p className="text-base font-semibold text-blue-200 mb-1 text-center">{formatDateForWeek(prediction.date)}</p>
-                        <p className="text-xs text-blue-300 mb-2 text-center">深夜〜翌朝の予測</p>
-                        <div className="mb-4 min-h-[5rem] flex flex-col justify-center">
-                          {prediction.level === -1 ? (
-                            <div className="flex flex-col justify-center items-center text-center">
-                              <p className="text-lg font-bold text-gray-300">オフシーズン</p>
-                            </div>
-                          ) : (
-                            <>
-                              <div
-                                className={`
-                                text-lg font-bold mb-3 text-center
-                                ${predictionLevels[prediction.level].color}
-                                ${prediction.level > 0 ? 'text-glow-normal' : 'text-glow-weak'}
-                              `}
-                              >
-                                {predictionLevels[prediction.level].name}
-                              </div>
-                              <div className="flex justify-center items-center h-10">{renderHotaruikaIcons(prediction.level, '/hotaruika_aikon.png', 'w-8 h-8', false)}</div>
-                            </>
-                          )}
-                        </div>
-                        <div className="w-full space-y-2 text-xs text-gray-300">
-                            <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                              <div className="flex items-center">
-                                <Thermometer className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                                <span>気温</span>
-                              </div>
-                              <div className="text-center">
-                                <span className="font-medium">
-                                  <span className="text-orange-300">{prediction.temperature_max}</span>
-                                  <span className="text-gray-400">/</span>
-                                  <span className="text-blue-300">{prediction.temperature_min}</span>
-                                  <span className="text-gray-400 text-[11px] align-top">℃</span>
-                                </span>
-                              </div>
-                            </div>
-                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                            <div className="flex items-center">
-                              <Cloudy className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                              <span>天気</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-medium">{prediction.weather}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                            <div className="flex items-center">
-                              <Wind className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                              <span>風向き</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-medium">{prediction.wind_direction}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 items-center bg-white/5 px-2 py-1 rounded">
-                            <div className="flex items-center">
-                              <Moon className="w-4 h-4 inline mr-1.5 text-blue-400" />
-                              <span>月齢</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-medium">{prediction.moonAge.toFixed(1)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 w-full flex justify-center">
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCardClick(prediction.date);
-                          }}
-                          variant="ghost"
-                          aria-label={`詳細: ${formatDateForWeek(prediction.date)}`}
-                          title="この日の詳細を表示"
-                          className="
-                            group relative h-8 md:h-7 px-3 rounded-xl text-xs font-medium
-                            bg-gradient-to-b from-white/10 to-white/[0.06]
-                            border border-blue-400/30 text-blue-100
-                            ring-1 ring-inset ring-blue-500/10
-                            shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]
-                            backdrop-blur-md
-                            transition-transform duration-150
-                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/45
-                            active:bg-white/[0.07]
-                            hover:bg-white/15
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                          "
-                        >
-                          <span className="inline-flex items-center gap-1.5">
-                            <span>詳細</span>
-                            <ChevronRight className="w-4 h-4 text-blue-300 transition-transform duration-150 group-hover:translate-x-[1px]" />
-                          </span>
-                        </Button>
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="absolute left-[-12px] sm:left-[-20px] top-1/2 -translate-y-1/2 flex xl:hidden bg-slate-800/50 hover:bg-slate-700/80 border-slate-600 z-10" />
-              <CarouselNext className="absolute right-[-12px] sm:right-[-20px] top-1/2 -translate-y-1/2 flex xl:hidden bg-slate-800/50 hover:bg-slate-700/80 border-slate-600 z-10" />
-            </Carousel>
-          </CardContent>
-        </Card>
+        <WeeklyForecast 
+          weekPredictions={weekPredictions}
+          predictionLevels={predictionLevels}
+          formatDateForWeek={formatDateForWeek}
+          renderHotaruikaIcons={renderHotaruikaIcons}
+          handleCardClick={handleCardClick}
+        />
 
-        <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
-          <CardHeader>
-            <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
-              <MessageCircle className="w-6 h-6" />
-              みんなの口コミ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* コメント投稿フォーム */}
-            <div className="mb-9 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <Input
-                  placeholder="お名前"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  className="h-8 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
-                />
-              </div>
-              <Textarea
-                placeholder="ホタルイカについてご自由にお書きください！"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                className="mb-4 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
-                rows={5}
-              />
-              <div className="mb-4">
-                <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200 mb-2">
-                  <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
-                  <span>画像を選択 ({selectedImages.length}/4)</span>
-                </label>
-                <Input id="image-upload" type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" disabled={selectedImages.length >= 4} />
-                {selectedImages.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {selectedImages.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-24 object-cover rounded-md" />
-                        <button onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <span className="text-gray-300 text-xs font-bold">ラベル：</span>
-
-                <Button
-                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold antialiased ${
-                    selectedLabel === '現地情報'
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                      : 'border-purple-500 text-purple-300 hover:bg-purple-900/20'
-                  }`}
-                  onClick={() => setSelectedLabel('現地情報')}
-                  variant={selectedLabel === '現地情報' ? 'default' : 'outline'}
-                >
-                  現地情報
-                </Button>
-
-                <Button
-                  className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold antialiased ${
-                    selectedLabel === 'その他'
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                      : 'border-purple-500 text-purple-300 hover:bg-purple-900/20'
-                  }`}
-                  onClick={() => setSelectedLabel('その他')}
-                  variant={selectedLabel === 'その他' ? 'default' : 'outline'}
-                >
-                  その他
-                </Button>
-              </div>
-              <Button
-                onClick={handleSubmitComment}
-                disabled={!newComment.trim() || !authorName.trim() || isSubmittingComment}
-                className="
-                  group relative inline-flex items-center gap-2
-                  rounded-xl px-4 py-2.5 text-sm font-semibold text-white
-                  bg-gradient-to-r from-indigo-600/90 via-fuchsia-600/90 to-rose-600/90
-                  backdrop-blur-md
-                  ring-1 ring-white/10
-                  shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_10px_26px_-14px_rgba(0,0,0,0.65)]
-                  transition-all duration-200
-                  hover:brightness-105 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_16px_32px_-14px_rgba(0,0,0,0.7)]
-                  active:scale-[0.99]
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 focus-visible:ring-offset-2
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  before:absolute before:inset-0 before:rounded-[inherit] before:pointer-events-none
-                  before:bg-gradient-to-tr before:from-white/12 before:via-transparent before:to-transparent
-                "
-              >
-                {isSubmittingComment ? (
-                  <>
-                    <Loader2 className="w-4 h-4 -ml-0.5 animate-spin" />
-                    投稿中...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 -ml-0.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                    投稿する
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* ラベルフィルター */}
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="text-gray-300 text-xs font-bold">ラベル：</span>
-              <Button
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === null ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
-                onClick={() => setSelectedFilterLabel(null)}
-                variant={selectedFilterLabel === null ? 'default' : 'outline'}
-              >
-                全て
-              </Button>
-              <Button
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '現地情報' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
-                onClick={() => setSelectedFilterLabel('現地情報')}
-                variant={selectedFilterLabel === '現地情報' ? 'default' : 'outline'}
-              >
-                現地情報
-              </Button>
-              <Button
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === 'その他' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
-                onClick={() => setSelectedFilterLabel('その他')}
-                variant={selectedFilterLabel === 'その他' ? 'default' : 'outline'}
-              >
-                その他
-              </Button>
-              <Button
-                className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '管理者' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
-                onClick={() => setSelectedFilterLabel('管理者')}
-                variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
-              >
-                管理者
-              </Button>
-            </div>
-
-            {/* 検索 */}
-            <div className="mb-4 flex items-center gap-2">
-              <span className="text-gray-300 text-xs font-bold whitespace-nowrap">検索：</span>
-              <div className="relative w-full md:w-2/3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="名前・投稿内容で検索"
-                  className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
-                />
-                {searchQuery && (
-                  <button
-                    aria-label="検索をクリア"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-gray-300"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 並び替え */}
-            <div className="mb-5 flex items-center gap-2">
-              <span className="text-gray-300 text-xs font-bold whitespace-nowrap">並び替え：</span>
-              <CustomSelect
-                options={sortOptions}
-                value={sortOrder}
-                onChange={(value) => setSortOrder(value as 'newest' | 'oldest' | 'good' | 'bad')}
-              />
-            </div>
-
-            {/* ページネーションコントロール（上部） */}
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex + 1}〜${endIndex}件 / 全${totalComments}件`}</div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  前へ
-                </Button>
-                <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
-                <Button
-                  variant="outline"
-                  className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || totalComments === 0}
-                >
-                  次へ
-                </Button>
-              </div>
-            </div>
-
-            {/* コメント一覧（検索＋並び替え＋30件ごとに表示） */}
-            <div className="space-y-4">
-              {paginatedComments.length === 0 ? (
-                <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する口コミはありません' : '口コミはまだありません'}</div>
-              ) : (
-                paginatedComments.map((comment) => (
-                  <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} formatTime={formatTime} createReply={createReply} />
-                ))
-              )}
-            </div>
-
-            {/* ページネーションコントロール（下部） */}
-            {totalComments > 0 && (
-              <div className="mt-6 flex items-center justify-between gap-3">
-                <div className="text-xs text-gray-400">
-                  {startIndex + 1}〜{endIndex}件 / 全{totalComments}件
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    前へ
-                  </Button>
-                  <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
-                  <Button
-                    variant="outline"
-                    className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    次へ
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CommentSection 
+          comments={comments}
+          handleReaction={createReaction}
+          formatTime={formatTime}
+          createReply={createReply}
+          createPost={createPost}
+          fetchPosts={fetchPosts}
+        />
       </div>
 
-      <footer className="text-center py-8 text-gray-400 border-t border-blue-500/20">
-        <p className="mb-2">© 2026 ホタルイカ爆湧き予報</p>
-      </footer>
+      <AppFooter />
     </div>
   );
 }
