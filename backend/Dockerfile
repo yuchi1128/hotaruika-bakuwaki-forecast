@@ -19,7 +19,7 @@ COPY . .
 # アプリケーションをビルド
 # CGO_ENABLED=0 は静的リンクバイナリを生成し、scratchイメージなどの軽量イメージで動作しやすく
 # -o /app/server で出力先を指定
-RUN CGO_ENABLED=0 go build -o /app/server main.go
+RUN CGO_ENABLED=0 go build -o /app/server cmd/server/main.go
 
 # --- 本番ステージ ---
 # 実行用の非常に軽量なベースイメージ
