@@ -1,4 +1,4 @@
-# ホタルイカ爆湧き予報
+## ホタルイカ爆湧き予報
 
 **https://bakuwaki.jp/**
 
@@ -19,7 +19,3 @@
 - **バックエンド**: Go
 - **データベース・ストレージ**: Supabase (PostgreSQL, Storage)
 - **インフラ**: Docker, Vercel, GCP(Cloud Run)
-
-### 構成
-
-![image](https://github.com/user-attachments/assets/d7a99492-d3e3-42a3-9a23-6f1081e2de3d)
