@@ -4,7 +4,7 @@ import { ShieldAlert } from 'lucide-react';
 
 // --- データ取得関数 ---
 async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData }> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const apiUrl = `${apiBaseUrl}/api/detail/${date}`;
 
   const response = await fetch(apiUrl, { next: { revalidate: 3600 } });
