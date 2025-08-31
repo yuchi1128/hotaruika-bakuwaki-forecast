@@ -49,6 +49,26 @@ interface CommentItemProps {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+const linkify = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.split(urlRegex).map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:underline"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function CommentItem({
   comment,
   handleReaction,
@@ -115,7 +135,7 @@ export default function CommentItem({
             </div>
             <p className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
               {reply.parent_username && <span className="text-blue-300 mr-1">@{reply.parent_username}</span>}
-              {reply.content}
+              {linkify(reply.content)}
             </p>
             <Button
               variant="ghost"
@@ -225,7 +245,7 @@ export default function CommentItem({
               </Badge>
             </div>
 
-            <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{comment.content}</p>
+            <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{linkify(comment.content)}</p>
 
             {comment.image_urls && comment.image_urls.length > 0 && (
               <>
