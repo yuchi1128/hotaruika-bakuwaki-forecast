@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/hotaruika_aikon_3.png',
   },
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
 
 // Noto Sans JP (Google Fonts) の設定

@@ -244,6 +244,15 @@ export default function ForecastCharts({
                   }
                 }}
                 onMouseLeave={() => setHoverWeatherX(null)}
+                {...(isMobile && {
+                  onTouchMove: (state: any) => {
+                    if (state && state.activeLabel !== undefined && state.activeLabel !== null) {
+                      setHoverWeatherX(state.activeLabel as number);
+                    }
+                  },
+                  onTouchEnd: () => setHoverWeatherX(null),
+                  onTouchCancel: () => setHoverWeatherX(null),
+                })}
               >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                 <XAxis
@@ -348,10 +357,7 @@ export default function ForecastCharts({
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
                 </div>
               </div>
-              {/* ▼▼▼ 修正箇所 ▼▼▼ */}
-              {/* 外側のコンテナ: センタリングとスクロールを担当 */}
               <div className="text-center md:text-left overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-                {/* 内側のコンテナ: flexアイテムをまとめる */}
                 <div className="inline-flex gap-3 px-4 md:px-0 md:flex md:flex-wrap md:justify-center">
                   {[
                     ...tide.flood.map(f => ({ ...f, type: '満潮' })),
@@ -379,7 +385,6 @@ export default function ForecastCharts({
                     ))}
                 </div>
               </div>
-              {/* ▲▲▲ 修正箇所 ▲▲▲ */}
             </div>
             <div className="flex-grow min-h-0 -mt-1 sm:-mt-2">
               <ResponsiveContainer width="100%" height="100%">
@@ -390,6 +395,15 @@ export default function ForecastCharts({
                     if (state && state.activeLabel) setHoverTideX(state.activeLabel as string);
                   }}
                   onMouseLeave={() => setHoverTideX(null)}
+                  {...(isMobile && {
+                    onTouchMove: (state: any) => {
+                      if (state && state.activeLabel) {
+                        setHoverTideX(state.activeLabel as string);
+                      }
+                    },
+                    onTouchEnd: () => setHoverTideX(null),
+                    onTouchCancel: () => setHoverTideX(null),
+                  })}
                 >
                   <defs>
                     <linearGradient id="tideAreaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -398,7 +412,6 @@ export default function ForecastCharts({
                       <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  {/* 点線の描画方法を変更 */}
                   <XAxis
                     dataKey="time"
                     type="category"
@@ -426,7 +439,6 @@ export default function ForecastCharts({
                     content={<TideTooltip />}
                     cursor={{ stroke: '#a78bfa', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }}
                   />
-                  {/* Y軸（水平）のグリッド線 */}
                   {tideYTicks.map((y) => (
                     <ReferenceLine
                       key={`tide-y-${y}`}
@@ -438,7 +450,6 @@ export default function ForecastCharts({
                       isFront
                     />
                   ))}
-                  {/* X軸（垂直）のグリッド線 */}
                   {tideTicks.map(tick => (
                     <ReferenceLine
                       key={`tide-x-${tick}`}
