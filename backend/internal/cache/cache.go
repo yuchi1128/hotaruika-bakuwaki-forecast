@@ -84,12 +84,27 @@ func (c *CacheManager) FetchAndCacheDetailData() {
 				c.logger.Error("気象データの取得に失敗しました", "date", dateStr, "error", err)
 				return
 			}
+			// 対象日の潮汐データを取得
 			tideData, err := c.fetchTideData(targetDate)
 			if err != nil {
 				c.logger.Error("潮汐データの取得に失敗しました", "date", dateStr, "error", err)
 				return
 			}
-			combinedData := map[string]interface{}{"weather": weatherData, "tide": tideData}
+
+			// 翌日の潮汐データを取得
+			nextDate := targetDate.AddDate(0, 0, 1)
+			nextTideData, err := c.fetchTideData(nextDate)
+			if err != nil {
+				c.logger.Error("翌日の潮汐データの取得に失敗しました", "date", nextDate.Format("2006-01-02"), "error", err)
+				return // 翌日のデータがなければ28時間表示ができないため、ここで処理を中断
+			}
+
+			// 2日分の潮汐データをまとめて格納
+			combinedData := map[string]interface{}{
+				"weather":  weatherData,
+				"tide":     tideData,
+				"nextTide": nextTideData, // 翌日の潮汐データを追加
+			}
 			jsonData, err := json.Marshal(combinedData)
 			if err != nil {
 				c.logger.Error("詳細データのJSONシリアライズに失敗しました", "date", dateStr, "error", err)
