@@ -22,7 +22,7 @@ import {
 import type { HourlyWeather, TideData } from '@/app/detail/[date]/types';
 import { getNiceTicks, getMoonPhaseIcon } from '@/lib/detail-utils';
 
-// --- Tooltip Components ---
+
 function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload as {
@@ -58,16 +58,18 @@ function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[]
   );
 }
 
-function TideTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
+// 潮汐グラフ用のツールチップを修正
+function TideTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
-  const d = payload[0].payload as { time: string; level: number };
+  const data = payload[0].payload as { time: string; level: number; isNextDay: boolean };
+  const hour = new Date(data.time).getHours();
   return (
     <div className="rounded-lg border border-white/10 bg-slate-900/90 backdrop-blur-md p-3 shadow-xl">
-      <div className="mb-2 text-sm text-slate-300">{label ? `${Number(label.split(':')[0])}時` : ''}</div>
+      <div className="mb-2 text-sm text-slate-300">{data.isNextDay ? '翌' : ''}{`${hour}時`}</div>
       <div className="flex items-center gap-2">
         <span className="inline-block h-2 w-2 rounded-full bg-sky-400" />
         <span className="text-slate-200 text-sm">潮位</span>
-        <span className="font-semibold text-sky-300">{d.level}cm</span>
+        <span className="font-semibold text-sky-300">{data.level}cm</span>
       </div>
     </div>
   );
@@ -172,32 +174,27 @@ export default function ForecastCharts({
     [nextMidnightIndex, weatherTicks]
   );
 
-  // Tide Chart Logic
-  const tideChartData = tide.tide.map((t) => ({
-    time: t.time,
+  // --- 潮汐グラフのロジックを修正 ---
+  const tideChartData = useMemo(() => tide.tide.map((t) => ({
+    time: t.fullTime, // X軸には一意なfullTimeを使用
     level: t.cm,
-  }));
+    isNextDay: t.isNextDay,
+  })), [tide.tide]);
 
   const tideTicks = useMemo(() => {
     const step = isMobile ? 4 : 2;
-    const hourPick: Record<number, string | undefined> = {};
-    for (const d of tideChartData) {
-      const [hStr, mStr] = d.time.split(':');
-      const h = Number(hStr);
-      const m = Number(mStr);
-      if (hourPick[h] === undefined || m === 0) {
-        hourPick[h] = d.time;
+    const tickMap = new Map<number, string>(); // <timestamp, fullTimeString>
+
+    tideChartData.forEach(d => {
+      const date = new Date(d.time);
+      if (date.getMinutes() === 0 && date.getHours() % step === 0) {
+        // getTime()で数値のタイムスタンプを取得し、それをキーにすることで重複を防ぐ
+        tickMap.set(date.getTime(), d.time);
       }
-    }
-    const ticks: string[] = [];
-    for (let h = 0; h < 24; h += step) {
-      if (hourPick[h]) ticks.push(hourPick[h]!);
-    }
-    const first = tideChartData[0]?.time;
-    const last = tideChartData[tideChartData.length - 1]?.time;
-    if (first && !ticks.includes(first)) ticks.unshift(first);
-    if (last && !ticks.includes(last)) ticks.push(last);
-    return Array.from(new Set(ticks));
+    });
+    
+    // Mapの値（ユニークなfullTimeString）を取得しソートする
+    return Array.from(tickMap.values()).sort();
   }, [isMobile, tideChartData]);
 
   const tideYTicks = useMemo(() => {
@@ -208,35 +205,12 @@ export default function ForecastCharts({
     return getNiceTicks(min, max, isMobile ? 5 : 6);
   }, [tideChartData, isMobile]);
 
-  const tideReferenceAreas: React.ReactNode[] = [];
   let currentTideTimeX: string | null = null;
-  if (isTodayPage) {
+  if (isTodayPage && tideChartData.length > 0) {
     for (let i = tideChartData.length - 1; i >= 0; i--) {
-      const [hour, minute] = tideChartData[i].time.split(':').map(Number);
-      const pointDate = new Date(date);
-      pointDate.setHours(hour, minute, 0, 0);
-      if (pointDate < now) {
+      const pointDate = new Date(tideChartData[i].time);
+      if (pointDate <= now) {
         currentTideTimeX = tideChartData[i].time;
-        break;
-      }
-    }
-    for (let i = 0; i < tideChartData.length - 1; i++) {
-      const segmentEndTimeStr = tideChartData[i + 1].time;
-      const [hour, minute] = segmentEndTimeStr.split(':').map(Number);
-      const segmentEndDate = new Date(date);
-      segmentEndDate.setHours(hour, minute, 0, 0);
-      if (segmentEndDate < now) {
-        tideReferenceAreas.push(
-          <ReferenceArea
-            key={`tide-area-${i}`}
-            x1={tideChartData[i].time}
-            x2={tideChartData[i + 1].time}
-            stroke="none"
-            fill="#64748b"
-            fillOpacity={0.2}
-          />
-        );
-      } else {
         break;
       }
     }
@@ -276,7 +250,7 @@ export default function ForecastCharts({
                   dataKey="index"
                   tickFormatter={xAxisTickFormatter}
                   tick={{ fill: '#9ca3af' }}
-                  fontSize={isMobile ? 10 : 12}
+                  fontSize={10}
                   type="number"
                   ticks={weatherTicks}
                   interval={0}
@@ -286,7 +260,7 @@ export default function ForecastCharts({
                   yAxisId="left"
                   orientation="left"
                   stroke="#fbbf24"
-                  tick={{ fill: '#fbbf24', fontSize: isMobile ? 10 : 12 }}
+                  tick={{ fill: '#fbbf24', fontSize: 10 }}
                   width={isMobile ? 35 : 35}
                   ticks={weatherTempTicks}
                   domain={
@@ -300,7 +274,7 @@ export default function ForecastCharts({
                   yAxisId="right"
                   orientation="right"
                   stroke="#60a5fa"
-                  tick={{ fill: '#60a5fa', fontSize: isMobile ? 10 : 12 }}
+                  tick={{ fill: '#60a5fa', fontSize: 10 }}
                   width={isMobile ? 25 : 25}
                   ticks={weatherPrecipTicks}
                   domain={
@@ -374,18 +348,12 @@ export default function ForecastCharts({
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
                 </div>
               </div>
-              <div className="flex flex-row gap-2 justify-center mt-2 flex-wrap">
+              <div className="flex flex-row gap-2 mt-2 justify-start md:justify-center flex-nowrap md:flex-wrap overflow-x-auto md:overflow-visible pb-2 md:pb-0">
                 {[
                   ...tide.flood.map(f => ({ ...f, type: '満潮' })),
                   ...tide.edd.map(e => ({ ...e, type: '干潮' })),
                 ]
-                  .sort((a, b) => {
-                    const getMinutes = (t: string) => {
-                      const [h, m] = t.split(':').map(Number);
-                      return h * 60 + m;
-                    };
-                    return getMinutes(a.time) - getMinutes(b.time);
-                  })
+                  .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
                   .map((t, i) => (
                     <div
                       key={i}
@@ -400,7 +368,7 @@ export default function ForecastCharts({
                         )}
                       </div>
                       <div className="flex flex-col items-center justify-center ml-1">
-                        <span className="font-semibold">{t.time}</span>
+                        <span className="font-semibold whitespace-nowrap">{t.isNextDay ? '翌' : ''}{t.time}</span>
                         <span className="text-[11px] text-slate-500">{t.cm}cm</span>
                       </div>
                     </div>
@@ -424,15 +392,20 @@ export default function ForecastCharts({
                       <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} horizontal={false} />
+                  {/* 点線の描画方法を変更 */}
                   <XAxis
                     dataKey="time"
+                    type="category"
                     ticks={tideTicks}
                     interval={0}
-                    minTickGap={0}
-                    tickFormatter={(t: string) => `${Number(t.split(':')[0])}時`}
-                    tick={{ fill: '#9ca3af' }}
-                    fontSize={isMobile ? 10 : 12}
+                    tickFormatter={(time) => {
+                      const d = new Date(time);
+                      const hour = d.getHours();
+                      const dataPoint = tideChartData.find(p => p.time === time);
+                      return `${dataPoint?.isNextDay ? '翌' : ''}${hour}時`;
+                    }}
+                    tick={{ fill: '#9ca3af', fontSize: 10 }}
+                    fontSize={10}
                   />
                   <YAxis
                     yAxisId="0"
@@ -447,6 +420,7 @@ export default function ForecastCharts({
                     content={<TideTooltip />}
                     cursor={{ stroke: '#a78bfa', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }}
                   />
+                  {/* Y軸（水平）のグリッド線 */}
                   {tideYTicks.map((y) => (
                     <ReferenceLine
                       key={`tide-y-${y}`}
@@ -458,7 +432,26 @@ export default function ForecastCharts({
                       isFront
                     />
                   ))}
-                  {tideReferenceAreas}
+                  {/* X軸（垂直）のグリッド線 */}
+                  {tideTicks.map(tick => (
+                    <ReferenceLine
+                      key={`tide-x-${tick}`}
+                      x={tick}
+                      stroke="#94a3b8"
+                      strokeDasharray="3 3"
+                      strokeOpacity={0.2}
+                    />
+                  ))}
+                  {isTodayPage && currentTideTimeX && (
+                    <ReferenceArea
+                      yAxisId="0"
+                      x1={tideChartData[0].time}
+                      x2={currentTideTimeX}
+                      stroke="none"
+                      fill="#64748b"
+                      fillOpacity={0.2}
+                    />
+                  )}
                   {isTodayPage && currentTideTimeX && (
                     <ReferenceLine x={currentTideTimeX} stroke="red" strokeDasharray="3 3">
                       <Label value="現在" position="insideTopRight" fill="#fff" fontSize={10} />
@@ -481,32 +474,50 @@ export default function ForecastCharts({
                     dot={false}
                     activeDot={{ r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 }}
                   />
-                  {tide.flood.map((t) => (
-                    <ReferenceDot
-                      key={`flood-${t.time}`}
-                      xAxisId="0"
-                      yAxisId="0"
-                      x={t.time}
-                      y={t.cm}
-                      r={4}
-                      fill="#facc15"
-                      stroke="#fff"
-                      isFront
-                    />
-                  ))}
-                  {tide.edd.map((t) => (
-                    <ReferenceDot
-                      key={`edd-${t.time}`}
-                      xAxisId="0"
-                      yAxisId="0"
-                      x={t.time}
-                      y={t.cm}
-                      r={4}
-                      fill="#38bdf8"
-                      stroke="#fff"
-                      isFront
-                    />
-                  ))}
+                  {tideChartData.length > 0 && tide.flood.map((t) => {
+                    const targetTime = new Date(t.fullTime).getTime();
+                    const closestPoint = tideChartData.reduce((prev, curr) => {
+                      const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
+                      const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
+                      return currDiff < prevDiff ? curr : prev;
+                    });
+
+                    return (
+                      <ReferenceDot
+                        key={`flood-${t.fullTime}`}
+                        yAxisId="0"
+                        x={closestPoint.time}
+                        y={t.cm}
+                        r={4}
+                        fill="#facc15"
+                        stroke="#0f172a"
+                        strokeWidth={1}
+                        isFront
+                      />
+                    );
+                  })}
+                  {tideChartData.length > 0 && tide.edd.map((t) => {
+                    const targetTime = new Date(t.fullTime).getTime();
+                    const closestPoint = tideChartData.reduce((prev, curr) => {
+                      const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
+                      const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
+                      return currDiff < prevDiff ? curr : prev;
+                    });
+
+                    return (
+                      <ReferenceDot
+                        key={`edd-${t.fullTime}`}
+                        yAxisId="0"
+                        x={closestPoint.time}
+                        y={t.cm}
+                        r={4}
+                        fill="#38bdf8"
+                        stroke="#0f172a"
+                        strokeWidth={1}
+                        isFront
+                      />
+                    );
+                  })}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

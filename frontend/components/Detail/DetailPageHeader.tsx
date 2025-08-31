@@ -116,8 +116,12 @@ export default function DetailPageHeader({
                   <div>
                     <h4 className="font-semibold text-slate-200 mb-1">潮汐情報</h4>
                     <p className="text-slate-300 leading-relaxed">
-                      <strong className="text白">{helpDate}</strong>{' '}
-                      の1日分（0時〜24時）の潮位グラフです。
+                      <strong className="text-white">{helpDate} 0時</strong> から{' '}
+                      <strong className="text-white">{helpNextDate} 4時</strong>{' '}
+                      までの28時間予測です。
+                      <br />
+                      過去・未来にかかわらず、すべて計算に基づいた
+                      <strong className="text-purple-300">予測値（推算値）</strong>です。
                     </p>
                   </div>
                 </div>

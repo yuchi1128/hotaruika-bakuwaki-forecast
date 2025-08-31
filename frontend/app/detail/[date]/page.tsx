@@ -16,6 +16,7 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
 
   const apiData = await response.json();
 
+  // --- 気象データの処理 (28時間分) ---
   const weatherData: HourlyWeather[] = apiData.weather.hourly.time.map((t: string, i: number) => ({
     time: t,
     temperature: apiData.weather.hourly.temperature_2m[i],
@@ -25,9 +26,6 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
     wind_speed: apiData.weather.hourly.wind_speed_10m[i],
     wind_direction: apiData.weather.hourly.wind_direction_10m[i],
   }));
-
-  const [year, month, day] = date.split('-');
-  const tideData: TideData = apiData.tide.tide.chart[`${year}-${month}-${day}`];
 
   const startDate = date;
   const endDate = new Date(date);
@@ -39,7 +37,81 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
 
   const slicedWeatherData = (startIndex !== -1 && endIndex !== -1) 
     ? weatherData.slice(startIndex, endIndex + 1)
-    : weatherData.slice(0, 24);
+    : weatherData.slice(0, 24); // フォールバック
+
+  // --- 潮汐データの処理 (28時間分) ---
+  const [year, month, day] = date.split('-');
+  const baseDate = new Date(date);
+  const nextDate = new Date(baseDate);
+  nextDate.setDate(baseDate.getDate() + 1);
+  const nextDateStr = nextDate.toISOString().split('T')[0];
+  const [nextYear, nextMonth, nextDay] = nextDateStr.split('-');
+
+  // APIから当日と翌日の潮汐データを取得 (安全なアクセス)
+  const todayTideSource = apiData?.tide?.tide?.chart?.[`${year}-${month}-${day}`];
+  const nextDayTideSource = apiData?.nextTide?.tide?.chart?.[`${nextYear}-${nextMonth}-${nextDay}`];
+
+  // データソースが存在しない場合は、クラッシュを避け空のデータを返す
+  if (!todayTideSource || !nextDayTideSource) {
+    return {
+      weather: slicedWeatherData,
+      tide: {
+        moon: { age: 'N/A', title: '' },
+        sun: { rise: '', set: '' },
+        tide: [],
+        flood: [],
+        edd: [],
+      },
+    };
+  }
+
+  // isNextDayとfullTimeプロパティを付与するヘルパー関数
+  const processTideEvents = (events: any[], isNextDay: boolean, dateString: string) => {
+    return events.map((e: any) => ({
+      ...e,
+      isNextDay,
+      fullTime: `${dateString}T${e.time}`,
+    }));
+  };
+
+  // グラフ用データ (tide)
+  const todayTideChart = processTideEvents(todayTideSource.tide, false, date)
+    .filter((t: any) => t.time !== '24:00'); // 24:00のデータを重複回避のため除外
+
+  const nextDayTideChart = processTideEvents(nextDayTideSource.tide, true, nextDateStr)
+    .filter((t: any) => {
+      const [hour] = t.time.split(':').map(Number);
+      return hour <= 4; // 翌日の4時まで
+    });
+
+  // 満潮 (flood)
+  const todayFlood = processTideEvents(todayTideSource.flood, false, date)
+    .filter((t: any) => t.time !== '24:00');
+
+  const nextDayFlood = processTideEvents(nextDayTideSource.flood, true, nextDateStr)
+    .filter((f: any) => {
+
+      const [hour, minute] = f.time.split(':').map(Number);
+      return hour < 4 || (hour === 4 && minute === 0);
+    });
+
+  // 干潮 (edd)
+  const todayEdd = processTideEvents(todayTideSource.edd, false, date)
+    .filter((t: any) => t.time !== '24:00');
+    
+  const nextDayEdd = processTideEvents(nextDayTideSource.edd, true, nextDateStr)
+    .filter((e: any) => {
+      const [hour, minute] = e.time.split(':').map(Number);
+      return hour < 4 || (hour === 4 && minute === 0);
+    });
+
+  // 最終的なTideDataオブジェクトを構築
+  const tideData: TideData = {
+    ...todayTideSource, // moon や title などの基本情報を引き継ぐ
+    tide: [...todayTideChart, ...nextDayTideChart],
+    flood: [...todayFlood, ...nextDayFlood],
+    edd: [...todayEdd, ...nextDayEdd],
+  };
 
   return { weather: slicedWeatherData, tide: tideData };
 }
