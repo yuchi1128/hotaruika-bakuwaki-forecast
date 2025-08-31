@@ -22,6 +22,7 @@ import {
 import type { HourlyWeather, TideData } from '@/app/detail/[date]/types';
 import { getNiceTicks, getMoonPhaseIcon } from '@/lib/detail-utils';
 
+
 function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload as {
@@ -347,8 +348,7 @@ export default function ForecastCharts({
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
                 </div>
               </div>
-              {/* 満潮・干潮リストの表示を修正 */}
-              <div className="flex flex-row gap-2 justify-center mt-2 flex-wrap">
+              <div className="flex flex-row gap-2 mt-2 justify-start md:justify-center flex-nowrap md:flex-wrap overflow-x-auto md:overflow-visible pb-2 md:pb-0">
                 {[
                   ...tide.flood.map(f => ({ ...f, type: '満潮' })),
                   ...tide.edd.map(e => ({ ...e, type: '干潮' })),
@@ -368,7 +368,7 @@ export default function ForecastCharts({
                         )}
                       </div>
                       <div className="flex flex-col items-center justify-center ml-1">
-                        <span className="font-semibold">{t.isNextDay ? '翌' : ''}{t.time}</span>
+                        <span className="font-semibold whitespace-nowrap">{t.isNextDay ? '翌' : ''}{t.time}</span>
                         <span className="text-[11px] text-slate-500">{t.cm}cm</span>
                       </div>
                     </div>
@@ -474,7 +474,6 @@ export default function ForecastCharts({
                     dot={false}
                     activeDot={{ r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 }}
                   />
-                  {/* 満潮・干潮のドット表示を修正 */}
                   {tideChartData.length > 0 && tide.flood.map((t) => {
                     const targetTime = new Date(t.fullTime).getTime();
                     const closestPoint = tideChartData.reduce((prev, curr) => {
