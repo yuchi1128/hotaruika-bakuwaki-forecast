@@ -348,32 +348,38 @@ export default function ForecastCharts({
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
                 </div>
               </div>
-              <div className="flex flex-row gap-2 mt-2 justify-start md:justify-center flex-nowrap md:flex-wrap overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-                {[
-                  ...tide.flood.map(f => ({ ...f, type: '満潮' })),
-                  ...tide.edd.map(e => ({ ...e, type: '干潮' })),
-                ]
-                  .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
-                  .map((t, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center px-2 py-1 bg-black/10 rounded min-w-[56px] max-w-[88px] h-10"
-                      style={{ fontSize: '12px', lineHeight: 1.1 }}
-                    >
-                      <div className="flex-shrink-0 flex items-center justify-center h-full">
-                        {t.type === '満潮' ? (
-                          <ArrowUp className="w-4 h-4 text-yellow-300" />
-                        ) : (
-                          <ArrowDown className="w-4 h-4 text-cyan-300" />
-                        )}
+              {/* ▼▼▼ 修正箇所 ▼▼▼ */}
+              {/* 外側のコンテナ: センタリングとスクロールを担当 */}
+              <div className="text-center md:text-left overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+                {/* 内側のコンテナ: flexアイテムをまとめる */}
+                <div className="inline-flex gap-3 px-4 md:px-0 md:flex md:flex-wrap md:justify-center">
+                  {[
+                    ...tide.flood.map(f => ({ ...f, type: '満潮' })),
+                    ...tide.edd.map(e => ({ ...e, type: '干潮' })),
+                  ]
+                    .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
+                    .map((t, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center px-2 py-1 bg-black/10 rounded min-w-[56px] max-w-[88px] h-10"
+                        style={{ fontSize: '12px', lineHeight: 1.1 }}
+                      >
+                        <div className="flex-shrink-0 flex items-center justify-center h-full">
+                          {t.type === '満潮' ? (
+                            <ArrowUp className="w-4 h-4 text-yellow-300" />
+                          ) : (
+                            <ArrowDown className="w-4 h-4 text-cyan-300" />
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center justify-center ml-1">
+                          <span className="font-semibold whitespace-nowrap">{t.isNextDay ? '翌' : ''}{t.time}</span>
+                          <span className="text-[11px] text-slate-500">{t.cm}cm</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-center justify-center ml-1">
-                        <span className="font-semibold whitespace-nowrap">{t.isNextDay ? '翌' : ''}{t.time}</span>
-                        <span className="text-[11px] text-slate-500">{t.cm}cm</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
               </div>
+              {/* ▲▲▲ 修正箇所 ▲▲▲ */}
             </div>
             <div className="flex-grow min-h-0 -mt-1 sm:-mt-2">
               <ResponsiveContainer width="100%" height="100%">
