@@ -22,9 +22,17 @@ import {
 import type { HourlyWeather, TideData } from '@/app/detail/[date]/types';
 import { getNiceTicks, getMoonPhaseIcon } from '@/lib/detail-utils';
 
+function WeatherTooltip({
+  active,
+  payload,
+  show = true,
+}: {
+  active?: boolean;
+  payload?: any[];
+  show?: boolean;
+}) {
+  if (!show || !active || !payload || payload.length === 0) return null;
 
-function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
-  if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload as {
     index: number;
     hour: number;
@@ -33,6 +41,7 @@ function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[]
   };
   const tempEntry = payload.find((p) => p.dataKey === 'temperature');
   const precEntry = payload.find((p) => p.dataKey === 'precipitation');
+
   return (
     <div className="rounded-lg border border-white/10 bg-slate-900/90 backdrop-blur-md p-3 shadow-xl">
       <div className="mb-2 text-sm text-slate-300">{`${d.hour}時`}</div>
@@ -58,14 +67,26 @@ function WeatherTooltip({ active, payload }: { active?: boolean; payload?: any[]
   );
 }
 
-// 潮汐グラフ用のツールチップを修正
-function TideTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
-  if (!active || !payload || payload.length === 0) return null;
+function TideTooltip({
+  active,
+  payload,
+  show = true,
+}: {
+  active?: boolean;
+  payload?: any[];
+  show?: boolean;
+}) {
+  if (!show || !active || !payload || payload.length === 0) return null;
+
   const data = payload[0].payload as { time: string; level: number; isNextDay: boolean };
   const hour = new Date(data.time).getHours();
+
   return (
     <div className="rounded-lg border border-white/10 bg-slate-900/90 backdrop-blur-md p-3 shadow-xl">
-      <div className="mb-2 text-sm text-slate-300">{data.isNextDay ? '翌' : ''}{`${hour}時`}</div>
+      <div className="mb-2 text-sm text-slate-300">
+        {data.isNextDay ? '翌' : ''}
+        {`${hour}時`}
+      </div>
       <div className="flex items-center gap-2">
         <span className="inline-block h-2 w-2 rounded-full bg-sky-400" />
         <span className="text-slate-200 text-sm">潮位</span>
@@ -95,6 +116,13 @@ export default function ForecastCharts({
 }: ForecastChartsProps) {
   const [hoverWeatherX, setHoverWeatherX] = useState<number | null>(null);
   const [hoverTideX, setHoverTideX] = useState<string | null>(null);
+
+  // モバイル時のタッチ状態
+  const [isTouchingWeather, setIsTouchingWeather] = useState(false);
+  const [isTouchingTide, setIsTouchingTide] = useState(false);
+
+  // 潮グラフは内部の active 状態が残ることがあるので、再マウント用のキーを用意
+  const [tideChartKey, setTideChartKey] = useState(0);
 
   // Weather Chart Logic
   const weatherChartData = weather.map((w, index) => ({
@@ -174,26 +202,26 @@ export default function ForecastCharts({
     [nextMidnightIndex, weatherTicks]
   );
 
-  // --- 潮汐グラフのロジックを修正 ---
-  const tideChartData = useMemo(() => tide.tide.map((t) => ({
-    time: t.fullTime, // X軸には一意なfullTimeを使用
-    level: t.cm,
-    isNextDay: t.isNextDay,
-  })), [tide.tide]);
+  // --- 潮汐グラフのロジック ---
+  const tideChartData = useMemo(
+    () =>
+      tide.tide.map((t) => ({
+        time: t.fullTime,
+        level: t.cm,
+        isNextDay: t.isNextDay,
+      })),
+    [tide.tide]
+  );
 
   const tideTicks = useMemo(() => {
     const step = isMobile ? 4 : 2;
-    const tickMap = new Map<number, string>(); // <timestamp, fullTimeString>
-
-    tideChartData.forEach(d => {
+    const tickMap = new Map<number, string>();
+    tideChartData.forEach((d) => {
       const date = new Date(d.time);
       if (date.getMinutes() === 0 && date.getHours() % step === 0) {
-        // getTime()で数値のタイムスタンプを取得し、それをキーにすることで重複を防ぐ
         tickMap.set(date.getTime(), d.time);
       }
     });
-    
-    // Mapの値（ユニークなfullTimeString）を取得しソートする
     return Array.from(tickMap.values()).sort();
   }, [isMobile, tideChartData]);
 
@@ -233,101 +261,110 @@ export default function ForecastCharts({
               <Thermometer /> 気温 & 降水量
             </CardTitle>
           </CardHeader>
+
           <CardContent className={`p-2 sm:p-0 sm:pt-2 transition-all duration-300 ${isMobile ? 'h-[280px]' : 'h-[400px]'}`}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={weatherChartData}
-                margin={isMobile ? { top: 5, right: 8, left: 0, bottom: 5 } : { top: 5, right: 10, left: 0, bottom: 5 }}
-                onMouseMove={(state: any) => {
-                  if (state && state.activeLabel !== undefined && state.activeLabel !== null) {
-                    setHoverWeatherX(state.activeLabel as number);
-                  }
-                }}
-                onMouseLeave={() => setHoverWeatherX(null)}
-                {...(isMobile && {
-                  onTouchMove: (state: any) => {
+            <div
+              onTouchStart={() => setIsTouchingWeather(true)}
+              onTouchEnd={() => {
+                setIsTouchingWeather(false);
+                setHoverWeatherX(null);
+              }}
+              onTouchCancel={() => {
+                setIsTouchingWeather(false);
+                setHoverWeatherX(null);
+              }}
+              className="h-full w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={weatherChartData}
+                  margin={isMobile ? { top: 5, right: 8, left: 0, bottom: 5 } : { top: 5, right: 10, left: 0, bottom: 5 }}
+                  onMouseMove={(state: any) => {
                     if (state && state.activeLabel !== undefined && state.activeLabel !== null) {
                       setHoverWeatherX(state.activeLabel as number);
                     }
-                  },
-                  onTouchEnd: () => setHoverWeatherX(null),
-                  onTouchCancel: () => setHoverWeatherX(null),
-                })}
-              >
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                <XAxis
-                  dataKey="index"
-                  tickFormatter={xAxisTickFormatter}
-                  tick={{ fill: '#9ca3af' }}
-                  fontSize={10}
-                  type="number"
-                  ticks={weatherTicks}
-                  interval={0}
-                  domain={[0, Math.max(0, weatherChartData.length - 1)]}
-                />
-                <YAxis
-                  yAxisId="left"
-                  orientation="left"
-                  stroke="#fbbf24"
-                  tick={{ fill: '#fbbf24', fontSize: 10 }}
-                  width={isMobile ? 35 : 35}
-                  ticks={weatherTempTicks}
-                  domain={
-                    weatherTempTicks.length
-                      ? [weatherTempTicks[0], weatherTempTicks[weatherTempTicks.length - 1]]
-                      : undefined
-                  }
-                  allowDecimals
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="#60a5fa"
-                  tick={{ fill: '#60a5fa', fontSize: 10 }}
-                  width={isMobile ? 25 : 25}
-                  ticks={weatherPrecipTicks}
-                  domain={
-                    weatherPrecipTicks.length
-                      ? [weatherPrecipTicks[0], weatherPrecipTicks[weatherPrecipTicks.length - 1]]
-                      : undefined
-                  }
-                  allowDecimals
-                />
-                <Tooltip content={<WeatherTooltip />} cursor={{ stroke: '#94a3b8', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }} />
-                <Legend wrapperStyle={{ fontSize: isMobile ? '12px' : '14px' }} formatter={renderLegendWithUnit} />
-                {isTodayPage && currentDecimalIndex !== -1 && (
-                  <ReferenceArea yAxisId="left" x1={0} x2={currentDecimalIndex} stroke="none" fill="#64748b" fillOpacity={0.2} />
-                )}
-                {nextMidnightIndex >= 0 && !hasNextMidnightTick && (
-                  <ReferenceLine
-                    yAxisId="left"
-                    x={nextMidnightIndex}
-                    stroke="#94a3b8"
-                    strokeDasharray="3 3"
-                    strokeOpacity={0.2}
+                  }}
+                  onMouseLeave={() => {
+                    setHoverWeatherX(null);
+                    setIsTouchingWeather(false);
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                  <XAxis
+                    dataKey="index"
+                    tickFormatter={xAxisTickFormatter}
+                    tick={{ fill: '#9ca3af' }}
+                    fontSize={10}
+                    type="number"
+                    ticks={weatherTicks}
+                    interval={0}
+                    domain={[0, Math.max(0, weatherChartData.length - 1)]}
                   />
-                )}
-                {isTodayPage && currentDecimalIndex !== -1 && (
-                  <ReferenceLine yAxisId="left" x={currentDecimalIndex} stroke="red" strokeDasharray="3 3">
-                    <Label value="現在" position="insideTopRight" fill="#fff" fontSize={10} />
-                  </ReferenceLine>
-                )}
-                {hoverWeatherX !== null && (
-                  <ReferenceLine yAxisId="left" x={hoverWeatherX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />
-                )}
-                <Bar yAxisId="right" dataKey="precipitation" name="降水量" fill="#60a5fa" barSize={8} radius={[3, 3, 0, 0]} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="temperature"
-                  name="気温"
-                  stroke="#fbbf24"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 5, fill: '#fbbf24', stroke: '#0f172a', strokeWidth: 2 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+                  <YAxis
+                    yAxisId="left"
+                    orientation="left"
+                    stroke="#fbbf24"
+                    tick={{ fill: '#fbbf24', fontSize: 10 }}
+                    width={isMobile ? 35 : 35}
+                    ticks={weatherTempTicks}
+                    domain={
+                      weatherTempTicks.length
+                        ? [weatherTempTicks[0], weatherTempTicks[weatherTempTicks.length - 1]]
+                        : undefined
+                    }
+                    allowDecimals
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#60a5fa"
+                    tick={{ fill: '#60a5fa', fontSize: 10 }}
+                    width={isMobile ? 25 : 25}
+                    ticks={weatherPrecipTicks}
+                    domain={
+                      weatherPrecipTicks.length
+                        ? [weatherPrecipTicks[0], weatherPrecipTicks[weatherPrecipTicks.length - 1]]
+                        : undefined
+                    }
+                    allowDecimals
+                  />
+                  <Tooltip
+                    content={(props) => <WeatherTooltip {...props} show={!isMobile || isTouchingWeather} />}
+                    cursor={
+                      !isMobile || isTouchingWeather
+                        ? { stroke: '#94a3b8', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }
+                        : false
+                    }
+                  />
+                  <Legend wrapperStyle={{ fontSize: isMobile ? '12px' : '14px' }} formatter={renderLegendWithUnit} />
+                  {isTodayPage && currentDecimalIndex !== -1 && (
+                    <ReferenceArea yAxisId="left" x1={0} x2={currentDecimalIndex} stroke="none" fill="#64748b" fillOpacity={0.2} />
+                  )}
+                  {nextMidnightIndex >= 0 && !hasNextMidnightTick && (
+                    <ReferenceLine yAxisId="left" x={nextMidnightIndex} stroke="#94a3b8" strokeDasharray="3 3" strokeOpacity={0.2} />
+                  )}
+                  {isTodayPage && currentDecimalIndex !== -1 && (
+                    <ReferenceLine yAxisId="left" x={currentDecimalIndex} stroke="red" strokeDasharray="3 3">
+                      <Label value="現在" position="insideTopRight" fill="#fff" fontSize={10} />
+                    </ReferenceLine>
+                  )}
+                  {((!isMobile) || isTouchingWeather) && hoverWeatherX !== null && (
+                    <ReferenceLine yAxisId="left" x={hoverWeatherX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />
+                  )}
+                  <Bar yAxisId="right" dataKey="precipitation" name="降水量" fill="#60a5fa" barSize={8} radius={[3, 3, 0, 0]} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="temperature"
+                    name="気温"
+                    stroke="#fbbf24"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={!isMobile || isTouchingWeather ? { r: 5, fill: '#fbbf24', stroke: '#0f172a', strokeWidth: 2 } : false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -339,7 +376,8 @@ export default function ForecastCharts({
               <Waves /> 潮汐情報
             </CardTitle>
           </CardHeader>
-          <CardContent className={`flex flex-col p-0 ${isMobile ? 'h-[380px]' : 'h-[400px]'}`}>
+
+        <CardContent className={`flex flex-col p-0 ${isMobile ? 'h-[380px]' : 'h-[400px]'}`}>
             <div className="space-y-2 sm:space-y-3 mb-1 sm:mb-2 px-4 sm:px-6 pt-2 sm:pt-6">
               <div className="flex items-center justify-center gap-6 sm:gap-9 bg-white/5 p-2 sm:p-3 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -351,18 +389,16 @@ export default function ForecastCharts({
                     <p className="text-lg sm:text-xl font-bold">{moonAgeValue.toFixed(1)}</p>
                   </div>
                 </div>
-                <div className="h-5 sm:h-6 w-px bg-white/15 mx-3 sm:mx-5" aria-hidden="true" />
+                <div className="h-5 sm:h-6 w-px bg白/15 mx-3 sm:mx-5" aria-hidden="true" />
                 <div className="inline-flex flex-col items-center leading-tight">
                   <p className="text-xs sm:text-sm text-slate-300">潮</p>
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
                 </div>
               </div>
+
               <div className="text-center md:text-left overflow-x-auto md:overflow-visible pb-2 md:pb-0">
                 <div className="inline-flex gap-3 px-4 md:px-0 md:flex md:flex-wrap md:justify-center">
-                  {[
-                    ...tide.flood.map(f => ({ ...f, type: '満潮' })),
-                    ...tide.edd.map(e => ({ ...e, type: '干潮' })),
-                  ]
+                  {[...tide.flood.map((f) => ({ ...f, type: '満潮' })), ...tide.edd.map((e) => ({ ...e, type: '干潮' }))]
                     .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
                     .map((t, i) => (
                       <div
@@ -378,7 +414,10 @@ export default function ForecastCharts({
                           )}
                         </div>
                         <div className="flex flex-col items-center justify-center ml-1">
-                          <span className="font-semibold whitespace-nowrap">{t.isNextDay ? '翌' : ''}{t.time}</span>
+                          <span className="font-semibold whitespace-nowrap">
+                            {t.isNextDay ? '翌' : ''}
+                            {t.time}
+                          </span>
                           <span className="text-[11px] text-slate-500">{t.cm}cm</span>
                         </div>
                       </div>
@@ -386,157 +425,173 @@ export default function ForecastCharts({
                 </div>
               </div>
             </div>
+
             <div className="flex-grow min-h-0 -mt-1 sm:-mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={tideChartData}
-                  margin={isMobile ? { top: 10, right: 15, left: 5, bottom: 15 } : { top: 12, right: 25, left: 10, bottom: 8 }}
-                  onMouseMove={(state: any) => {
-                    if (state && state.activeLabel) setHoverTideX(state.activeLabel as string);
-                  }}
-                  onMouseLeave={() => setHoverTideX(null)}
-                  {...(isMobile && {
-                    onTouchMove: (state: any) => {
-                      if (state && state.activeLabel) {
-                        setHoverTideX(state.activeLabel as string);
-                      }
-                    },
-                    onTouchEnd: () => setHoverTideX(null),
-                    onTouchCancel: () => setHoverTideX(null),
-                  })}
-                >
-                  <defs>
-                    <linearGradient id="tideAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
-                      <stop offset="70%" stopColor="#38bdf8" stopOpacity={0.12} />
-                      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="time"
-                    type="category"
-                    ticks={tideTicks}
-                    interval={0}
-                    tickFormatter={(time) => {
-                      const d = new Date(time);
-                      const hour = d.getHours();
-                      const dataPoint = tideChartData.find(p => p.time === time);
-                      return `${dataPoint?.isNextDay ? '翌' : ''}${hour}時`;
+              <div
+                onTouchStart={() => setIsTouchingTide(true)}
+                onTouchEnd={() => {
+                  setIsTouchingTide(false);
+                  setHoverTideX(null);
+                  setTideChartKey((k) => k + 1);
+                }}
+                onTouchCancel={() => {
+                  setIsTouchingTide(false);
+                  setHoverTideX(null);
+                  setTideChartKey((k) => k + 1);
+                }}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    key={tideChartKey}
+                    data={tideChartData}
+                    margin={isMobile ? { top: 10, right: 15, left: 5, bottom: 15 } : { top: 12, right: 25, left: 10, bottom: 8 }}
+                    onMouseMove={(state: any) => {
+                      if (state && state.activeLabel) setHoverTideX(state.activeLabel as string);
                     }}
-                    tick={{ fill: '#9ca3af', fontSize: 10 }}
-                    fontSize={10}
-                  />
-                  <YAxis
-                    yAxisId="0"
-                    tick={{ fill: '#9ca3af', fontSize: 10 }}
-                    unit="cm"
-                    ticks={tideYTicks}
-                    domain={tideYTicks.length ? [tideYTicks[0], tideYTicks[tideYTicks.length - 1]] : undefined}
-                    width={isMobile ? 40 : 45}
-                    allowDecimals
-                  />
-                  <Tooltip
-                    content={<TideTooltip />}
-                    cursor={{ stroke: '#a78bfa', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }}
-                  />
-                  {tideYTicks.map((y) => (
-                    <ReferenceLine
-                      key={`tide-y-${y}`}
-                      yAxisId="0"
-                      y={y}
-                      stroke="#94a3b8"
-                      strokeDasharray="3 3"
-                      strokeOpacity={0.2}
-                      isFront
-                    />
-                  ))}
-                  {tideTicks.map(tick => (
-                    <ReferenceLine
-                      key={`tide-x-${tick}`}
-                      x={tick}
-                      stroke="#94a3b8"
-                      strokeDasharray="3 3"
-                      strokeOpacity={0.2}
-                    />
-                  ))}
-                  {isTodayPage && currentTideTimeX && (
-                    <ReferenceArea
-                      yAxisId="0"
-                      x1={tideChartData[0].time}
-                      x2={currentTideTimeX}
-                      stroke="none"
-                      fill="#64748b"
-                      fillOpacity={0.2}
-                    />
-                  )}
-                  {isTodayPage && currentTideTimeX && (
-                    <ReferenceLine x={currentTideTimeX} stroke="red" strokeDasharray="3 3">
-                      <Label value="現在" position="insideTopRight" fill="#fff" fontSize={10} />
-                    </ReferenceLine>
-                  )}
-                  {hoverTideX && <ReferenceLine x={hoverTideX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />}
-                  <Area
-                    type="monotone"
-                    dataKey="level"
-                    stroke="none"
-                    fill="url(#tideAreaGradient)"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="level"
-                    name="潮位"
-                    stroke="#38bdf8"
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 }}
-                  />
-                  {tideChartData.length > 0 && tide.flood.map((t) => {
-                    const targetTime = new Date(t.fullTime).getTime();
-                    const closestPoint = tideChartData.reduce((prev, curr) => {
-                      const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
-                      const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
-                      return currDiff < prevDiff ? curr : prev;
-                    });
+                    onMouseLeave={() => {
+                      setHoverTideX(null);
+                      setIsTouchingTide(false);
+                    }}
+                  >
+                    <defs>
+                      <linearGradient id="tideAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
+                        <stop offset="70%" stopColor="#38bdf8" stopOpacity={0.12} />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
 
-                    return (
-                      <ReferenceDot
-                        key={`flood-${t.fullTime}`}
+                    <XAxis
+                      dataKey="time"
+                      type="category"
+                      ticks={tideTicks}
+                      interval={0}
+                      tickFormatter={(time) => {
+                        const d = new Date(time);
+                        const hour = d.getHours();
+                        const dataPoint = tideChartData.find((p) => p.time === time);
+                        return `${dataPoint?.isNextDay ? '翌' : ''}${hour}時`;
+                      }}
+                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      fontSize={10}
+                    />
+                    <YAxis
+                      yAxisId="0"
+                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      unit="cm"
+                      ticks={tideYTicks}
+                      domain={tideYTicks.length ? [tideYTicks[0], tideYTicks[tideYTicks.length - 1]] : undefined}
+                      width={isMobile ? 40 : 45}
+                      allowDecimals
+                    />
+                    <Tooltip
+                      content={(props) => <TideTooltip {...props} show={!isMobile || isTouchingTide} />}
+                      cursor={
+                        !isMobile || isTouchingTide
+                          ? { stroke: '#a78bfa', strokeDasharray: '4 4', strokeWidth: 1, strokeOpacity: 0.6 }
+                          : false
+                      }
+                    />
+
+                    {tideYTicks.map((y) => (
+                      <ReferenceLine
+                        key={`tide-y-${y}`}
                         yAxisId="0"
-                        x={closestPoint.time}
-                        y={t.cm}
-                        r={4}
-                        fill="#facc15"
-                        stroke="#0f172a"
-                        strokeWidth={1}
+                        y={y}
+                        stroke="#94a3b8"
+                        strokeDasharray="3 3"
+                        strokeOpacity={0.2}
                         isFront
                       />
-                    );
-                  })}
-                  {tideChartData.length > 0 && tide.edd.map((t) => {
-                    const targetTime = new Date(t.fullTime).getTime();
-                    const closestPoint = tideChartData.reduce((prev, curr) => {
-                      const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
-                      const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
-                      return currDiff < prevDiff ? curr : prev;
-                    });
+                    ))}
 
-                    return (
-                      <ReferenceDot
-                        key={`edd-${t.fullTime}`}
+                    {tideTicks.map((tick) => (
+                      <ReferenceLine key={`tide-x-${tick}`} x={tick} stroke="#94a3b8" strokeDasharray="3 3" strokeOpacity={0.2} />
+                    ))}
+
+                    {isTodayPage && currentTideTimeX && (
+                      <ReferenceArea
                         yAxisId="0"
-                        x={closestPoint.time}
-                        y={t.cm}
-                        r={4}
-                        fill="#38bdf8"
-                        stroke="#0f172a"
-                        strokeWidth={1}
-                        isFront
+                        x1={tideChartData[0].time}
+                        x2={currentTideTimeX}
+                        stroke="none"
+                        fill="#64748b"
+                        fillOpacity={0.2}
                       />
-                    );
-                  })}
-                </ComposedChart>
-              </ResponsiveContainer>
+                    )}
+
+                    {isTodayPage && currentTideTimeX && (
+                      <ReferenceLine x={currentTideTimeX} stroke="red" strokeDasharray="3 3">
+                        <Label value="現在" position="insideTopRight" fill="#fff" fontSize={10} />
+                      </ReferenceLine>
+                    )}
+
+                    {((!isMobile) || isTouchingTide) && hoverTideX && (
+                      <ReferenceLine x={hoverTideX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />
+                    )}
+
+                    <Area type="monotone" dataKey="level" stroke="none" fill="url(#tideAreaGradient)" isAnimationActive={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="level"
+                      name="潮位"
+                      stroke="#38bdf8"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={!isMobile || isTouchingTide ? { r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 } : false}
+                    />
+
+                    {tideChartData.length > 0 &&
+                      tide.flood.map((t) => {
+                        const targetTime = new Date(t.fullTime).getTime();
+                        const closestPoint = tideChartData.reduce((prev, curr) => {
+                          const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
+                          const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
+                          return currDiff < prevDiff ? curr : prev;
+                        });
+
+                        return (
+                          <ReferenceDot
+                            key={`flood-${t.fullTime}`}
+                            yAxisId="0"
+                            x={closestPoint.time}
+                            y={t.cm}
+                            r={4}
+                            fill="#facc15"
+                            stroke="#0f172a"
+                            strokeWidth={1}
+                            isFront
+                          />
+                        );
+                      })}
+
+                    {tideChartData.length > 0 &&
+                      tide.edd.map((t) => {
+                        const targetTime = new Date(t.fullTime).getTime();
+                        const closestPoint = tideChartData.reduce((prev, curr) => {
+                          const prevDiff = Math.abs(new Date(prev.time).getTime() - targetTime);
+                          const currDiff = Math.abs(new Date(curr.time).getTime() - targetTime);
+                          return currDiff < prevDiff ? curr : prev;
+                        });
+
+                        return (
+                          <ReferenceDot
+                            key={`edd-${t.fullTime}`}
+                            yAxisId="0"
+                            x={closestPoint.time}
+                            y={t.cm}
+                            r={4}
+                            fill="#38bdf8"
+                            stroke="#0f172a"
+                            strokeWidth={1}
+                            isFront
+                          />
+                        );
+                      })}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </CardContent>
         </Card>
