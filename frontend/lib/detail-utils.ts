@@ -27,7 +27,7 @@ export const getWeatherInfo = (code: number, time: string): { description: strin
   const isDay = hour >= daylight.start && hour < daylight.end;
 
   if (code <= 1) {
-    return { description: '晴れ', Icon: isDay ? Sun : Moon, className: isDay ? 'text-yellow-300' : 'text-yellow-200' };
+    return { description: '晴れ', Icon: isDay ? Sun : Moon, className: isDay ? 'text-yellow-300' : 'text-white' };
   }
   if (code <= 3) {
     return { description: '曇り', Icon: Cloudy, className: 'text-slate-400' };

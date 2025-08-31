@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Wind, Droplet, Navigation } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Wind, Droplet, Navigation, Sparkle } from 'lucide-react';
 import type { HourlyWeather } from '@/app/detail/[date]/types';
 import { monthlyDaylightHours, getWeatherInfo } from '@/lib/detail-utils';
 
@@ -157,8 +157,16 @@ export default function HourlyForecast({
                   </div>
                 </div>
 
-                <div className="my-1 sm:my-2 scale-90 sm:scale-100">
-                  <Icon className={`w-8 h-8 ${className}`} />
+                <div className="relative my-1 sm:my-2 h-8 w-8 flex items-center justify-center scale-90 sm:scale-100">
+                  {!isDay && w.weather_code <= 1 ? (
+                    <div className="relative h-8 w-8">
+                      <Icon className={`absolute bottom-0 left-0 w-7 h-7 ${className}`} />
+                      <Sparkle className="absolute top-0.5 right-0.5 w-3 h-3 text-white" />
+                      <Sparkle className="absolute top-3 right-[-2px] w-2 h-2 text-white" />
+                    </div>
+                  ) : (
+                    <Icon className={`w-8 h-8 ${className}`} />
+                  )}
                 </div>
 
                 <p className="font-bold text-base sm:text-xl">{w.temperature.toFixed(1)}℃</p>
