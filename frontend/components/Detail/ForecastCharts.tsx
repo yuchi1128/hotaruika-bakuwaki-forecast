@@ -33,18 +33,24 @@ function WeatherTooltip({
 }) {
   if (!show || !active || !payload || payload.length === 0) return null;
 
+  // ★ 修正点: isNextDay を型定義に追加
   const d = payload[0].payload as {
     index: number;
     hour: number;
     temperature: number;
     precipitation: number;
+    isNextDay: boolean;
   };
   const tempEntry = payload.find((p) => p.dataKey === 'temperature');
   const precEntry = payload.find((p) => p.dataKey === 'precipitation');
 
   return (
     <div className="rounded-lg border border-white/10 bg-slate-900/90 backdrop-blur-md p-3 shadow-xl">
-      <div className="mb-2 text-sm text-slate-300">{`${d.hour}時`}</div>
+      {/* ★ 修正点: isNextDay フラグを元に「翌」を表示 */}
+      <div className="mb-2 text-sm text-slate-300">
+        {d.isNextDay ? '翌' : ''}
+        {`${d.hour}時`}
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: tempEntry?.color || '#fbbf24' }} />
@@ -96,7 +102,6 @@ function TideTooltip({
   );
 }
 
-// --- Main Component ---
 interface ForecastChartsProps {
   weather: HourlyWeather[];
   tide: TideData;
@@ -121,16 +126,22 @@ export default function ForecastCharts({
   const [isTouchingWeather, setIsTouchingWeather] = useState(false);
   const [isTouchingTide, setIsTouchingTide] = useState(false);
 
-  // 潮グラフは内部の active 状態が残ることがあるので、再マウント用のキーを用意
+  // 潮グラフの内部状態リセット用キー（タッチ終了時に再マウント）
   const [tideChartKey, setTideChartKey] = useState(0);
 
   // Weather Chart Logic
-  const weatherChartData = weather.map((w, index) => ({
-    index,
-    hour: new Date(w.time).getHours(),
-    temperature: w.temperature,
-    precipitation: w.precipitation,
-  }));
+  // ★ 修正点: isNextDay フラグをデータに含める
+  const baseDate = new Date(date);
+  const weatherChartData = weather.map((w, index) => {
+    const pointDate = new Date(w.time);
+    return {
+      index,
+      hour: pointDate.getHours(),
+      temperature: w.temperature,
+      precipitation: w.precipitation,
+      isNextDay: pointDate.toDateString() !== baseDate.toDateString(),
+    };
+  });
 
   const weatherTicks = useMemo(() => {
     const step = isMobile ? 4 : 2;
@@ -206,7 +217,7 @@ export default function ForecastCharts({
   const tideChartData = useMemo(
     () =>
       tide.tide.map((t) => ({
-        time: t.fullTime,
+        time: t.fullTime, // X軸には一意なfullTimeを使用
         level: t.cm,
         isNextDay: t.isNextDay,
       })),
@@ -215,7 +226,7 @@ export default function ForecastCharts({
 
   const tideTicks = useMemo(() => {
     const step = isMobile ? 4 : 2;
-    const tickMap = new Map<number, string>();
+    const tickMap = new Map<number, string>(); // <timestamp, fullTimeString>
     tideChartData.forEach((d) => {
       const date = new Date(d.time);
       if (date.getMinutes() === 0 && date.getHours() % step === 0) {
@@ -351,7 +362,17 @@ export default function ForecastCharts({
                   {((!isMobile) || isTouchingWeather) && hoverWeatherX !== null && (
                     <ReferenceLine yAxisId="left" x={hoverWeatherX} stroke="#e5e7eb" strokeDasharray="4 4" strokeOpacity={0.7} />
                   )}
-                  <Bar yAxisId="right" dataKey="precipitation" name="降水量" fill="#60a5fa" barSize={8} radius={[3, 3, 0, 0]} />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="precipitation"
+                    name="降水量"
+                    fill="#60a5fa"
+                    barSize={8}
+                    radius={[3, 3, 0, 0]}
+                    isAnimationActive={false}
+                    animationBegin={0}
+                    animationDuration={0}
+                  />
                   <Line
                     yAxisId="left"
                     type="monotone"
@@ -361,6 +382,9 @@ export default function ForecastCharts({
                     strokeWidth={2}
                     dot={false}
                     activeDot={!isMobile || isTouchingWeather ? { r: 5, fill: '#fbbf24', stroke: '#0f172a', strokeWidth: 2 } : false}
+                    isAnimationActive={false}
+                    animationBegin={0}
+                    animationDuration={0}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -377,7 +401,7 @@ export default function ForecastCharts({
             </CardTitle>
           </CardHeader>
 
-        <CardContent className={`flex flex-col p-0 ${isMobile ? 'h-[380px]' : 'h-[400px]'}`}>
+          <CardContent className={`flex flex-col p-0 ${isMobile ? 'h-[380px]' : 'h-[400px]'}`}>
             <div className="space-y-2 sm:space-y-3 mb-1 sm:mb-2 px-4 sm:px-6 pt-2 sm:pt-6">
               <div className="flex items-center justify-center gap-6 sm:gap-9 bg-white/5 p-2 sm:p-3 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -389,7 +413,7 @@ export default function ForecastCharts({
                     <p className="text-lg sm:text-xl font-bold">{moonAgeValue.toFixed(1)}</p>
                   </div>
                 </div>
-                <div className="h-5 sm:h-6 w-px bg白/15 mx-3 sm:mx-5" aria-hidden="true" />
+                <div className="h-5 sm:h-6 w-px bg-white/15 mx-3 sm:mx-5" aria-hidden="true" />
                 <div className="inline-flex flex-col items-center leading-tight">
                   <p className="text-xs sm:text-sm text-slate-300">潮</p>
                   <p className="text-lg sm:text-xl font-bold">{tide.moon.title}</p>
@@ -432,7 +456,7 @@ export default function ForecastCharts({
                 onTouchEnd={() => {
                   setIsTouchingTide(false);
                   setHoverTideX(null);
-                  setTideChartKey((k) => k + 1);
+                  setTideChartKey((k) => k + 1); // 再マウント（内部 active 状態の確実なリセット）
                 }}
                 onTouchCancel={() => {
                   setIsTouchingTide(false);
@@ -532,6 +556,7 @@ export default function ForecastCharts({
                     )}
 
                     <Area type="monotone" dataKey="level" stroke="none" fill="url(#tideAreaGradient)" isAnimationActive={false} />
+
                     <Line
                       type="monotone"
                       dataKey="level"
@@ -540,6 +565,9 @@ export default function ForecastCharts({
                       strokeWidth={2}
                       dot={false}
                       activeDot={!isMobile || isTouchingTide ? { r: 4, fill: '#38bdf8', stroke: '#0f172a', strokeWidth: 2 } : false}
+                      isAnimationActive={false}
+                      animationBegin={0}
+                      animationDuration={0}
                     />
 
                     {tideChartData.length > 0 &&
