@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'ホタルイカ爆湧き予報',
   description: '富山湾のホタルイカ身投げ量をAIで予測。今日から一週間の予測と口コミ情報をお届けします。',
   icons: {
-    icon: '/hotaruika_aikon_2.png',
+    icon: '/hotaruika_aikon_3.png',
   },
 };
 
