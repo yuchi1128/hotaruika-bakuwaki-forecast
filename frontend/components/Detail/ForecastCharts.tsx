@@ -33,7 +33,6 @@ function WeatherTooltip({
 }) {
   if (!show || !active || !payload || payload.length === 0) return null;
 
-  // ★ 修正点: isNextDay を型定義に追加
   const d = payload[0].payload as {
     index: number;
     hour: number;
@@ -46,7 +45,6 @@ function WeatherTooltip({
 
   return (
     <div className="rounded-lg border border-white/10 bg-slate-900/90 backdrop-blur-md p-3 shadow-xl">
-      {/* ★ 修正点: isNextDay フラグを元に「翌」を表示 */}
       <div className="mb-2 text-sm text-slate-300">
         {d.isNextDay ? '翌' : ''}
         {`${d.hour}時`}
@@ -126,11 +124,10 @@ export default function ForecastCharts({
   const [isTouchingWeather, setIsTouchingWeather] = useState(false);
   const [isTouchingTide, setIsTouchingTide] = useState(false);
 
-  // 潮グラフの内部状態リセット用キー（タッチ終了時に再マウント）
+  // ★ 修正点: 潮グラフの内部状態リセット用キーを元に戻す
   const [tideChartKey, setTideChartKey] = useState(0);
 
   // Weather Chart Logic
-  // ★ 修正点: isNextDay フラグをデータに含める
   const baseDate = new Date(date);
   const weatherChartData = weather.map((w, index) => {
     const pointDate = new Date(w.time);
@@ -456,7 +453,7 @@ export default function ForecastCharts({
                 onTouchEnd={() => {
                   setIsTouchingTide(false);
                   setHoverTideX(null);
-                  setTideChartKey((k) => k + 1); // 再マウント（内部 active 状態の確実なリセット）
+                  setTideChartKey((k) => k + 1);
                 }}
                 onTouchCancel={() => {
                   setIsTouchingTide(false);
