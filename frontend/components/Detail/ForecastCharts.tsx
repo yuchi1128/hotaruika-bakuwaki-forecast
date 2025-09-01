@@ -417,7 +417,7 @@ export default function ForecastCharts({
                 </div>
               </div>
 
-              <div className="text-center overflow-x-auto pb-2">
+              <div className="text-center overflow-x-auto pb-2 custom-scrollbar">
                 <div className="inline-flex gap-3 px-4">
                   {[...tide.flood.map((f) => ({ ...f, type: '満潮' })), ...tide.edd.map((e) => ({ ...e, type: '干潮' }))]
                     .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
