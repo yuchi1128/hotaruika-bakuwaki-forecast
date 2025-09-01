@@ -1,4 +1,4 @@
-'''/* 以前の @import と @font-face は削除し、Tailwindのインポートのみにします */
+/* 以前の @import と @font-face は削除し、Tailwindのインポートのみにします */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -177,31 +177,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }
-
-/* Custom scrollbar styles for horizontal containers */
-.custom-scrollbar::-webkit-scrollbar {
-  height: 8px;
-  -webkit-appearance: none;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.4);
-}
-
-/* Fallback for Firefox */
-.custom-scrollbar {
-  scrollbar-width: auto; /* Use 'auto' to ensure it's visible */
-  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.2);
-}
-'''
