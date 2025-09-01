@@ -96,10 +96,7 @@ export default function HourlyForecast({
         </button>
       )}
 
-      <div
-        className="overflow-x-auto rounded-lg border border-white/10 custom-scrollbar"
-        ref={hourlyForecastRef}
-      >
+      <div className="overflow-x-auto rounded-lg border border-white/10" ref={hourlyForecastRef}>
         <div className="flex">
           {weather.map((w, i) => {
             const itemDate = new Date(w.time);
