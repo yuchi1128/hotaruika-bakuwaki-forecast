@@ -33,12 +33,15 @@ export default function DetailClientView({
   }, []);
 
   const lastUpdated = new Date(lastUpdatedISO);
-  const formattedDate = new Date(date).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  });
+  const formattedDate = useMemo(() => {
+    const dt = new Date(date);
+    const year = dt.getFullYear();
+    const month = dt.getMonth() + 1;
+    const day = dt.getDate();
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekday = weekdays[dt.getDay()];
+    return `${year}年${month}月${day}日(${weekday})`;
+  }, [date]);
 
   const now = useMemo(() => new Date(), []);
 
@@ -55,7 +58,7 @@ export default function DetailClientView({
       <DetailPageHeader
         formattedDate={formattedDate}
         lastUpdated={lastUpdated}
-        onBack={() => router.back()}
+        onBack={() => router.push('/')}
         date={date}
       />
       <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
