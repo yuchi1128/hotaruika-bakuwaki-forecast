@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Thermometer, Waves, ArrowUp, ArrowDown } from 'lucide-react';
 import {
@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import type { HourlyWeather, TideData } from '@/app/detail/[date]/types';
 import { getNiceTicks, getMoonPhaseIcon } from '@/lib/detail-utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 function WeatherTooltip({
   active,
@@ -124,8 +125,38 @@ export default function ForecastCharts({
   const [isTouchingWeather, setIsTouchingWeather] = useState(false);
   const [isTouchingTide, setIsTouchingTide] = useState(false);
 
-  // ★ 修正点: 潮グラフの内部状態リセット用キーを元に戻す
+  // 潮グラフの内部状態リセット用キー
   const [tideChartKey, setTideChartKey] = useState(0);
+
+  // 満潮/干潮リストが実際に横スクロールを必要としているか
+  const tideListViewportRef = useRef<HTMLDivElement>(null);
+  const [isTideListScrollable, setIsTideListScrollable] = useState(false);
+
+  useEffect(() => {
+    const el = tideListViewportRef.current;
+    if (!el) return;
+
+    const check = () => {
+      // 多少の誤差を吸収するために +1 のマージン
+      const scrollable = el.scrollWidth > el.clientWidth + 1;
+      setIsTideListScrollable(scrollable);
+    };
+
+    // 初回とリサイズで判定
+    check();
+    const onResize = () => requestAnimationFrame(check);
+    window.addEventListener('resize', onResize);
+
+    // ResizeObserver で内容や幅の変化にも追従
+    const ro = new ResizeObserver(() => requestAnimationFrame(check));
+    ro.observe(el);
+    if (el.firstElementChild instanceof HTMLElement) ro.observe(el.firstElementChild);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      ro.disconnect();
+    };
+  }, [tide.flood, tide.edd]);
 
   // Weather Chart Logic
   const baseDate = new Date(date);
@@ -214,7 +245,7 @@ export default function ForecastCharts({
   const tideChartData = useMemo(
     () =>
       tide.tide.map((t) => ({
-        time: t.fullTime, // X軸には一意なfullTimeを使用
+        time: t.fullTime,
         level: t.cm,
         isNextDay: t.isNextDay,
       })),
@@ -223,7 +254,7 @@ export default function ForecastCharts({
 
   const tideTicks = useMemo(() => {
     const step = isMobile ? 4 : 2;
-    const tickMap = new Map<number, string>(); // <timestamp, fullTimeString>
+    const tickMap = new Map<number, string>();
     tideChartData.forEach((d) => {
       const date = new Date(d.time);
       if (date.getMinutes() === 0 && date.getHours() % step === 0) {
@@ -417,8 +448,17 @@ export default function ForecastCharts({
                 </div>
               </div>
 
-              <div className="text-center overflow-x-auto pb-2">
-                <div className="inline-flex gap-3 px-4">
+              {/* 満潮/干潮の横スクロール（スクロールが無いときは何も出さない） */}
+              <ScrollArea
+                type={isTideListScrollable ? 'always' : 'auto'}
+                scrollHideDelay={0}
+                showVertical={false}
+                showHorizontal={isTideListScrollable}
+                viewportRef={tideListViewportRef}
+                viewportClassName="hide-native-scrollbar"
+                className={`text-center ${isTideListScrollable ? 'pb-2' : ''}`}
+              >
+                <div className="inline-flex gap-3 px-4 w-max">
                   {[...tide.flood.map((f) => ({ ...f, type: '満潮' })), ...tide.edd.map((e) => ({ ...e, type: '干潮' }))]
                     .sort((a, b) => new Date(a.fullTime).getTime() - new Date(b.fullTime).getTime())
                     .map((t, i) => (
@@ -444,7 +484,7 @@ export default function ForecastCharts({
                       </div>
                     ))}
                 </div>
-              </div>
+              </ScrollArea>
             </div>
 
             <div className="flex-grow min-h-0 -mt-1 sm:-mt-2">

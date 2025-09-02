@@ -5,6 +5,7 @@ import { CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Wind, Droplet, Navigation, Sparkle } from 'lucide-react';
 import type { HourlyWeather } from '@/app/detail/[date]/types';
 import { monthlyDaylightHours, getWeatherInfo } from '@/lib/detail-utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface HourlyForecastProps {
   weather: HourlyWeather[];
@@ -26,8 +27,8 @@ export default function HourlyForecast({
   const [showScrollRight, setShowScrollRight] = useState(false);
 
   const handleScroll = (direction: 'left' | 'right') => {
-    if (!hourlyForecastRef.current) return;
     const container = hourlyForecastRef.current;
+    if (!container) return;
     const scrollAmount = container.clientWidth * 0.7;
     container.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
@@ -36,8 +37,9 @@ export default function HourlyForecast({
   };
 
   const checkScrollButtons = () => {
-    if (!hourlyForecastRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = hourlyForecastRef.current;
+    const container = hourlyForecastRef.current;
+    if (!container) return;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
     setShowScrollLeft(scrollLeft > 0);
     setShowScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
   };
@@ -45,11 +47,9 @@ export default function HourlyForecast({
   useEffect(() => {
     const container = hourlyForecastRef.current;
     if (!container) return;
-
     checkScrollButtons();
     container.addEventListener('scroll', checkScrollButtons);
     window.addEventListener('resize', checkScrollButtons);
-
     return () => {
       container.removeEventListener('scroll', checkScrollButtons);
       window.removeEventListener('resize', checkScrollButtons);
@@ -59,23 +59,15 @@ export default function HourlyForecast({
   useEffect(() => {
     if (isTodayPage && hourlyForecastRef.current) {
       setTimeout(() => {
-        if (!hourlyForecastRef.current) return;
-        const currentHourElement = hourlyForecastRef.current.querySelector(
-          '[data-is-current-hour="true"]'
-        );
+        const container = hourlyForecastRef.current;
+        if (!container) return;
+        const currentHourElement = container.querySelector('[data-is-current-hour="true"]');
         if (currentHourElement) {
-          const container = hourlyForecastRef.current;
           const element = currentHourElement as HTMLElement;
-
           const containerRect = container.getBoundingClientRect();
           const elementRect = element.getBoundingClientRect();
-
           const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft;
-
-          container.scrollTo({
-            left: scrollLeft,
-            behavior: 'auto',
-          });
+          container.scrollTo({ left: scrollLeft, behavior: 'auto' });
         }
       }, 100);
     }
@@ -96,8 +88,17 @@ export default function HourlyForecast({
         </button>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-white/10" ref={hourlyForecastRef}>
-        <div className="flex">
+      {/* モバイル時のみ viewport の内側に余白を確保してスクロールバーと内容の距離をとる */}
+      <ScrollArea
+        type="always"
+        scrollHideDelay={0}
+        showVertical={false}
+        showHorizontal={true}
+        viewportRef={hourlyForecastRef}
+        viewportClassName={`hide-native-scrollbar ${isMobile ? 'pb-1' : ''}`}
+        className="rounded-lg border border-white/10"
+      >
+        <div className="flex w-max">
           {weather.map((w, i) => {
             const itemDate = new Date(w.time);
             const hour = itemDate.getHours();
@@ -120,7 +121,7 @@ export default function HourlyForecast({
             const roundedDegrees = windIndex * 22.5;
 
             const isNextDay = itemDate.toDateString() !== new Date(date).toDateString();
-            
+
             const { Icon, className } = getWeatherInfo(w.weather_code, w.time);
 
             return (
@@ -131,11 +132,7 @@ export default function HourlyForecast({
                   ${isDay ? 'bg-sky-900/40 border-t-sky-500/70' : 'bg-slate-950/40 border-t-indigo-500/70'}
                   border-t-4`}
               >
-                <div
-                  className={`flex flex-col items-center justify-around h-full w-full ${
-                    isPast ? 'opacity-50' : ''
-                  }`}
-                >
+                <div className={`flex flex-col items-center justify-around h-full w-full ${isPast ? 'opacity-50' : ''}`}>
                   <div className="flex flex-col items中心 justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
                     {isCurrentHour && (
                       <p className="relative top-0.5 sm:top-1 text-[10px] sm:text[11px] font-semibold text-red-300">
@@ -180,7 +177,8 @@ export default function HourlyForecast({
                     <span>{w.precipitation.toFixed(1)}mm</span>
                   </div>
 
-                  <div className="flex flex-col items-center gap-1 text-[10px] sm:text-xs text-slate-300">
+                  {/* ここにモバイル時のみ下マージンを追加して、スクロールバーとの距離を確保 */}
+                  <div className="flex flex-col items-center gap-1 text-[10px] sm:text-xs text-slate-300 mb-1 sm:mb-0">
                     <div className="flex items-center gap-1">
                       <Wind className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       <span>{w.wind_speed.toFixed(1)}m/s</span>
@@ -195,7 +193,7 @@ export default function HourlyForecast({
             );
           })}
         </div>
-      </div>
+      </ScrollArea>
 
       {isMobile && showScrollRight && (
         <button
