@@ -112,6 +112,23 @@
   }
 }
 
+@layer utilities {
+  @media (hover: hover) {
+    .hover-text-green-300:hover {
+      color: #6ee7b7;
+    }
+    .hover-text-red-300:hover {
+      color: #fca5a5;
+    }
+    .hover-text-blue-300:hover {
+      color: #93c5fd;
+    }
+    .hover-text-gray-300:hover {
+      color: #d1d5db;
+    }
+  }
+}
+
 @keyframes hotaruika-pulse {
   0%, 100% {
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
@@ -198,11 +215,10 @@
 }
 
 
-/* Radix ScrollArea の Viewport 内でネイティブスクロールバーを消したい時に使用 */
 .hide-native-scrollbar {
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* IE/Edge レガシー */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-native-scrollbar::-webkit-scrollbar {
-  display: none;                /* WebKit (Safari/Chrome) */
+  display: none;
 }

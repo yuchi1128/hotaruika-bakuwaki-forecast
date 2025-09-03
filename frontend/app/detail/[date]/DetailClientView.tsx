@@ -7,6 +7,8 @@ import DetailPageHeader from '@/components/Detail/DetailPageHeader';
 import HourlyForecast from '@/components/Detail/HourlyForecast';
 import ForecastCharts from '@/components/Detail/ForecastCharts';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface DetailClientViewProps {
   date: string;
   weather: HourlyWeather[];
@@ -22,6 +24,7 @@ export default function DetailClientView({
 }: DetailClientViewProps) {
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
+  const [predictionDates, setPredictionDates] = useState<string[]>([]);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -30,6 +33,24 @@ export default function DetailClientView({
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  useEffect(() => {
+    const fetchForecasts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/prediction`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const dates = data.map((p: any) => p.date.split('T')[0]);
+        setPredictionDates(dates);
+      } catch (error) {
+        console.error('Failed to fetch forecasts:', error);
+      }
+    };
+
+    fetchForecasts();
   }, []);
 
   const lastUpdated = new Date(lastUpdatedISO);
@@ -60,6 +81,7 @@ export default function DetailClientView({
         lastUpdated={lastUpdated}
         onBack={() => router.push('/')}
         date={date}
+        predictionDates={predictionDates}
       />
       <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
         <HourlyForecast
