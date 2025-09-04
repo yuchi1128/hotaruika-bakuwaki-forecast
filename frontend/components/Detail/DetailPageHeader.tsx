@@ -164,7 +164,7 @@ export default function DetailPageHeader({
                         次の時刻に更新されます：
                         <br />
                         <span className="font-mono text-white">
-                          05:00, 08:00, 11:00, 14:00, 17:00, 23:00, 02:00
+                          05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00
                         </span>
                       </p>
                     </div>

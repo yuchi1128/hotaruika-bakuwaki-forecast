@@ -119,7 +119,7 @@ const TodayForecast = ({
                     <h4 className="font-semibold text-slate-200 mb-1">予報の更新</h4>
                     <p className="text-slate-300 leading-relaxed">
                       次の時刻に更新されます：<br />
-                      <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 23:00, 02:00</span>
+                      <span className="font-mono text-white">05:00, 08:00, 11:00, 14:00, 17:00, 20:00, 23:00, 02:00</span>
                     </p>
                   </div>
                 </div>

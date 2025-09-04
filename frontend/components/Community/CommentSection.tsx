@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -69,6 +69,8 @@ const CommentSection = ({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
   const COMMENTS_PER_PAGE = 30;
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const filterSectionRef = useRef<HTMLDivElement>(null);
 
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
@@ -181,8 +183,15 @@ const CommentSection = ({
   const endIndex = Math.min(startIndex + COMMENTS_PER_PAGE, totalComments);
   const paginatedComments = useMemo(() => sortedComments.slice(startIndex, endIndex), [sortedComments, startIndex, endIndex]);
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (filterSectionRef.current) {
+      filterSectionRef.current.scrollIntoView({ behavior: 'auto' });
+    }
+  };
+
   return (
-    <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
+    <Card ref={commentSectionRef} className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
       <CardHeader>
         <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
           <MessageCircle className="w-6 h-6" />
@@ -287,7 +296,7 @@ const CommentSection = ({
         </div>
 
         {/* ラベルフィルター */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div ref={filterSectionRef} style={{ scrollMarginTop: '80px' }} className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-gray-300 text-xs font-bold">ラベル：</span>
           <Button
             className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === null ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
@@ -334,7 +343,7 @@ const CommentSection = ({
               <button
                 aria-label="検索をクリア"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-300 hover-bg-white-10"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -357,18 +366,18 @@ const CommentSection = ({
           <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex + 1}〜${endIndex}件 / 全${totalComments}件`}</div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              variant="ghost"
+              className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
               前へ
             </Button>
             <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
             <Button
-              variant="outline"
-              className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              variant="ghost"
+              className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages || totalComments === 0}
             >
               次へ
@@ -395,18 +404,18 @@ const CommentSection = ({
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                variant="ghost"
+                className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
               >
                 前へ
               </Button>
               <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
               <Button
-                variant="outline"
-                className="h-7 px-3 text-xs border-blue-500/40 text-blue-100 hover:bg-white/10"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                variant="ghost"
+                className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
               >
                 次へ

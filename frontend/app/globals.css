@@ -113,6 +113,23 @@
 }
 
 @layer utilities {
+  .hover-text-green-300:active {
+    color: #6ee7b7;
+  }
+  .hover-text-red-300:active {
+    color: #fca5a5;
+  }
+  .hover-text-blue-300:active {
+    color: #93c5fd;
+  }
+  .hover-text-gray-300:active {
+    color: #d1d5db;
+  }
+
+  .hover-bg-white-10:active {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
   @media (hover: hover) {
     .hover-text-green-300:hover {
       color: #6ee7b7;
@@ -125,6 +142,9 @@
     }
     .hover-text-gray-300:hover {
       color: #d1d5db;
+    }
+    .hover-bg-white-10:hover {
+      background-color: rgba(255, 255, 255, 0.1);
     }
   }
 }
