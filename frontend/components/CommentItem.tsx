@@ -141,7 +141,7 @@ export default function CommentItem({
               variant="ghost"
               size="sm"
               onClick={() => handleReaction(reply.id, 'reply', 'good')}
-              className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300`}
+              className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
               disabled={reply.myReaction !== null}
             >
               <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
@@ -151,7 +151,7 @@ export default function CommentItem({
               variant="ghost"
               size="sm"
               onClick={() => handleReaction(reply.id, 'reply', 'bad')}
-              className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300`}
+              className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
               disabled={reply.myReaction !== null}
             >
               <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
@@ -161,7 +161,7 @@ export default function CommentItem({
               variant="ghost"
               size="sm"
               onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
-              className="text-xs text-gray-400 hover-text-blue-300"
+              className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
             >
               <MessageCircle className="w-4 h-4 mr-1" />
               返信
@@ -201,7 +201,7 @@ export default function CommentItem({
                   <Button
                     variant="ghost"
                     onClick={() => setReplyingTo(null)}
-                    className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300"
+                    className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300 active:bg-slate-600/50 rounded-md"
                   >
                     キャンセル
                   </Button>
@@ -311,7 +311,7 @@ export default function CommentItem({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleReaction(comment.id, 'post', 'good')}
-                  className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300`}
+                  className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
                   disabled={comment.myReaction !== null}
                 >
                   <ThumbsUp className={`w-4 h-4 mr-1 ${comment.myReaction === 'good' ? 'fill-current' : ''}`} />
@@ -321,7 +321,7 @@ export default function CommentItem({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleReaction(comment.id, 'post', 'bad')}
-                  className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300`}
+                  className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
                   disabled={comment.myReaction !== null}
                 >
                   <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
@@ -331,7 +331,7 @@ export default function CommentItem({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsReplying(!isReplying)}
-                  className="text-xs text-gray-400 hover-text-blue-300"
+                  className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
                 >
                   <MessageCircle className="w-4 h-4 mr-1" />
                   返信
@@ -342,7 +342,7 @@ export default function CommentItem({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowReplies(!showReplies)}
-                  className="text-xs text-gray-400 hover-text-blue-300"
+                  className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
                 >
                   {showReplies ? '返信を隠す' : `${comment.replies.length}件の返信を表示`}
                 </Button>
@@ -384,7 +384,7 @@ export default function CommentItem({
                   <Button
                     variant="ghost"
                     onClick={() => setIsReplying(false)}
-                    className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300"
+                    className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300 active:bg-slate-600/50 rounded-md"
                   >
                     キャンセル
                   </Button>

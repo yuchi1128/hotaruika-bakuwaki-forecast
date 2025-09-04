@@ -9,13 +9,21 @@ export default function DetailLoading() {
     <div className="min-h-screen relative z-10 p-4 sm:p-4 md:p-6 max-w-7xl mx-auto text-white safe-area">
       {/* Header Skeleton */}
       <header className="mb-4 sm:mb-6">
-        <Skeleton className="h-10 w-24 mb-2" />
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 sm:h-9 w-20" />
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold flex items-center gap-3">
-              <Calendar className="text-blue-300" />
-              <Skeleton className="h-8 sm:h-10 w-64" />
-            </h1>
+            <Skeleton className="h-8 sm:h-9 w-20" />
+            <Skeleton className="h-8 sm:h-9 w-20" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1 mt-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold flex items-center gap-3">
+                <Calendar className="text-blue-300" />
+                <Skeleton className="h-8 sm:h-10 w-64" />
+              </h1>
+            </div>
           </div>
           <div className="flex items-center gap-1 text-xs text-blue-200/80 mt-1 pl-1">
             <Skeleton className="h-4 w-40" />
