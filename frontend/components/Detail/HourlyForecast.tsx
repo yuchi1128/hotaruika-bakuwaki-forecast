@@ -130,12 +130,16 @@ export default function HourlyForecast({
                 data-is-current-hour={isCurrentHour}
                 className={`flex-shrink-0 w-16 sm:w-24 flex flex-col items-center justify-around p-1.5 sm:p-3 text-center h-40 sm:h-52 border-r border-white/10 last:border-r-0 transition-all duration-300 backdrop-blur-sm
                   ${isDay ? 'bg-sky-900/40 border-t-sky-500/70' : 'bg-slate-950/40 border-t-indigo-500/70'}
-                  border-t-4`}
+                  border-t-4 ${isPast ? 'bg-slate-700/20 border-t-slate-500/50' : ''}`}
               >
-                <div className={`flex flex-col items-center justify-around h-full w-full ${isPast ? 'opacity-50' : ''}`}>
-                  <div className="flex flex-col items中心 justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
+                <div className={`flex flex-col items-center justify-around h-full w-full transition-all duration-300 ${
+                  isPast 
+                    ? 'opacity-50 saturate-55' 
+                    : ''
+                }`}>
+                  <div className="flex flex-col items-center justify-end h-7 sm:h-8 pb-0.5 sm:pb-1">
                     {isCurrentHour && (
-                      <p className="relative top-0.5 sm:top-1 text-[10px] sm:text[11px] font-semibold text-red-300">
+                      <p className="relative top-0.5 sm:top-1 text-[10px] sm:text-[11px] font-semibold text-red-300">
                         現在
                       </p>
                     )}

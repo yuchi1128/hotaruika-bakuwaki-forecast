@@ -65,8 +65,12 @@ export default function DetailPageHeader({
   return (
     <header className="mb-4 sm:mb-6">
       <div className="flex items-center justify-between">
-        <Button onClick={onBack} variant="ghost" className="text-white hover:bg-white/10">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        <Button
+          onClick={onBack}
+          variant="ghost"
+          className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
           戻る
         </Button>
 
