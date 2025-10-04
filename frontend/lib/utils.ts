@@ -77,9 +77,121 @@ export const formatTime = (date: Date) => {
   };
 
 export const getOffSeasonMessage = (date: Date) => {
+
   const month = date.getMonth();
+
   if (month === 0) {
+
     return '現在はホタルイカの身投げの時期ではありません。2月から予測を再開します';
+
   }
+
   return '現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。';
+
+};
+
+
+
+export const predictionLevels = [
+
+  { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
+
+  { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
+
+  { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
+
+  { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-500/[.14] border border-green-400/20 backdrop-blur-sm' },
+
+  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます！！', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
+
+  { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
+
+];
+
+
+
+export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
+
+  const month = date.getMonth();
+
+  // const isSeason = month >= 1 && month <= 4; // 2月から5月
+  const isSeason = true; // 確認用の一時的な変更
+
+
+  let level = 0;
+
+  if (isSeason) {
+
+    if (predicted_amount >= 1.25) {
+
+      level = 5;
+
+    } else if (predicted_amount >= 1.0) {
+
+      level = 4;
+
+    } else if (predicted_amount >= 0.75) {
+
+      level = 3;
+
+    } else if (predicted_amount >= 0.5) {
+
+      level = 2;
+
+    } else if (predicted_amount >= 0.25) {
+
+      level = 1;
+
+    } else {
+
+      level = 0;
+
+    }
+
+  } else {
+
+    level = -1; // シーズン外
+
+  }
+
+
+
+  const bakuwakiIndex = Math.min(Math.round((predicted_amount / 1.25) * 100), 200); // 200%を上限とする
+
+
+
+  if (level === -1) {
+
+    return {
+
+      level: -1,
+
+      name: 'シーズンオフ',
+
+      description: getOffSeasonMessage(date),
+
+      color: 'text-gray-400',
+
+      bgColor: 'bg-gray-700/20',
+
+      bakuwakiIndex: 0,
+
+    };
+
+  }
+
+
+
+  const levelInfo = predictionLevels.find(p => p.level === level) || predictionLevels[0];
+
+
+
+  return {
+
+    ...levelInfo,
+
+    bakuwakiIndex,
+
+  };
+
 };

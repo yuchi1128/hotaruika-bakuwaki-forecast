@@ -31,3 +31,14 @@ export interface TideData {
   edd: TideEvent[];
   tide: TideChartEntry[];
 }
+
+export interface Prediction {
+  date: string;
+  predicted_amount: number;
+  moon_age: number;
+  weather_code: number;
+  temperature_max: number;
+  temperature_min: number;
+  precipitation_probability_max: number;
+  dominant_wind_direction: number;
+}

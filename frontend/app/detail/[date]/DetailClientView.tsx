@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import type { HourlyWeather, TideData } from './types';
+import type { HourlyWeather, TideData, Prediction } from './types';
 import DetailPageHeader from '@/components/Detail/DetailPageHeader';
 import HourlyForecast from '@/components/Detail/HourlyForecast';
 import ForecastCharts from '@/components/Detail/ForecastCharts';
+import BakuwakiIndexDisplay from '@/components/Detail/BakuwakiIndexDisplay';
+import { getBakuwakiLevelInfo } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -13,6 +15,7 @@ interface DetailClientViewProps {
   date: string;
   weather: HourlyWeather[];
   tide: TideData;
+  prediction: Prediction | null;
   lastUpdatedISO: string;
 }
 
@@ -20,6 +23,7 @@ export default function DetailClientView({
   date,
   weather,
   tide,
+  prediction,
   lastUpdatedISO,
 }: DetailClientViewProps) {
   const [isMobile, setIsMobile] = useState(false);
@@ -74,6 +78,17 @@ export default function DetailClientView({
     return nowTime >= startTime && nowTime < endTime;
   }, [weather, now]);
 
+  const bakuwakiInfo = useMemo(() => {
+    const targetDate = new Date(date);
+    // 予報データがない場合でも、日付からシーズンオフかどうかを判断するために、predicted_amountを0として関数を呼び出す
+    // const amount = prediction ? prediction.predicted_amount : 0;
+
+    // 確認用の一時的な値
+    const amount = 1.34;
+
+    return getBakuwakiLevelInfo(amount, targetDate);
+  }, [prediction, date]);
+
   return (
     <div className="min-h-screen relative z-10 p-4 sm:p-4 md:p-6 max-w-7xl mx-auto text-white safe-area">
       <DetailPageHeader
@@ -84,6 +99,14 @@ export default function DetailClientView({
         predictionDates={predictionDates}
       />
       <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
+        {bakuwakiInfo && (
+          <BakuwakiIndexDisplay 
+            bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
+            level={bakuwakiInfo.level}
+            name={bakuwakiInfo.name}
+            description={bakuwakiInfo.description}
+          />
+        )}
         <HourlyForecast
           weather={weather}
           date={date}

@@ -1,9 +1,9 @@
 import DetailClientView from './DetailClientView';
-import type { HourlyWeather, TideData } from './types';
+import type { HourlyWeather, TideData, Prediction } from './types';
 import { ShieldAlert } from 'lucide-react';
 
 // --- データ取得関数 ---
-async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData }> {
+async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData, prediction: Prediction | null }> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const apiUrl = `${apiBaseUrl}/api/detail/${date}`;
 
@@ -62,6 +62,7 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
         flood: [],
         edd: [],
       },
+      prediction: apiData.prediction,
     };
   }
 
@@ -113,7 +114,7 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
     edd: [...todayEdd, ...nextDayEdd],
   };
 
-  return { weather: slicedWeatherData, tide: tideData };
+  return { weather: slicedWeatherData, tide: tideData, prediction: apiData.prediction };
 }
 
 // --- 最終更新日時取得関数 ---
@@ -178,13 +179,14 @@ export default async function DetailPage({ params }: { params: { date: string } 
 
   // --- データ取得と画面表示 ---
   try {
-    const { weather, tide } = await fetchDetailData(date);
+    const { weather, tide, prediction } = await fetchDetailData(date);
     const lastUpdated = getLastUpdateTime();
 
     return <DetailClientView 
       date={date} 
       weather={weather} 
       tide={tide} 
+      prediction={prediction}
       lastUpdatedISO={lastUpdated.toISOString()} 
     />;
 
