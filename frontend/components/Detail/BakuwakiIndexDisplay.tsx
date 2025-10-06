@@ -30,6 +30,9 @@ export default function BakuwakiIndexDisplay({
   const hotaruikaIconSrc = level >= 5 ? '/hotaruika_aikon_3.png' : level >= 3 ? '/hotaruika_aikon_2.png' : '/hotaruika_aikon.png';
 
   const count = useMemo(() => {
+    if (level === 0) {
+      return 0;
+    }
     let num = 0;
     if (isMobile) {
       if (bakuwakiIndex > 150) num = 15;
@@ -51,13 +54,13 @@ export default function BakuwakiIndexDisplay({
       else if (bakuwakiIndex > 10) num = 2;
     }
     return num;
-  }, [bakuwakiIndex, isMobile]);
+  }, [bakuwakiIndex, isMobile, level]);
 
   const positions = useMemo(() => {
     const newPositions: { top: number; left: number; s: number; }[] = [];
     const sizes = [2.5, 3, 2, 3.5, 2.25, 3.5]; // in rem
-    const minDistance = isMobile ? 18 : 15;
-    const maxAttempts = 20;
+    const minDistance = isMobile ? 22 : 18;
+    const maxAttempts = 100;
 
     for (let i = 0; i < count; i++) {
       let top, left;
