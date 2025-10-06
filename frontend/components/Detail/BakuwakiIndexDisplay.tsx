@@ -53,18 +53,45 @@ export default function BakuwakiIndexDisplay({
   }, [bakuwakiIndex, isMobile]);
 
   const positions = useMemo(() => {
-    const newPositions: { top: string; left: string; s: string; transform: string; }[] = [];
+    const newPositions: { top: number; left: number; s: string; }[] = [];
     const sizes = ['10', '12', '8', '14', '9', '16'];
+    const minDistance = isMobile ? 18 : 15;
+    const maxAttempts = 20;
+
     for (let i = 0; i < count; i++) {
+      let top, left;
+      let attempts = 0;
+      let isOverlapping;
+
+      do {
+        top = 5 + Math.random() * 90;
+        left = 5 + Math.random() * 90;
+        isOverlapping = false;
+
+        for (const p of newPositions) {
+          const dist = Math.sqrt(Math.pow(p.left - left, 2) + Math.pow(p.top - top, 2));
+          if (dist < minDistance) {
+            isOverlapping = true;
+            break;
+          }
+        }
+        attempts++;
+      } while (isOverlapping && attempts < maxAttempts);
+
       newPositions.push({
-        top: `${5 + Math.random() * 90}%`,
-        left: `${5 + Math.random() * 90}%`,
+        top: top,
+        left: left,
         s: sizes[i % sizes.length],
-        transform: 'translate(-50%, -50%)',
       });
     }
-    return newPositions;
-  }, [count]);
+
+    return newPositions.map(p => ({
+        top: `${p.top}%`,
+        left: `${p.left}%`,
+        s: p.s,
+        transform: 'translate(-50%, -50%)',
+    }));
+  }, [count, isMobile]);
 
   return (
     <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>
