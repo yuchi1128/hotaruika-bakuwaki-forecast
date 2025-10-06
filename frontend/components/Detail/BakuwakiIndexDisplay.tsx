@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { predictionLevels } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { CardTitle } from '@/components/ui/card';
 
 interface BakuwakiIndexDisplayProps {
   bakuwakiIndex: number;
@@ -53,8 +54,8 @@ export default function BakuwakiIndexDisplay({
   }, [bakuwakiIndex, isMobile]);
 
   const positions = useMemo(() => {
-    const newPositions: { top: number; left: number; s: string; }[] = [];
-    const sizes = ['10', '12', '8', '14', '9', '16'];
+    const newPositions: { top: number; left: number; s: number; }[] = [];
+    const sizes = [2.5, 3, 2, 3.5, 2.25, 3.5]; // in rem
     const minDistance = isMobile ? 18 : 15;
     const maxAttempts = 20;
 
@@ -94,81 +95,89 @@ export default function BakuwakiIndexDisplay({
   }, [count, isMobile]);
 
   return (
-    <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>
+    <div className="relative">
+      <CardTitle className="mt-6 text-lg sm:text-xl text-blue-100 mb-3 ml-1">
+        湧き指数
+      </CardTitle>
       
-      <div className="absolute inset-0 z-0 opacity-40">
-        {positions.map((p, index) => (
-          <div
-            key={index}
-            className={`absolute w-${p.s} h-${p.s}`}
-            style={{ 
-              top: p.top, 
-              left: p.left, 
-              transform: p.transform,
-              zIndex: 1 
-            }}
-          >
-            <img
-              src={hotaruikaIconSrc}
-              alt="ホタルイカ"
-              className={`w-full h-full floating [filter:drop-shadow(0_0_8px_rgba(187,247,208,0.5))]`}
-              style={{ animationDelay: `${(index * 0.2)}s` }}
-            />
-          </div>
-        ))}
-      </div>
+      <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>      
 
-      {/* Main Content Area */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full">
-        
-        <div className="relative flex items-center justify-center w-48 h-48 md:w-52 md:h-52">
-          {/* Background Chart */}
-          <div className="absolute inset-0 z-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a7f3d0" stopOpacity={0.7}/>
-                    <stop offset="95%" stopColor="#34d399" stopOpacity={0.3}/>
-                  </linearGradient>
-                </defs>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="70%"
-                  outerRadius="100%"
-                  startAngle={90}
-                  endAngle={-270}
-                  isAnimationActive={false}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Text Content in the center */}
-          <div className="relative z-10 flex flex-col items-center justify-center w-full h-full bg-black/10 rounded-full backdrop-blur-sm">
-            <span className="text-sm text-slate-300">湧き指数</span>
-            <span className="text-5xl font-bold text-white tracking-tighter">
-              {bakuwakiIndex}
-              <span className="text-2xl font-medium">%</span>
-            </span>
-          </div>
+        <div className="absolute inset-0 z-0 opacity-40">
+          {positions.map((p, index) => (
+            <div
+              key={index}
+              className="absolute"
+              style={{ 
+                top: p.top, 
+                left: p.left, 
+                transform: p.transform,
+                width: `${p.s}rem`,
+                height: `${p.s}rem`,
+                zIndex: 1 
+              }}
+            >
+              <img
+                src={hotaruikaIconSrc}
+                alt="ホタルイカ"
+                className={`w-full h-full floating [filter:drop-shadow(0_0_8px_rgba(187,247,208,0.5))]`}
+                style={{ animationDelay: `${(index * 0.2)}s` }}
+              />
+            </div>
+          ))}
         </div>
 
-        {/* Level Name and Description below the chart */}
-        <div className="mt-4 text-center">
-          <p className={`text-4xl md:text-5xl font-bold ${levelInfo.color} ${level > 0 ? 'text-glow-normal' : 'text-glow-weak'}`}>
-            {name}
-          </p>
-          <p className="text-base text-gray-300 mt-1">{description}</p>
-        </div>
+        {/* Main Content Area */}
+        <div className="relative z-10 flex flex-col items-center justify-center h-full">
+          
+          <div className="relative flex items-center justify-center w-48 h-48 md:w-52 md:h-52">
+            {/* Background Chart */}
+            <div className="absolute inset-0 z-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a7f3d0" stopOpacity={0.7}/>
+                      <stop offset="95%" stopColor="#34d399" stopOpacity={0.3}/>
+                    </linearGradient>
+                  </defs>
+                  <Pie
+                    data={chartData}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="70%"
+                    outerRadius="100%"
+                    startAngle={90}
+                    endAngle={-270}
+                    isAnimationActive={false}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
+            {/* Text Content in the center */}
+            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full bg-black/10 rounded-full backdrop-blur-sm">
+              <span className="text-sm text-slate-300">湧き指数</span>
+              <span className="text-5xl font-bold text-white tracking-tighter">
+                {bakuwakiIndex}
+                <span className="text-2xl font-medium">%</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Level Name and Description below the chart */}
+          <div className="mt-4 text-center">
+            <p className={`text-4xl md:text-5xl font-bold ${levelInfo.color} ${level > 0 ? 'text-glow-normal' : 'text-glow-weak'}`}>
+              {name}
+            </p>
+            <p className="text-base text-gray-300 mt-1">{description}</p>
+          </div>
+
+        </div>
       </div>
     </div>
   );

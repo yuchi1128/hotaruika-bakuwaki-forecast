@@ -84,7 +84,7 @@ export default function DetailClientView({
     // const amount = prediction ? prediction.predicted_amount : 0;
 
     // 確認用の一時的な値
-    const amount = 0.35;
+    const amount = 0.85;
 
     return getBakuwakiLevelInfo(amount, targetDate);
   }, [prediction, date]);
