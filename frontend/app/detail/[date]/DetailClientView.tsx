@@ -84,7 +84,7 @@ export default function DetailClientView({
     // const amount = prediction ? prediction.predicted_amount : 0;
 
     // 確認用の一時的な値
-    const amount = 1.34;
+    const amount = 1.75;
 
     return getBakuwakiLevelInfo(amount, targetDate);
   }, [prediction, date]);
@@ -105,6 +105,7 @@ export default function DetailClientView({
             level={bakuwakiInfo.level}
             name={bakuwakiInfo.name}
             description={bakuwakiInfo.description}
+            isMobile={isMobile}
           />
         )}
         <HourlyForecast

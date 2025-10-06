@@ -1,98 +1,145 @@
 'use client';
 
+import { useMemo } from 'react';
 import { predictionLevels } from "@/lib/utils";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface BakuwakiIndexDisplayProps {
   bakuwakiIndex: number;
   level: number;
   name: string;
   description: string;
+  isMobile: boolean;
 }
-
-const renderHotaruikaIcons = (level: number, src: string, size = 'w-10 h-10', animated = true) => {
-  if (level <= 0) return null;
-  const count = Math.min(level, 5);
-  return Array.from({ length: count }).map((_, index) => (
-    <img
-      key={index}
-      src={src}
-      alt="ホタルイカ"
-      className={`${size} ${animated ? 'floating' : ''} [filter:drop-shadow(0_0_0.5rem_rgba(255,255,255,0.8))]`}
-      style={{ animationDelay: `${index * 0.4}s` }}
-    />
-  ));
-};
 
 export default function BakuwakiIndexDisplay({
   bakuwakiIndex,
   level,
   name,
   description,
+  isMobile,
 }: BakuwakiIndexDisplayProps) {
+
   const chartData = [
-    { name: '湧き指数', value: bakuwakiIndex, fill: 'url(#colorUv)' },
-    { name: '残り', value: Math.max(100 - bakuwakiIndex, 0), fill: '#374151' }, // gray-700
+    { name: 'Bakuwaki Index', value: bakuwakiIndex, fill: 'url(#chartGradient)' },
+    { name: 'Remaining', value: Math.max(100 - bakuwakiIndex, 0), fill: 'rgba(0, 0, 0, 0.2)' },
   ];
 
   const levelInfo = predictionLevels.find(p => p.level === level) || predictionLevels[0];
   const hotaruikaIconSrc = level >= 5 ? '/hotaruika_aikon_3.png' : level >= 3 ? '/hotaruika_aikon_2.png' : '/hotaruika_aikon.png';
 
+  const count = useMemo(() => {
+    let num = 0;
+    if (isMobile) {
+      if (bakuwakiIndex > 150) num = 15;
+      else if (bakuwakiIndex > 120) num = 12;
+      else if (bakuwakiIndex > 100) num = 10;
+      else if (bakuwakiIndex > 80) num = 8;
+      else if (bakuwakiIndex > 60) num = 6;
+      else if (bakuwakiIndex > 40) num = 4;
+      else if (bakuwakiIndex > 25) num = 2;
+      else if (bakuwakiIndex > 10) num = 1;
+    } else {
+      if (bakuwakiIndex > 150) num = 30;
+      else if (bakuwakiIndex > 120) num = 25;
+      else if (bakuwakiIndex > 100) num = 20;
+      else if (bakuwakiIndex > 80) num = 16;
+      else if (bakuwakiIndex > 60) num = 12;
+      else if (bakuwakiIndex > 40) num = 8;
+      else if (bakuwakiIndex > 25) num = 5;
+      else if (bakuwakiIndex > 10) num = 2;
+    }
+    return num;
+  }, [bakuwakiIndex, isMobile]);
+
+  const positions = useMemo(() => {
+    const newPositions: { top: string; left: string; s: string; transform: string; }[] = [];
+    const sizes = ['10', '12', '8', '14', '9', '16'];
+    for (let i = 0; i < count; i++) {
+      newPositions.push({
+        top: `${5 + Math.random() * 90}%`,
+        left: `${5 + Math.random() * 90}%`,
+        s: sizes[i % sizes.length],
+        transform: 'translate(-50%, -50%)',
+      });
+    }
+    return newPositions;
+  }, [count]);
+
   return (
-    <div className="w-full bg-slate-900/50 backdrop-blur-sm border-blue-500/20 rounded-2xl p-4 sm:p-6 shadow-lg">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8">
+    <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>
+      
+      <div className="absolute inset-0 z-0 opacity-40">
+        {positions.map((p, index) => (
+          <div
+            key={index}
+            className={`absolute w-${p.s} h-${p.s}`}
+            style={{ 
+              top: p.top, 
+              left: p.left, 
+              transform: p.transform,
+              zIndex: 1 
+            }}
+          >
+            <img
+              src={hotaruikaIconSrc}
+              alt="ホタルイカ"
+              className={`w-full h-full floating [filter:drop-shadow(0_0_8px_rgba(187,247,208,0.5))]`}
+              style={{ animationDelay: `${(index * 0.2)}s` }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full">
         
-        {/* Left Side: Chart and Index */}
-        <div className="flex items-center gap-4">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32">
+        <div className="relative flex items-center justify-center w-48 h-48 md:w-52 md:h-52">
+          {/* Background Chart */}
+          <div className="absolute inset-0 z-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <defs>
-                  <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.9}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0.3}/>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a7f3d0" stopOpacity={0.7}/>
+                    <stop offset="95%" stopColor="#34d399" stopOpacity={0.3}/>
                   </linearGradient>
                 </defs>
-                <Tooltip 
-                  cursor={false}
-                  contentStyle={{ display: 'none' }} // ツールチップは表示しない
-                />
                 <Pie
                   data={chartData}
                   dataKey="value"
-                  nameKey="name"
                   cx="50%"
                   cy="50%"
                   innerRadius="70%"
                   outerRadius="100%"
                   startAngle={90}
                   endAngle={-270}
-                  paddingAngle={0}
-                  cornerRadius={5}
+                  isAnimationActive={false}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
                   ))}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xs text-slate-400">湧き指数</span>
-              <span className="text-3xl sm:text-4xl font-bold text-white tracking-tighter">
-                {bakuwakiIndex}
-                <span className="text-lg sm:text-xl font-medium">%</span>
-              </span>
-            </div>
+          </div>
+
+          {/* Text Content in the center */}
+          <div className="relative z-10 flex flex-col items-center justify-center w-full h-full bg-black/10 rounded-full backdrop-blur-sm">
+            <span className="text-sm text-slate-300">湧き指数</span>
+            <span className="text-5xl font-bold text-white tracking-tighter">
+              {bakuwakiIndex}
+              <span className="text-2xl font-medium">%</span>
+            </span>
           </div>
         </div>
 
-        {/* Right Side: Level Info and Icons */}
-        <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
-          <p className={`text-sm font-semibold ${levelInfo.color}`}>{description}</p>
-          <h3 className={`text-3xl sm:text-4xl font-bold ${levelInfo.color}`}>{name}</h3>
-          <div className="flex items-center justify-center sm:justify-start mt-2 h-10">
-            {renderHotaruikaIcons(level, hotaruikaIconSrc)}
-          </div>
+        {/* Level Name and Description below the chart */}
+        <div className="mt-4 text-center">
+          <p className={`text-4xl md:text-5xl font-bold ${levelInfo.color} ${level > 0 ? 'text-glow-normal' : 'text-glow-weak'}`}>
+            {name}
+          </p>
+          <p className="text-base text-gray-300 mt-1">{description}</p>
         </div>
 
       </div>
