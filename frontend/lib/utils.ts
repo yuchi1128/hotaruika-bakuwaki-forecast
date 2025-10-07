@@ -156,7 +156,7 @@ export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
 
 
 
-  const bakuwakiIndex = Math.min(Math.round((predicted_amount / 1.25) * 100), 200); // 200%を上限とする
+  const bakuwakiIndex = Math.min(Math.round((predicted_amount / 1.5) * 100), 200); // 200%を上限とする
 
 
 

@@ -84,7 +84,7 @@ export default function DetailClientView({
     // const amount = prediction ? prediction.predicted_amount : 0;
 
     // 確認用の一時的な値
-    const amount = 1.25;
+    const amount = 1.27;
 
     return getBakuwakiLevelInfo(amount, targetDate);
   }, [prediction, date]);
@@ -98,15 +98,17 @@ export default function DetailClientView({
         date={date}
         predictionDates={predictionDates}
       />
-      <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
+      <main className="mt-7 space-y-6 sm:space-y-10 pb-4 sm:pb-8">
         {bakuwakiInfo && (
-          <BakuwakiIndexDisplay 
-            bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
-            level={bakuwakiInfo.level}
-            name={bakuwakiInfo.name}
-            description={bakuwakiInfo.description}
-            isMobile={isMobile}
-          />
+          <div className="mb-6 sm:mb-2">
+            <BakuwakiIndexDisplay 
+              bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
+              level={bakuwakiInfo.level}
+              name={bakuwakiInfo.name}
+              description={bakuwakiInfo.description}
+              isMobile={isMobile}
+            />
+          </div>
         )}
         <HourlyForecast
           weather={weather}

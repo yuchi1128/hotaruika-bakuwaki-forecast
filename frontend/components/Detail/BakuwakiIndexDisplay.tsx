@@ -48,7 +48,8 @@ export default function BakuwakiIndexDisplay({
 
   const levelColor = useMemo(() => {
     if (level >= 5) return { start: '#f9a8d4', end: '#c084fc', shadow: 'rgba(249, 168, 212, 0.5)' }; // Pink-Purple
-    if (level >= 3) return { start: '#fcd34d', end: '#fb923c', shadow: 'rgba(252, 211, 77, 0.5)' }; // Yellow-Orange
+    if (level >= 4) return { start: '#fcd34d', end: '#fb923c', shadow: 'rgba(252, 211, 77, 0.5)' }; // Yellow-Orange
+    if (level === 3) return { start: '#86efac', end: '#22c55e', shadow: 'rgba(134, 239, 172, 0.5)' }; // Green
     if (level > 0) return { start: '#93c5fd', end: '#60a5fa', shadow: 'rgba(147, 197, 253, 0.5)' }; // Light Blue-Blue
     return { start: '#9ca3af', end: '#6b7280', shadow: 'rgba(156, 163, 175, 0.4)' }; // Gray
   }, [level]);
@@ -67,23 +68,38 @@ export default function BakuwakiIndexDisplay({
     }
     let num = 0;
     if (isMobile) {
-      if (bakuwakiIndex > 150) num = 15;
-      else if (bakuwakiIndex > 120) num = 12;
-      else if (bakuwakiIndex > 100) num = 10;
-      else if (bakuwakiIndex > 80) num = 8;
-      else if (bakuwakiIndex > 60) num = 6;
-      else if (bakuwakiIndex > 40) num = 4;
-      else if (bakuwakiIndex > 25) num = 2;
-      else if (bakuwakiIndex > 10) num = 1;
+        if (bakuwakiIndex > 170) num = 30;
+        else if (bakuwakiIndex > 150) num = 27;
+        else if (bakuwakiIndex > 135) num = 23;
+        else if (bakuwakiIndex > 120) num = 19;
+        else if (bakuwakiIndex > 110) num = 16;
+        else if (bakuwakiIndex > 100) num = 15;
+        else if (bakuwakiIndex > 90) num = 15;
+        else if (bakuwakiIndex > 83) num = 15;
+        else if (bakuwakiIndex > 70) num = 11;
+        else if (bakuwakiIndex > 60) num = 9;
+        else if (bakuwakiIndex > 50) num = 7;
+        else if (bakuwakiIndex > 40) num = 6;
+        else if (bakuwakiIndex > 30) num = 4;
+        else if (bakuwakiIndex > 20) num = 3;
+        else if (bakuwakiIndex > 10) num = 2;
     } else {
-      if (bakuwakiIndex > 150) num = 30;
-      else if (bakuwakiIndex > 120) num = 25;
-      else if (bakuwakiIndex > 100) num = 20;
-      else if (bakuwakiIndex > 80) num = 16;
-      else if (bakuwakiIndex > 60) num = 12;
-      else if (bakuwakiIndex > 40) num = 8;
-      else if (bakuwakiIndex > 25) num = 5;
-      else if (bakuwakiIndex > 10) num = 2;
+        if (bakuwakiIndex > 170) num = 45;
+        else if (bakuwakiIndex > 150) num = 40;
+        else if (bakuwakiIndex > 135) num = 37;
+        else if (bakuwakiIndex > 120) num = 35;
+        else if (bakuwakiIndex > 110) num = 32;
+        else if (bakuwakiIndex > 100) num = 30;
+        else if (bakuwakiIndex > 90) num = 30;
+        else if (bakuwakiIndex > 83) num = 30;
+        else if (bakuwakiIndex > 70) num = 20;
+        else if (bakuwakiIndex > 60) num = 16;
+        else if (bakuwakiIndex > 50) num = 9;
+        else if (bakuwakiIndex > 45) num = 7;
+        else if (bakuwakiIndex > 40) num = 6;
+        else if (bakuwakiIndex > 30) num = 5;
+        else if (bakuwakiIndex > 20) num = 3;
+        else if (bakuwakiIndex > 10) num = 2;
     }
     return num;
   }, [bakuwakiIndex, isMobile, level]);
@@ -130,11 +146,6 @@ export default function BakuwakiIndexDisplay({
   }, [count, isMobile]);
 
   return (
-    <div className="relative">
-      <CardTitle className="mt-6 text-lg sm:text-xl text-blue-100 mb-3 ml-1">
-        湧き指数
-      </CardTitle>
-      
       <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>      
 
         <div className="absolute inset-0 z-0 opacity-40">
@@ -224,6 +235,5 @@ export default function BakuwakiIndexDisplay({
 
         </div>
       </div>
-    </div>
   );
 }
