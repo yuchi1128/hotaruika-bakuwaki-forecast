@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { predictionLevels } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CardTitle } from '@/components/ui/card';
@@ -20,10 +20,42 @@ export default function BakuwakiIndexDisplay({
   description,
   isMobile,
 }: BakuwakiIndexDisplayProps) {
+  const [animatedIndex, setAnimatedIndex] = useState(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let startTimestamp: number | null = null;
+    const animationDuration = 800; // ms
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / animationDuration, 1);
+      const currentValue = Math.floor(progress * bakuwakiIndex);
+      
+      setAnimatedIndex(currentValue);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(step);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [bakuwakiIndex]);
+
+  const levelColor = useMemo(() => {
+    if (level >= 5) return { start: '#f9a8d4', end: '#c084fc', shadow: 'rgba(249, 168, 212, 0.5)' }; // Pink-Purple
+    if (level >= 3) return { start: '#fcd34d', end: '#fb923c', shadow: 'rgba(252, 211, 77, 0.5)' }; // Yellow-Orange
+    if (level > 0) return { start: '#93c5fd', end: '#60a5fa', shadow: 'rgba(147, 197, 253, 0.5)' }; // Light Blue-Blue
+    return { start: '#9ca3af', end: '#6b7280', shadow: 'rgba(156, 163, 175, 0.4)' }; // Gray
+  }, [level]);
 
   const chartData = [
-    { name: 'Bakuwaki Index', value: bakuwakiIndex, fill: 'url(#chartGradient)' },
-    { name: 'Remaining', value: Math.max(100 - bakuwakiIndex, 0), fill: 'rgba(0, 0, 0, 0.2)' },
+    { name: 'Bakuwaki Index', value: animatedIndex, fill: 'url(#chartGradient)' },
+    { name: 'Remaining', value: Math.max(100 - animatedIndex, 0), fill: '#374151' }, // Darker gray background
   ];
 
   const levelInfo = predictionLevels.find(p => p.level === level) || predictionLevels[0];
@@ -139,9 +171,12 @@ export default function BakuwakiIndexDisplay({
                 <PieChart>
                   <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a7f3d0" stopOpacity={0.7}/>
-                      <stop offset="95%" stopColor="#34d399" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor={levelColor.start} stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor={levelColor.end} stopOpacity={0.6}/>
                     </linearGradient>
+                    <filter id="pie-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor={levelColor.shadow} />
+                    </filter>
                   </defs>
                   <Pie
                     data={chartData}
@@ -153,9 +188,11 @@ export default function BakuwakiIndexDisplay({
                     startAngle={90}
                     endAngle={-270}
                     isAnimationActive={false}
+                    filter="url(#pie-shadow)"
+                    strokeWidth={2}
                   >
                     {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
+                      <Cell key={`cell-${index}`} fill={entry.fill} stroke={'rgba(255, 255, 255, 0.2)'} />
                     ))}
                   </Pie>
                 </PieChart>
@@ -163,11 +200,16 @@ export default function BakuwakiIndexDisplay({
             </div>
 
             {/* Text Content in the center */}
-            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full bg-black/10 rounded-full backdrop-blur-sm">
-              <span className="text-sm text-slate-300">湧き指数</span>
-              <span className="text-5xl font-bold text-white tracking-tighter">
+            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full bg-black/20 rounded-full backdrop-blur-sm border border-white/10 shadow-inner-2xl">
+              {/* Gloss effect overlay */}
+              <div 
+                className="absolute inset-x-0 top-0 h-1/2 rounded-t-full opacity-80"
+                style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%)' }}
+              />
+              <span className="relative text-sm font-medium text-slate-300">湧き指数</span>
+              <span className="relative text-5xl font-bold text-white tracking-tighter drop-shadow-lg">
                 {bakuwakiIndex}
-                <span className="text-2xl font-medium">%</span>
+                <span className="text-2xl font-medium ml-1">%</span>
               </span>
             </div>
           </div>
