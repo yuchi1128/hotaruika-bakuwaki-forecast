@@ -29,6 +29,8 @@ export default function DetailClientView({
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const [predictionDates, setPredictionDates] = useState<string[]>([]);
+  const [currentPrediction, setCurrentPrediction] = useState<Prediction | null>(prediction);
+  const [loading, setLoading] = useState(!prediction);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -41,21 +43,29 @@ export default function DetailClientView({
 
   useEffect(() => {
     const fetchForecasts = async () => {
+      setLoading(true);
       try {
         const response = await fetch(`${API_URL}/api/prediction`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
-        const dates = data.map((p: any) => p.date.split('T')[0]);
+        const data: Prediction[] = await response.json();
+        const dates = data.map((p) => p.date.split('T')[0]);
         setPredictionDates(dates);
+
+        const matchedPrediction = data.find(p => p.date.split('T')[0] === date);
+        if (matchedPrediction) {
+          setCurrentPrediction(matchedPrediction);
+        }
       } catch (error) {
         console.error('Failed to fetch forecasts:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchForecasts();
-  }, []);
+  }, [date]);
 
   const lastUpdated = new Date(lastUpdatedISO);
   const formattedDate = useMemo(() => {
@@ -81,13 +91,10 @@ export default function DetailClientView({
   const bakuwakiInfo = useMemo(() => {
     const targetDate = new Date(date);
     // 予報データがない場合でも、日付からシーズンオフかどうかを判断するために、predicted_amountを0として関数を呼び出す
-    // const amount = prediction ? prediction.predicted_amount : 0;
-
-    // 確認用の一時的な値
-    const amount = 1.27;
+    const amount = currentPrediction ? currentPrediction.predicted_amount : 0;
 
     return getBakuwakiLevelInfo(amount, targetDate);
-  }, [prediction, date]);
+  }, [currentPrediction, date]);
 
   return (
     <div className="min-h-screen relative z-10 p-4 sm:p-4 md:p-6 max-w-7xl mx-auto text-white safe-area">
@@ -99,17 +106,16 @@ export default function DetailClientView({
         predictionDates={predictionDates}
       />
       <main className="mt-7 space-y-6 sm:space-y-10 pb-4 sm:pb-8">
-        {bakuwakiInfo && (
-          <div className="mb-6 sm:mb-2">
-            <BakuwakiIndexDisplay 
-              bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
-              level={bakuwakiInfo.level}
-              name={bakuwakiInfo.name}
-              description={bakuwakiInfo.description}
-              isMobile={isMobile}
-            />
-          </div>
-        )}
+        <div className="mb-6 sm:mb-2">
+          <BakuwakiIndexDisplay 
+            bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
+            level={bakuwakiInfo.level}
+            name={bakuwakiInfo.name}
+            description={bakuwakiInfo.description}
+            isMobile={isMobile}
+            isLoading={loading}
+          />
+        </div>
         <HourlyForecast
           weather={weather}
           date={date}
