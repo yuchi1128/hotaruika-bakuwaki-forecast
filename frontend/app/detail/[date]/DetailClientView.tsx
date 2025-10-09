@@ -113,14 +113,21 @@ export default function DetailClientView({
       />
       <main className="mt-7 space-y-6 sm:space-y-10 pb-4 sm:pb-8">
         <div className="mb-6 sm:mb-2">
-          <BakuwakiIndexDisplay 
-            bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
-            level={bakuwakiInfo.level}
-            name={bakuwakiInfo.name}
-            description={bakuwakiInfo.description}
-            isMobile={isMobile}
-            isLoading={loading}
-          />
+          {bakuwakiInfo.level === -1 ? (
+            <div className="text-center p-8 bg-gray-800/50 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-700/50">
+              <h2 className="text-3xl font-bold text-gray-400">シーズンオフ</h2>
+              <p className="text-gray-400 mt-2 text-base">{bakuwakiInfo.description}</p>
+            </div>
+          ) : (
+            <BakuwakiIndexDisplay 
+              bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
+              level={bakuwakiInfo.level}
+              name={bakuwakiInfo.name}
+              description={bakuwakiInfo.description}
+              isMobile={isMobile}
+              isLoading={loading}
+            />
+          )}
         </div>
         <HourlyForecast
           weather={weather}

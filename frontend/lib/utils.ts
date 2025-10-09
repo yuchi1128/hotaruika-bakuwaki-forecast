@@ -114,8 +114,7 @@ export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
 
   const month = date.getMonth();
 
-  // const isSeason = month >= 1 && month <= 4; // 2月から5月
-  const isSeason = true; // 確認用の一時的な変更
+  const isSeason = month >= 1 && month <= 4; // 2月から5月
 
 
   let level = 0;
