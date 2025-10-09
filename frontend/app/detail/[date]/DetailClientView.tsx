@@ -17,6 +17,8 @@ interface DetailClientViewProps {
   tide: TideData;
   prediction: Prediction | null;
   lastUpdatedISO: string;
+  isPreview?: boolean;
+  predictionDates?: string[];
 }
 
 export default function DetailClientView({
@@ -25,12 +27,14 @@ export default function DetailClientView({
   tide,
   prediction,
   lastUpdatedISO,
+  isPreview = false,
+  predictionDates: initialPredictionDates = [],
 }: DetailClientViewProps) {
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
-  const [predictionDates, setPredictionDates] = useState<string[]>([]);
+  const [predictionDates, setPredictionDates] = useState<string[]>(initialPredictionDates);
   const [currentPrediction, setCurrentPrediction] = useState<Prediction | null>(prediction);
-  const [loading, setLoading] = useState(!prediction);
+  const [loading, setLoading] = useState(!prediction && !isPreview);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -42,6 +46,8 @@ export default function DetailClientView({
   }, []);
 
   useEffect(() => {
+    if (isPreview) return;
+
     const fetchForecasts = async () => {
       setLoading(true);
       try {
@@ -65,7 +71,7 @@ export default function DetailClientView({
     };
 
     fetchForecasts();
-  }, [date]);
+  }, [date, isPreview]);
 
   const lastUpdated = new Date(lastUpdatedISO);
   const formattedDate = useMemo(() => {

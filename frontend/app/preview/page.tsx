@@ -293,7 +293,11 @@ export default function Home() {
 
   const handleCardClick = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
-    router.push(`/detail/${dateString}`);
+    if (dateString === '2025-05-26') {
+      router.push(`/preview/detail/${dateString}`);
+    } else {
+      router.push(`/detail/${dateString}`);
+    }
   };
 
   if (loading) {
