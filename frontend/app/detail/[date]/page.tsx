@@ -1,9 +1,11 @@
 import DetailClientView from './DetailClientView';
-import type { HourlyWeather, TideData } from './types';
+import type { HourlyWeather, TideData, Prediction } from './types';
 import { ShieldAlert } from 'lucide-react';
+import { mockWeather, mockTide, mockPrediction, MOCK_DATE } from './mockData';
+import { getLastUpdateTime } from '@/lib/utils';
 
 // --- データ取得関数 ---
-async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData }> {
+async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData, prediction: Prediction | null }> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
   const apiUrl = `${apiBaseUrl}/api/detail/${date}`;
 
@@ -62,6 +64,7 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
         flood: [],
         edd: [],
       },
+      prediction: apiData.prediction,
     };
   }
 
@@ -113,31 +116,23 @@ async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[]
     edd: [...todayEdd, ...nextDayEdd],
   };
 
-  return { weather: slicedWeatherData, tide: tideData };
+  return { weather: slicedWeatherData, tide: tideData, prediction: apiData.prediction };
 }
-
-// --- 最終更新日時取得関数 ---
-const getLastUpdateTime = (): Date => {
-  const now = new Date();
-  const updateHours = [2, 5, 8, 11, 14, 17, 20, 23];
-  const currentHour = now.getHours();
-
-  const lastUpdateHourToday = [...updateHours].reverse().find((hour) => currentHour >= hour);
-
-  const lastUpdateDate = new Date(now);
-
-  if (lastUpdateHourToday !== undefined) {
-    lastUpdateDate.setHours(lastUpdateHourToday, 0, 0, 0);
-  } else {
-    lastUpdateDate.setDate(now.getDate() - 1);
-    lastUpdateDate.setHours(23, 0, 0, 0);
-  }
-  return lastUpdateDate;
-};
 
 // --- ページ本体 (サーバーコンポーネント) ---
 export default async function DetailPage({ params }: { params: { date: string } }) {
   const { date } = params;
+
+  if (date === MOCK_DATE) {
+    const lastUpdated = getLastUpdateTime();
+    return <DetailClientView 
+      date={date} 
+      weather={mockWeather} 
+      tide={mockTide} 
+      prediction={mockPrediction}
+      lastUpdatedISO={lastUpdated.toISOString()} 
+    />;
+  }
 
   // --- 日付の妥当性チェック ---
   const now = new Date();
@@ -178,13 +173,14 @@ export default async function DetailPage({ params }: { params: { date: string } 
 
   // --- データ取得と画面表示 ---
   try {
-    const { weather, tide } = await fetchDetailData(date);
+    const { weather, tide, prediction } = await fetchDetailData(date);
     const lastUpdated = getLastUpdateTime();
 
     return <DetailClientView 
       date={date} 
       weather={weather} 
       tide={tide} 
+      prediction={prediction}
       lastUpdatedISO={lastUpdated.toISOString()} 
     />;
 

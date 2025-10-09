@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import type { HourlyWeather, TideData } from './types';
+import type { HourlyWeather, TideData, Prediction } from './types';
 import DetailPageHeader from '@/components/Detail/DetailPageHeader';
 import HourlyForecast from '@/components/Detail/HourlyForecast';
 import ForecastCharts from '@/components/Detail/ForecastCharts';
+import BakuwakiIndexDisplay from '@/components/Detail/BakuwakiIndexDisplay';
+import { getBakuwakiLevelInfo } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -13,18 +15,26 @@ interface DetailClientViewProps {
   date: string;
   weather: HourlyWeather[];
   tide: TideData;
+  prediction: Prediction | null;
   lastUpdatedISO: string;
+  isPreview?: boolean;
+  predictionDates?: string[];
 }
 
 export default function DetailClientView({
   date,
   weather,
   tide,
+  prediction,
   lastUpdatedISO,
+  isPreview = false,
+  predictionDates: initialPredictionDates = [],
 }: DetailClientViewProps) {
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
-  const [predictionDates, setPredictionDates] = useState<string[]>([]);
+  const [predictionDates, setPredictionDates] = useState<string[]>(initialPredictionDates);
+  const [currentPrediction, setCurrentPrediction] = useState<Prediction | null>(prediction);
+  const [loading, setLoading] = useState(!prediction && !isPreview);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -36,22 +46,32 @@ export default function DetailClientView({
   }, []);
 
   useEffect(() => {
+    if (isPreview) return;
+
     const fetchForecasts = async () => {
+      setLoading(true);
       try {
         const response = await fetch(`${API_URL}/api/prediction`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
-        const dates = data.map((p: any) => p.date.split('T')[0]);
+        const data: Prediction[] = await response.json();
+        const dates = data.map((p) => p.date.split('T')[0]);
         setPredictionDates(dates);
+
+        const matchedPrediction = data.find(p => p.date.split('T')[0] === date);
+        if (matchedPrediction) {
+          setCurrentPrediction(matchedPrediction);
+        }
       } catch (error) {
         console.error('Failed to fetch forecasts:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchForecasts();
-  }, []);
+  }, [date, isPreview]);
 
   const lastUpdated = new Date(lastUpdatedISO);
   const formattedDate = useMemo(() => {
@@ -74,6 +94,14 @@ export default function DetailClientView({
     return nowTime >= startTime && nowTime < endTime;
   }, [weather, now]);
 
+  const bakuwakiInfo = useMemo(() => {
+    const targetDate = new Date(date);
+    // 予報データがない場合でも、日付からシーズンオフかどうかを判断するために、predicted_amountを0として関数を呼び出す
+    const amount = currentPrediction ? currentPrediction.predicted_amount : 0;
+
+    return getBakuwakiLevelInfo(amount, targetDate);
+  }, [currentPrediction, date]);
+
   return (
     <div className="min-h-screen relative z-10 p-4 sm:p-4 md:p-6 max-w-7xl mx-auto text-white safe-area">
       <DetailPageHeader
@@ -83,7 +111,24 @@ export default function DetailClientView({
         date={date}
         predictionDates={predictionDates}
       />
-      <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
+      <main className="mt-7 space-y-6 sm:space-y-10 pb-4 sm:pb-8">
+        <div className="mb-6 sm:mb-2">
+          {bakuwakiInfo.level === -1 ? (
+            <div className="text-center p-8 bg-gray-800/50 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-700/50">
+              <h2 className="text-3xl font-bold text-gray-400">シーズンオフ</h2>
+              <p className="text-gray-400 mt-2 text-base">{bakuwakiInfo.description}</p>
+            </div>
+          ) : (
+            <BakuwakiIndexDisplay 
+              bakuwakiIndex={bakuwakiInfo.bakuwakiIndex}
+              level={bakuwakiInfo.level}
+              name={bakuwakiInfo.name}
+              description={bakuwakiInfo.description}
+              isMobile={isMobile}
+              isLoading={loading}
+            />
+          )}
+        </div>
         <HourlyForecast
           weather={weather}
           date={date}
