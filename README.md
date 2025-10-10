@@ -16,6 +16,7 @@
 
 - **フロントエンド**: Next.js, TypeScript
 - **UI**: Tailwind CSS, shadcn/ui
-- **バックエンド**: Go
+- **バックエンド**: Go, FastAPI
 - **データベース・ストレージ**: Supabase (PostgreSQL, Storage)
 - **インフラ**: Docker, Vercel, GCP(Cloud Run)
+- **機械学習**: LightGBM
