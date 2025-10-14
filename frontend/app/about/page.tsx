@@ -48,31 +48,31 @@ const AboutPage = () => {
           <section>
             <h2 className="text-2xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">湧き指数の算出方法</h2>
             <p>
-              当サイトの「湧き指数」は、最新のAI技術を活用した独自の予測モデルによって算出されています。この指数の値に基づき、「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量をはじめ、気象情報や潮汐情報などの膨大なデータを学習して構築されたもので、これを用いてリアルタイムに予測を行っています。
+              当サイトの「湧き指数」は、AI（人工知能）技術を活用した独自の予測モデルで算出されており、この指数の値から「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量と、その日の様々なデータとの関係をAIが学習し、未来の出現量を予測する仕組みです。
             </p>
             <p className="mt-4">
-              モデルが主に考慮するデータは以下の通りです。
+              予測には、主に以下のようなデータが使われています。
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-base">
               <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h3 className="font-semibold text-purple-300">気象データ</h3>
-                <p className="text-sm text-foreground/80 mt-1">風向、風速、天気、気圧の変化</p>
+                <h3 className="font-semibold text-purple-300">夜間の気象データ</h3>
+                <p className="text-sm text-foreground/80 mt-1">気温、降水量、風の強さや向きなど、ホタルイカが活動する夜間の天候を重視しています。</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h3 className="font-semibold text-purple-300">海洋データ</h3>
-                <p className="text-sm text-foreground/80 mt-1">潮位、潮汐のタイミング、波の高さ、水温</p>
+                <h3 className="font-semibold text-purple-300">月齢データ</h3>
+                <p className="text-sm text-foreground/80 mt-1">月の満ち欠け（月齢）は、夜の明るさに影響し、ホタルイカの行動に関係すると言われています。</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h3 className="font-semibold text-purple-300">天文学的データ</h3>
-                <p className="text-sm text-foreground/80 mt-1">月齢、月の輝度</p>
+                <h3 className="font-semibold text-purple-300">カレンダーの情報</h3>
+                <p className="text-sm text-foreground/80 mt-1">季節の進み具合なども考慮に入れています。</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h3 className="font-semibold text-purple-300">過去の出現データ</h3>
-                <p className="text-sm text-foreground/80 mt-1">過去の爆湧き記録とユーザー投稿</p>
+                <h3 className="font-semibold text-purple-300">前日・前々日のデータ</h3>
+                <p className="text-sm text-foreground/80 mt-1">その日の状況だけでなく、前日や前々日の気象データなども、予測の重要な要素となります。</p>
               </div>
             </div>
             <p className="mt-4">
-              これらのデータを複合的に評価し、その日の爆湧き発生確率を指数として提供しています。予測モデルは、新しいデータを継続的に学習し、日々精度を向上させています。
+              AIはこれらのデータから複雑なパターンを見つけ出し、単純な条件だけでは分からない関係性を捉えて、その日の「湧き指数」を算出します。このモデルは新しいデータを継続的に学習し、日々精度を向上させています。
             </p>
           </section>
 
