@@ -1,8 +1,19 @@
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const AboutPage = () => {
   return (
     <div className="container mx-auto p-4 md:p-8">
+      <div className="mb-6">
+        <Link href="/" passHref>
+          <Button variant="ghost" className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg">
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            戻る
+          </Button>
+        </Link>
+      </div>
       <Card className="max-w-4xl mx-auto bg-card/80 backdrop-blur-sm border-blue-400/20">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent py-2">
@@ -72,7 +83,7 @@ const AboutPage = () => {
               </div>
             </div>
             <p className="mt-4">
-              AIはこれらのデータから複雑なパターンを見つけ出し、単純な条件だけでは分からない関係性を捉えて、その日の「湧き指数」を算出します。このモデルは新しいデータを継続的に学習し、日々精度を向上させています。
+              AIはこれらのデータから複雑なパターンを見つけ出し、単純な条件だけでは分からない関係性を捉えて、その日の「湧き指数」を算出します。
             </p>
           </section>
 
