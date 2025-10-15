@@ -12,7 +12,6 @@ interface BakuwakiIndexDisplayProps {
   name: string;
   description: string;
   isMobile: boolean;
-  isLoading: boolean;
 }
 
 export default function BakuwakiIndexDisplay({
@@ -21,12 +20,10 @@ export default function BakuwakiIndexDisplay({
   name,
   description,
   isMobile,
-  isLoading,
 }: BakuwakiIndexDisplayProps) {
   const [animatedIndex, setAnimatedIndex] = useState(0);
 
   useEffect(() => {
-    if (isLoading) return;
     let animationFrameId: number;
     let startTimestamp: number | null = null;
     const animationDuration = 800; // ms
@@ -48,7 +45,7 @@ export default function BakuwakiIndexDisplay({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [bakuwakiIndex, isLoading]);
+  }, [bakuwakiIndex]);
 
   const levelColor = useMemo(() => {
     if (level >= 5) return { start: '#f9a8d4', end: '#c084fc', shadow: 'rgba(249, 168, 212, 0.5)' }; // Pink-Purple
@@ -148,20 +145,6 @@ export default function BakuwakiIndexDisplay({
         transform: 'translate(-50%, -50%)',
     }));
   }, [count, isMobile]);
-
-  if (isLoading) {
-    return (
-      <div className="relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6">
-        <div className="relative z-10 flex flex-col items-center justify-center h-full">
-          <Skeleton className="w-48 h-48 md:w-52 md:h-52 rounded-full" />
-          <div className="mt-4 text-center">
-            <Skeleton className="h-12 w-48 mt-2" />
-            <Skeleton className="h-6 w-64 mt-2" />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
       <div className={`relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6 ${levelInfo.bgColor}`}>      
