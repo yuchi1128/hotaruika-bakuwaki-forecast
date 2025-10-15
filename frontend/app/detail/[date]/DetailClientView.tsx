@@ -34,7 +34,6 @@ export default function DetailClientView({
   const router = useRouter();
   const [predictionDates, setPredictionDates] = useState<string[]>(initialPredictionDates);
   const [currentPrediction, setCurrentPrediction] = useState<Prediction | null>(prediction);
-  const [loading, setLoading] = useState(!prediction && !isPreview);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -49,7 +48,6 @@ export default function DetailClientView({
     if (isPreview) return;
 
     const fetchForecasts = async () => {
-      setLoading(true);
       try {
         const response = await fetch(`${API_URL}/api/prediction`);
         if (!response.ok) {
@@ -65,8 +63,6 @@ export default function DetailClientView({
         }
       } catch (error) {
         console.error('Failed to fetch forecasts:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -125,7 +121,6 @@ export default function DetailClientView({
               name={bakuwakiInfo.name}
               description={bakuwakiInfo.description}
               isMobile={isMobile}
-              isLoading={loading}
             />
           )}
         </div>

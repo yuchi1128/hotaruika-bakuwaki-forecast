@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const AboutPage = () => {
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-6">
+      <div className="mb-3 md:mb-6">
         <Link href="/" passHref>
           <Button variant="ghost" className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg">
             <ArrowLeft className="w-4 h-4 mr-1" />
@@ -20,16 +20,16 @@ const AboutPage = () => {
             このサイトについて
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8 text-lg leading-relaxed text-foreground/90">
+        <CardContent className="space-y-8 text-base leading-relaxed text-foreground/90">
           <section>
-            <h2 className="text-2xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">「ホタルイカ爆湧き予報」へようこそ</h2>
+            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">「ホタルイカ爆湧き予報」へようこそ</h2>
             <p>
               このサイトは、富山湾の神秘であるホタルイカの身投げ量を予測し、その魅力を多くの人々と共有するために作られました。ホタルイカ掬いや観光に訪れる方々などホタルイカを愛するすべての人に、信頼性の高い情報を提供することを目指しています。
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">「身投げ」とは？</h2>
+            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">「身投げ」とは？</h2>
             <p>
               身投げとは、ホタルイカが産卵のために海岸近くまで押し寄せる現象を指します。この現象は、特定の自然条件が揃ったときに発生し、「爆湧き」時には海岸が青白い光で埋め尽くされる幻想的な光景を見ることができます。
             </p>
@@ -45,19 +45,19 @@ const AboutPage = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">当サイトの機能</h2>
+            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">当サイトの機能</h2>
             <p>
               本サイトでは、これらの条件を総合的に分析し、独自のアルゴリズムに基づいて「湧き指数」を算出しています。
             </p>
             <ul className="list-disc list-inside mt-4 space-y-2 text-base">
               <li><span className="font-semibold text-blue-200/90">身投げ量予報：</span> 先7日間の爆湧き期待度を指数で確認できます。</li>
               <li><span className="font-semibold text-blue-200/90">詳細情報：</span> 日付ごとの時間帯別の天気、波の高さ、潮位、月齢などの詳細なデータを提供します。</li>
-              <li><span className="font-semibold text-blue-200/90">コミュニティ機能：</span> 現地の最新情報やホタルイカに関する話題を共有・交換する交流の場としてご利用ください。</li>
+              <li><span className="font-semibold text-blue-200/90">口コミ機能：</span> 現地の最新情報やホタルイカに関する話題を共有・交換する交流の場としてご利用ください。</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">湧き指数の算出方法</h2>
+            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">湧き指数の算出方法</h2>
             <p>
               当サイトの「湧き指数」は、AI（人工知能）技術を活用した独自の予測モデルで算出されており、この指数の値から「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量と、その日の様々なデータとの関係をAIが学習し、未来の出現量を予測する仕組みです。
             </p>
@@ -88,7 +88,7 @@ const AboutPage = () => {
           </section>
 
           <section>
-            <p className="text-center text-xl font-medium text-foreground/80 pt-4">
+            <p className="text-center text-lg font-medium text-foreground/80 pt-4">
               皆様のホタルイカ体験が、より豊かで素晴らしいものになることを願っています。
             </p>
           </section>

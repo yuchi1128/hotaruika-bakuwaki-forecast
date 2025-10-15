@@ -32,6 +32,17 @@ export default function DetailLoading() {
       </header>
 
       <main className="space-y-6 sm:space-y-8 pb-4 sm:pb-8">
+        {/* BakuwakiIndexDisplay Skeleton */}
+        <div className="relative w-full overflow-hidden glow-effect bg-gradient-to-br from-gray-900 via-blue-900/40 to-gray-900 border border-blue-500/30 rounded-3xl shadow-2xl p-6">
+          <div className="relative z-10 flex flex-col items-center justify-center h-full">
+            <Skeleton className="w-48 h-48 md:w-52 md:h-52 rounded-full" />
+            <div className="mt-4 text-center">
+              <Skeleton className="h-12 w-48 mt-2" />
+              <Skeleton className="h-6 w-64 mt-2" />
+            </div>
+          </div>
+        </div>
+
         {/* Hourly Forecast Skeleton */}
         <div className="relative">
           <div className="mt-6 mb-3 ml-1">
