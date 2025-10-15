@@ -10,7 +10,7 @@ import {
 
 const AppHeader = () => {
   return (
-    <header className="pt-10 pb-8 md:pb-12 px-4">
+    <header className="pt-11 pb-8 md:pb-11 px-4">
       <div className="max-w-6xl mx-auto flex flex-col items-center justify-center relative">
         {/* Centered Content */}
         <div className="text-center">
@@ -23,7 +23,7 @@ const AppHeader = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link href="/about" passHref>
-                      <Button variant="ghost" size="icon" className="text-blue-200 hover:bg-blue-500/10 hover:text-blue-100 rounded-full">
+                      <Button variant="ghost" size="icon" className="text-blue-200 hover:text-blue-100 rounded-full"> 
                         <Info className="w-5 h-5" />
                         <span className="sr-only">このサイトについて</span>
                       </Button>

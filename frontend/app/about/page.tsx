@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const AboutPage = () => {
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-3 md:mb-6">
+      <div className="mb-3 md:mb-6 md:ml-auto md:-mr-6">
         <Link href="/" passHref>
           <Button variant="ghost" className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg">
             <ArrowLeft className="w-4 h-4 mr-1" />
@@ -84,12 +84,6 @@ const AboutPage = () => {
             </div>
             <p className="mt-4">
               AIはこれらのデータから複雑なパターンを見つけ出し、単純な条件だけでは分からない関係性を捉えて、その日の「湧き指数」を算出します。
-            </p>
-          </section>
-
-          <section>
-            <p className="text-center text-lg font-medium text-foreground/80 pt-4">
-              皆様のホタルイカ体験が、より豊かで素晴らしいものになることを願っています。
             </p>
           </section>
         </CardContent>

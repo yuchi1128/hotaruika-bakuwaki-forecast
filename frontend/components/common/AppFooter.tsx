@@ -6,11 +6,6 @@ const AppFooter = () => {
     <footer className="text-center py-8 text-gray-400 border-t border-blue-500/20">
       <div className="flex justify-center items-center space-x-4">
         <p className="mb-0">© 2026 ホタルイカ爆湧き予報</p>
-        <Link href="/about" passHref>
-          <Button variant="link" className="text-gray-400 px-0">
-            このサイトについて
-          </Button>
-        </Link>
       </div>
     </footer>
   );
