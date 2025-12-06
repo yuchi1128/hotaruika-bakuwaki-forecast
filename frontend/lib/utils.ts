@@ -165,7 +165,7 @@ export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
 
       level: -1,
 
-      name: 'シーズンオフ',
+      name: 'オフシーズン',
 
       description: getOffSeasonMessage(date),
 

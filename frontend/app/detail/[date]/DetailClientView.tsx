@@ -111,7 +111,7 @@ export default function DetailClientView({
         <div className="mb-6 sm:mb-2">
           {bakuwakiInfo.level === -1 ? (
             <div className="text-center p-8 bg-gray-800/50 rounded-2xl shadow-lg backdrop-blur-sm border border-gray-700/50">
-              <h2 className="text-3xl font-bold text-gray-400">シーズンオフ</h2>
+              <h2 className="text-3xl font-bold text-gray-400">オフシーズン</h2>
               <p className="text-gray-400 mt-2 text-base">{bakuwakiInfo.description}</p>
             </div>
           ) : (
