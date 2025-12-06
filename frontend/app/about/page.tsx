@@ -57,6 +57,17 @@ const AboutPage = () => {
           </section>
 
           <section>
+            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">オフシーズン中の表示について</h2>
+            <p>
+              ホタルイカのオフシーズン中は、サイトの主要機能である予報や詳細情報が表示されません。シーズン中の表示を確認したい場合は、以下のプレビューページをご利用ください。なお、プレビューページではデモデータを使用しています。
+            </p>
+            <ul className="list-disc list-inside mt-4 space-y-2">
+              <li><Link href="https://bakuwaki.jp/preview" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">プレビューページ（メインページ）</Link></li>
+              <li><Link href="https://bakuwaki.jp/preview/detail/2025-05-26" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">プレビューページ（詳細ページ）</Link></li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">湧き指数の算出方法</h2>
             <p>
               当サイトの「湧き指数」は、AI（人工知能）技術を活用した独自の予測モデルで算出されており、この指数の値から「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量と、その日の様々なデータとの関係をAIが学習し、未来の出現量を予測する仕組みです。
