@@ -115,5 +115,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-// trigger cd test
