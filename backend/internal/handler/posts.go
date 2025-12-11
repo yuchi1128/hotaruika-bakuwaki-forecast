@@ -1,4 +1,4 @@
-//backend/internal/handler/posts.go
+// backend/internal/handler/posts.go
 package handler
 
 import (
@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
-	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lib/pq"
+	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
+	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
 
 func (h *Handler) postsHandler(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +212,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(posts)
 }
 
-func (h *Handler) getRepliesForPost(w http.ResponseWriter, r *http.Request, postID int) {
+func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, postID int) {
 	var replies []model.Reply
 
 	operation := func() error {
@@ -330,7 +330,7 @@ func (h *Handler) createReplyReaction(w http.ResponseWriter, r *http.Request, re
 	json.NewEncoder(w).Encode(reaction)
 }
 
-func (h *Handler) deleteItem(w http.ResponseWriter, r *http.Request, itemType string, itemID int) {
+func (h *Handler) deleteItem(w http.ResponseWriter, _ *http.Request, itemType string, itemID int) {
 	var tableName, imageColumn string
 	if itemType == "posts" {
 		tableName, imageColumn = "posts", "image_urls"
