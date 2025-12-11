@@ -110,7 +110,7 @@ func main() {
 
 	// サーバーの起動
 	logger.Info("サーバーをポート8080で起動します...")
-	if err := http.ListenAndServe(":8080", corsHandler); err != nil {
+	if err := http.ListenAndServe(":8080", corsHandler; err != nil {
 		logger.Error("サーバーの起動に失敗しました", "error", err)
 		os.Exit(1)
 	}
