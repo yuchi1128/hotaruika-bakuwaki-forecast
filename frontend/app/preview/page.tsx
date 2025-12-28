@@ -319,9 +319,9 @@ export default function Home() {
           className="w-auto bg-slate-800/80 border-blue-500/50 text-white shadow-lg backdrop-blur-md rounded-lg flex items-center justify-center p-6"
         >
           <DialogTitle className="sr-only">送信中</DialogTitle>
-          <DialogDescription className="sr-only">口コミをサーバーに送信しています。しばらくお待ちください。</DialogDescription>
+          <DialogDescription className="sr-only">送信しています。しばらくお待ちください。</DialogDescription>
           <Loader2 className="mr-3 h-5 w-5 animate-spin text-blue-300" />
-          <span>口コミを投稿中です...</span>
+          <span>投稿中です...</span>
         </DialogContent>
       </Dialog>
 

@@ -52,7 +52,7 @@ const AboutPage = () => {
             <ul className="list-disc list-inside mt-4 space-y-2 text-base">
               <li><span className="font-semibold text-blue-200/90">身投げ量予報：</span> 先7日間の爆湧き期待度を指数で確認できます。</li>
               <li><span className="font-semibold text-blue-200/90">詳細情報：</span> 日付ごとの時間帯別の天気、波の高さ、潮位、月齢などの詳細なデータを提供します。</li>
-              <li><span className="font-semibold text-blue-200/90">口コミ機能：</span> 現地の最新情報やホタルイカに関する話題を共有・交換する交流の場としてご利用ください。</li>
+              <li><span className="font-semibold text-blue-200/90">掲示板機能：</span> 現地の最新情報やホタルイカに関する話題を共有・交換する交流の場としてご利用ください。</li>
             </ul>
           </section>
 

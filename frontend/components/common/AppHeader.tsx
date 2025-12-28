@@ -36,7 +36,7 @@ const AppHeader = () => {
               </TooltipProvider>
             </div>
           </div>
-          <p className="text-sm md:text-lg text-blue-200 mb-1">富山湾の神秘をAIで予測</p>
+          <p className="text-sm md:text-lg text-blue-200 mb-1">ホタルイカの身投げをAIで予測</p>
           <div className="flex items-center justify-center gap-2 text-[11px] md:text-xs text-blue-300">
             <MapPin className="w-3 h-3" />
             <span>富山湾</span>

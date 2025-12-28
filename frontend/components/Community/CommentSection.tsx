@@ -195,7 +195,7 @@ const CommentSection = ({
       <CardHeader>
         <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
           <MessageCircle className="w-6 h-6" />
-          みんなの口コミ
+          掲示板
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -388,7 +388,7 @@ const CommentSection = ({
         {/* コメント一覧（検索＋並び替え＋30件ごとに表示） */}
         <div className="space-y-4">
           {paginatedComments.length === 0 ? (
-            <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する口コミはありません' : '口コミはまだありません'}</div>
+            <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する投稿はありません' : '投稿はまだありません'}</div>
           ) : (
             paginatedComments.map((comment) => (
               <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} formatTime={formatTime} createReply={createReply} />
