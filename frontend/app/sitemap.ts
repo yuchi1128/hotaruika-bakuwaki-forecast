@@ -23,8 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const dynamicRoutes: MetadataRoute.Sitemap = [];
   const today = new Date();
 
-  // 昨日から6日後までの8日間をループ
-  for (let i = -1; i <= 6; i++) {
+  // 昨日から7日後までの9日間をループ
+  for (let i = -1; i <= 7; i++) {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + i);
 
