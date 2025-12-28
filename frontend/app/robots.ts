@@ -6,11 +6,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        // すべてのクローラーを対象
         userAgent: '*',
-        // すべてのページを許可
         allow: '/',
-        // 以下のパスはクロールを禁止
         disallow: ['/admin/', '/preview/'],
       },
     ],
