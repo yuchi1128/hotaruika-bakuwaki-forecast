@@ -18,5 +18,5 @@
 - **UI**: Tailwind CSS, shadcn/ui
 - **バックエンド**: Go, FastAPI
 - **データベース・ストレージ**: Supabase (PostgreSQL, Storage)
-- **インフラ**: Docker, Vercel, GCP(Cloud Run)
+- **インフラ**: Docker, Vercel, GCP(Cloud Run), GitHub Actions
 - **機械学習**: LightGBM
