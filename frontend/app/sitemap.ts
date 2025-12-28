@@ -1,20 +1,11 @@
 import { MetadataRoute } from 'next';
 
-type Post = {
-  id: number;
-  username: string;
-  content: string;
-  image_urls: string | null;
-  label: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-};
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+  // 1. 静的ルート（トップページやAboutページなど）
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -30,43 +21,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  let dynamicRoutes: MetadataRoute.Sitemap = [];
+  // 2. 動的ルート（/detail/[date]）
+  // ページ側で受け付けている有効な日付（昨日から6日後まで）のURLのみを生成する
+  const dynamicRoutes: MetadataRoute.Sitemap = [];
+  const today = new Date();
 
-  try {
-    // APIから投稿データを取得
-    // revalidate: 3600 (1時間) を設定し、毎回バックエンドにリクエストが飛ばないようにする
-    const response = await fetch(`${backendUrl}/api/posts`, {
-      next: { revalidate: 3600 },
+  // 昨日から6日後までの8日間をループ
+  for (let i = -1; i <= 6; i++) {
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + i);
+
+    // YYYY-MM-DD 形式の文字列に変換
+    const dateStr = targetDate.toISOString().slice(0, 10);
+
+    dynamicRoutes.push({
+      url: `${baseUrl}/detail/${dateStr}`,
+      lastModified: new Date(), // 予報内容は日々変わるため、常に最新として扱う
+      changeFrequency: 'daily', // 毎日クロールしてもらう価値がある
+      priority: 0.9, // サイトの主要コンテンツのため優先度を高く設定
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch posts: ${response.statusText}`);
-    }
-
-    const posts: Post[] = await response.json();
-
-    const uniqueDates = new Map<string, string>();
-
-    posts.forEach((post) => {
-      const dateStr = post.created_at.slice(0, 10);
-      
-      if (!uniqueDates.has(dateStr) || new Date(post.created_at) > new Date(uniqueDates.get(dateStr)!)) {
-        uniqueDates.set(dateStr, post.created_at);
-      }
-    });
-
-    // 重複のないMapからサイトマップの配列を作成
-    dynamicRoutes = Array.from(uniqueDates.entries()).map(([dateStr, lastMod]) => {
-      return {
-        url: `${baseUrl}/detail/${dateStr}`,
-        lastModified: new Date(lastMod),
-        changeFrequency: 'weekly',
-        priority: 0.8,
-      };
-    });
-
-  } catch (error) {
-    console.error("Sitemap generation error:", error);
   }
 
   return [...staticRoutes, ...dynamicRoutes];
