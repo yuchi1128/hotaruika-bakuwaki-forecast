@@ -1,4 +1,4 @@
-//backend/cmd/server/main.go
+// backend/cmd/server/main.go
 package main
 
 import (
@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/cache"
-	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/handler"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
+	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/cache"
+	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/handler"
 )
 
 func main() {
