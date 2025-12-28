@@ -5,7 +5,7 @@ import localFont from 'next/font/local';
 
 export const metadata: Metadata = {
   title: 'ホタルイカ爆湧き予報',
-  description: '富山湾のホタルイカ身投げ量をAIで予測。今日から一週間の予測と口コミ情報をお届けします。',
+  description: '富山湾のホタルイカ身投げをAIで予測。ホタルイカ掬いのタイミングが分かる週間予報に加え、掲示板で現地の最新情報をリアルタイムに交換できます。',
   icons: {
     icon: '/hotaruika_aikon_3.png',
   },

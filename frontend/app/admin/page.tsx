@@ -75,7 +75,7 @@ export default function AdminPage() {
     setError('');
     try {
       const postsRes = await fetch(`${API_URL}/api/posts`, { credentials: 'include' });
-      if (!postsRes.ok) throw new Error('口コミの取得に失敗しました');
+      if (!postsRes.ok) throw new Error('取得に失敗しました');
       const postsData: Post[] = await postsRes.json();
 
       const postsWithReplies = await Promise.all(
@@ -311,7 +311,7 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2">
-              <h2 className="text-2xl font-semibold mb-4 text-slate-800">口コミ管理</h2>
+              <h2 className="text-2xl font-semibold mb-4 text-slate-800">掲示板管理</h2>
               <div className="mb-4">
                   <Input
                   type="text"
@@ -333,7 +333,7 @@ export default function AdminPage() {
                           <PostCard key={post.id} post={post} onDelete={handleDelete} />
                       ))
                       ) : (
-                      <p className="text-slate-500 text-center py-8">該当する口コミはありません。</p>
+                      <p className="text-slate-500 text-center py-8">該当する投稿はありません。</p>
                       )}
                   </div>
               )}
