@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     locale: 'ja_JP',
     type: 'website',
   },
+  verification: {
+    google: 'DUbWjtDoIJaM6FOqA7i3KI34R7GrC_Og6xCWjjsfjBw',
+  },
 };
 
 // Noto Sans JP (Google Fonts) の設定
