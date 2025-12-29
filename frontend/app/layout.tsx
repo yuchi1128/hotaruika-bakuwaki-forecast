@@ -3,13 +3,26 @@ import type { Metadata } from 'next';
 import { Noto_Sans_JP } from 'next/font/google';
 import localFont from 'next/font/local';
 
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const SITE_NAME = 'ホタルイカ爆湧き予報';
+
 export const metadata: Metadata = {
-  title: 'ホタルイカ爆湧き予報',
+  metadataBase: new URL(baseUrl),
+  title: SITE_NAME,
   description: '富山湾のホタルイカ身投げをAIで予測。ホタルイカ掬いのタイミングが分かる週間予報に加え、掲示板で現地の最新情報をリアルタイムに交換できます。',
   icons: {
     icon: '/hotaruika_aikon_3.png',
   },
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  // OGP設定（SNSや検索エンジンへの明示）
+  openGraph: {
+    title: SITE_NAME,
+    description: '富山湾のホタルイカ身投げをAIで予測。掲示板で現地の最新情報をリアルタイムに交換できます。',
+    url: baseUrl,
+    siteName: SITE_NAME,
+    locale: 'ja_JP',
+    type: 'website',
+  },
 };
 
 // Noto Sans JP (Google Fonts) の設定
@@ -41,9 +54,24 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Google検索用の構造化データ (JSON-LD)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    alternateName: 'bakuwaki.jp',
+    url: baseUrl,
+  };
+
   return (
     <html lang="ja">
       <body className={`${zenKaku.variable} ${notoSansJp.variable}`}>
+        {/* JSON-LDスクリプト */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
         <div className="fixed inset-0 z-[-1] bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
         <div className="stars">
           {Array.from({ length: 50 }).map((_, i) => (
