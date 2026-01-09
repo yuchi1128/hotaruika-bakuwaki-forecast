@@ -70,7 +70,7 @@ const AboutPage = () => {
           <section>
             <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">湧き指数の算出方法</h2>
             <p>
-              当サイトの「湧き指数」は、AI（人工知能）技術を活用した独自の予測モデルで算出されており、この指数の値から「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量と、その日の様々なデータとの関係をAIが学習し、未来の出現量を予測する仕組みです。
+              当サイトの「湧き指数」は、AI（機械学習）技術を活用した独自の予測モデルで算出されており、この指数の値から「爆湧き」などの湧きレベルを判定しています。予測モデルは、ホタルイカの過去の出現量と、その日の様々なデータとの関係をAIが学習し、未来の出現量を予測する仕組みです。
             </p>
             <p className="mt-4">
               予測には、主に以下のようなデータが使われています。
@@ -95,6 +95,13 @@ const AboutPage = () => {
             </div>
             <p className="mt-4">
               AIはこれらのデータから複雑なパターンを見つけ出し、単純な条件だけでは分からない関係性を捉えて、その日の「湧き指数」を算出します。
+            </p>
+            <p className="mt-4">
+              詳しくは、
+              <Link href="https://qiita.com/yuchi1128/items/eca2bb94dec63ecbff93" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
+                こちらの技術記事
+              </Link>
+              でAIによる予測手法やWebサイトの構築など、技術的な内容を解説しています。
             </p>
           </section>
         </CardContent>
