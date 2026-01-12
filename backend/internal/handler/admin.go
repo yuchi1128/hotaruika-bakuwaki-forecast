@@ -1,4 +1,4 @@
-//backend/internal/handler/admin.go
+// backend/internal/handler/admin.go
 package handler
 
 import (
@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model" // モジュール名に合わせて変更してください
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
 )
 
 func (h *Handler) adminLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -67,8 +67,19 @@ func (h *Handler) adminLogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Path:     "/",
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "logged out"})
+}
+
+func (h *Handler) adminCheckHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
+		return
+	}
+	// authMiddlewareを通過した場合のみここに到達するので、認証済み
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "authenticated"})
 }

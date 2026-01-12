@@ -51,7 +51,7 @@ export default function AdminPage() {
 
   const checkLoginStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/posts`, { credentials: 'include' });
+      const res = await fetch(`${API_URL}/api/admin/check`, { credentials: 'include' });
       if (res.ok) {
         setIsLoggedIn(true);
       } else {
