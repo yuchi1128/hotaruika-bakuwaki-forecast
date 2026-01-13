@@ -234,6 +234,28 @@ export default function AdminPage() {
     }
   };
 
+  const handleAdminReplyToReply = async (replyId: number, content: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/replies/${replyId}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '管理者',
+          content: content,
+          label: '管理者',
+        }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('管理者返信の作成に失敗しました。');
+      }
+      fetchAllData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
   const filteredPosts = posts.filter(post =>
     post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.username.toLowerCase().includes(searchTerm.toLowerCase())
@@ -353,7 +375,7 @@ export default function AdminPage() {
                   <div className="space-y-4">
                       {filteredPosts.length > 0 ? (
                       filteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} onDelete={handleDelete} onReply={handleAdminReply} />
+                          <PostCard key={post.id} post={post} onDelete={handleDelete} onReply={handleAdminReply} onReplyToReply={handleAdminReplyToReply} />
                       ))
                       ) : (
                       <p className="text-slate-500 text-center py-8">該当する投稿はありません。</p>
@@ -367,7 +389,7 @@ export default function AdminPage() {
   );
 }
 
-function PostCard({ post, onDelete, onReply }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string) => Promise<void> }) {
+function PostCard({ post, onDelete, onReply, onReplyToReply }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string) => Promise<void>, onReplyToReply: (replyId: number, content: string) => Promise<void> }) {
   const isAdmin = post.label === '管理者';
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
@@ -443,29 +465,78 @@ function PostCard({ post, onDelete, onReply }: { post: PostWithReplies, onDelete
           <h4 className="font-semibold text-sm mb-3 text-slate-600">返信 ({post.replies.length}件)</h4>
           <div className="space-y-3 w-full">
             {post.replies.map((reply) => (
-              <div key={reply.id} className="p-3 rounded-md bg-white border border-slate-200">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-slate-800">{reply.username}</p>
-                      {reply.label && (
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                          {reply.label}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
-                    <p className="whitespace-pre-wrap text-sm text-slate-700">{reply.content}</p>
-                  </div>
-                  <Button onClick={() => onDelete('reply', reply.id)} variant="ghost" size="icon" className="text-slate-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <ReplyItem key={reply.id} reply={reply} onDelete={onDelete} onReplyToReply={onReplyToReply} />
             ))}
           </div>
         </CardFooter>
       )}
     </Card>
+  );
+}
+
+function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number) => void, onReplyToReply: (replyId: number, content: string) => Promise<void> }) {
+  const [replyContent, setReplyContent] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitReply = async () => {
+    if (!replyContent.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onReplyToReply(reply.id, replyContent);
+      setReplyContent('');
+      setIsReplying(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-md bg-white border border-slate-200">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-sm text-slate-800">{reply.username}</p>
+            {reply.label && (
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                {reply.label}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
+          <p className="whitespace-pre-wrap text-sm text-slate-700">{reply.content}</p>
+
+          <div className="mt-2">
+            {!isReplying ? (
+              <Button onClick={() => setIsReplying(true)} variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50 h-7 text-xs">
+                返信する
+              </Button>
+            ) : (
+              <div className="space-y-2 mt-2">
+                <Textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="管理者として返信..."
+                  rows={2}
+                  className="w-full text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleSubmitReply} size="sm" className="h-7 text-xs" disabled={!replyContent.trim() || isSubmitting}>
+                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                    返信
+                  </Button>
+                  <Button onClick={() => { setIsReplying(false); setReplyContent(''); }} variant="ghost" size="sm" className="h-7 text-xs">
+                    キャンセル
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <Button onClick={() => onDelete('reply', reply.id)} variant="ghost" size="icon" className="text-slate-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
