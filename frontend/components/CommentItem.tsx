@@ -26,6 +26,7 @@ interface Reply {
   parent_reply_id: number | null;
   username: string;
   content: string;
+  label?: string;
   created_at: string;
   good_count: number;
   bad_count: number;
@@ -125,13 +126,18 @@ export default function CommentItem({
       >
         <div className="flex items-start gap-2">
           <div className="flex-1">
-            <div className="flex items-baseline gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1">
               <span className="font-semibold text-blue-200 text-xs sm:text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
                 {reply.username}
               </span>
               <span className="text-[11px] sm:text-xs text-gray-400">
                 {formatTime(new Date(reply.created_at))}
               </span>
+              {reply.label && (
+                <Badge variant="secondary" className="bg-blue-700/50 text-blue-200 text-[10px]">
+                  {reply.label}
+                </Badge>
+              )}
             </div>
             <p className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
               {reply.parent_username && <span className="text-blue-300 mr-1">@{reply.parent_username}</span>}
