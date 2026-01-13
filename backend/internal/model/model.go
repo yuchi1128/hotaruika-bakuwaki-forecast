@@ -26,6 +26,7 @@ type Reply struct {
 	ParentReplyID  *int      `json:"parent_reply_id"`
 	Username       string    `json:"username"`
 	Content        string    `json:"content"`
+	Label          *string   `json:"label,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	GoodCount      int       `json:"good_count"`
 	BadCount       int       `json:"bad_count"`

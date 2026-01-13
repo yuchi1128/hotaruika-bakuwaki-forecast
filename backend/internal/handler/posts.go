@@ -63,7 +63,17 @@ func (h *Handler) postDetailHandler(w http.ResponseWriter, r *http.Request) {
 		case http.MethodGet:
 			h.getRepliesForPost(w, r, postID)
 		case http.MethodPost:
-			h.createReplyToPost(w, r, postID)
+			isAdmin := false
+			cookie, err := r.Cookie("admin_token")
+			if err == nil {
+				tokenString := cookie.Value
+				claims := &model.Claims{}
+				token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) { return h.jwtKey, nil })
+				if err == nil && token.Valid && claims.Role == "admin" {
+					isAdmin = true
+				}
+			}
+			h.createReplyToPost(w, r, postID, isAdmin)
 		default:
 			http.Error(w, "許可されていないメソッドです", http.StatusMethodNotAllowed)
 		}
@@ -92,7 +102,17 @@ func (h *Handler) replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(pathSegments) == 4 && pathSegments[3] == "replies" {
-		h.createReplyToReply(w, r, replyID)
+		isAdmin := false
+		cookie, err := r.Cookie("admin_token")
+		if err == nil {
+			tokenString := cookie.Value
+			claims := &model.Claims{}
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) { return h.jwtKey, nil })
+			if err == nil && token.Valid && claims.Role == "admin" {
+				isAdmin = true
+			}
+		}
+		h.createReplyToReply(w, r, replyID, isAdmin)
 	} else if len(pathSegments) == 4 && pathSegments[3] == "reaction" {
 		h.createReplyReaction(w, r, replyID)
 	} else {
@@ -216,7 +236,7 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 	var replies []model.Reply
 
 	operation := func() error {
-		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
+		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.label, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
 
 		rows, err := h.db.Query(query, postID)
 		if err != nil {
@@ -230,7 +250,8 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			var reply model.Reply
 			var parentReplyID sql.NullInt64
 			var parentUsername sql.NullString
-			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+			var label sql.NullString
+			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
 				h.logger.Error("返信行のスキャンエラー", "error", err)
 				continue
 			}
@@ -240,6 +261,9 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			}
 			if parentUsername.Valid {
 				reply.ParentUsername = &parentUsername.String
+			}
+			if label.Valid {
+				reply.Label = &label.String
 			}
 			replies = append(replies, reply)
 		}
@@ -258,11 +282,18 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 	json.NewEncoder(w).Encode(replies)
 }
 
-func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int) {
+func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int, isAdmin bool) {
 	var reply model.Reply
 	json.NewDecoder(r.Body).Decode(&reply)
-	query := `INSERT INTO replies (post_id, username, content) VALUES ($1, $2, $3) RETURNING id, created_at`
-	err := h.db.QueryRow(query, postID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+
+	// 管理者のみ「管理者」ラベルを使用可能
+	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {
+		http.Error(w, "管理者ラベルは使用できません", http.StatusForbidden)
+		return
+	}
+
+	query := `INSERT INTO replies (post_id, username, content, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	err := h.db.QueryRow(query, postID, reply.Username, reply.Content, reply.Label).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		h.logger.Error("投稿への返信エラー", "error", err)
 		http.Error(w, "返信できませんでした", http.StatusInternalServerError)
@@ -274,9 +305,16 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 	json.NewEncoder(w).Encode(reply)
 }
 
-func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int) {
+func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int, isAdmin bool) {
 	var reply model.Reply
 	json.NewDecoder(r.Body).Decode(&reply)
+
+	// 管理者のみ「管理者」ラベルを使用可能
+	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {
+		http.Error(w, "管理者ラベルは使用できません", http.StatusForbidden)
+		return
+	}
+
 	var postID int
 	err := h.db.QueryRow("SELECT post_id FROM replies WHERE id = $1", parentReplyID).Scan(&postID)
 	if err != nil {
@@ -284,8 +322,8 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		http.Error(w, "返信できませんでした", http.StatusNotFound)
 		return
 	}
-	query := `INSERT INTO replies (post_id, parent_reply_id, username, content) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
-	err = h.db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content).Scan(&reply.ID, &reply.CreatedAt)
+	query := `INSERT INTO replies (post_id, parent_reply_id, username, content, label) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
+	err = h.db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content, reply.Label).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		h.logger.Error("返信への返信エラー", "error", err)
 		http.Error(w, "返信できませんでした", http.StatusInternalServerError)

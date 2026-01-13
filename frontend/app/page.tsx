@@ -60,6 +60,7 @@ interface Reply {
   parent_reply_id: number | null;
   username: string;
   content: string;
+  label?: string;
   created_at: string;
   good_count: number;
   bad_count: number;

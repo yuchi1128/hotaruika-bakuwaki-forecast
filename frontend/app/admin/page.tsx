@@ -27,6 +27,7 @@ interface Reply {
   post_id: number;
   username: string;
   content: string;
+  label?: string;
   created_at: string;
   parent_username?: string;
 }
@@ -211,6 +212,28 @@ export default function AdminPage() {
     }
   };
   
+  const handleAdminReply = async (postId: number, content: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/posts/${postId}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '管理者',
+          content: content,
+          label: '管理者',
+        }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('管理者返信の作成に失敗しました。');
+      }
+      fetchAllData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
   const filteredPosts = posts.filter(post =>
     post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.username.toLowerCase().includes(searchTerm.toLowerCase())
@@ -330,7 +353,7 @@ export default function AdminPage() {
                   <div className="space-y-4">
                       {filteredPosts.length > 0 ? (
                       filteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} onDelete={handleDelete} />
+                          <PostCard key={post.id} post={post} onDelete={handleDelete} onReply={handleAdminReply} />
                       ))
                       ) : (
                       <p className="text-slate-500 text-center py-8">該当する投稿はありません。</p>
@@ -344,9 +367,24 @@ export default function AdminPage() {
   );
 }
 
-function PostCard({ post, onDelete }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void }) {
+function PostCard({ post, onDelete, onReply }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string) => Promise<void> }) {
   const isAdmin = post.label === '管理者';
-    
+  const [replyContent, setReplyContent] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitReply = async () => {
+    if (!replyContent.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onReply(post.id, replyContent);
+      setReplyContent('');
+      setIsReplying(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="bg-slate-100 p-4 border-b border-slate-200">
@@ -363,7 +401,7 @@ function PostCard({ post, onDelete }: { post: PostWithReplies, onDelete: (type: 
         </div>
         <p className="text-xs text-slate-500 pt-1">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
       </CardHeader>
-      
+
       <CardContent className="p-4 bg-white">
         <p className="whitespace-pre-wrap text-slate-800">{post.content}</p>
         {post.image_urls && post.image_urls.length > 0 && (
@@ -371,6 +409,33 @@ function PostCard({ post, onDelete }: { post: PostWithReplies, onDelete: (type: 
             <TwitterLikeMediaGrid images={post.image_urls.map(url => `${url}`)} />
           </div>
         )}
+
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          {!isReplying ? (
+            <Button onClick={() => setIsReplying(true)} variant="outline" size="sm" className="text-blue-600 border-blue-300 hover:bg-blue-50">
+              管理者として返信
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <Textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder="管理者として返信..."
+                rows={3}
+                className="w-full"
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleSubmitReply} size="sm" disabled={!replyContent.trim() || isSubmitting}>
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  返信する
+                </Button>
+                <Button onClick={() => { setIsReplying(false); setReplyContent(''); }} variant="ghost" size="sm">
+                  キャンセル
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
 
       {post.replies && post.replies.length > 0 && (
@@ -381,7 +446,14 @@ function PostCard({ post, onDelete }: { post: PostWithReplies, onDelete: (type: 
               <div key={reply.id} className="p-3 rounded-md bg-white border border-slate-200">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <p className="font-bold text-sm text-slate-800">{reply.username}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-slate-800">{reply.username}</p>
+                      {reply.label && (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                          {reply.label}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
                     <p className="whitespace-pre-wrap text-sm text-slate-700">{reply.content}</p>
                   </div>
