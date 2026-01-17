@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveReaction, getReaction } from '@/lib/client-utils';
+import { saveReaction, getReaction, removeReaction } from '@/lib/client-utils';
 import {
   getWeatherFromCode,
   getWindDirection,
@@ -259,6 +259,44 @@ export default function Home() {
   };
 
   const createReaction = async (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
+    // 既にリアクション済みの場合は何もしない（連打防止）
+    if (getReaction(type, targetId) !== null) {
+      return;
+    }
+
+    // APIリクエスト前にLocalStorageを更新してボタンを即座に無効化
+    saveReaction(type, targetId, reactionType);
+
+    // UIを即座に更新
+    setComments((prevComments) =>
+      prevComments.map((comment) => {
+        if (type === 'post' && comment.id === targetId) {
+          return {
+            ...comment,
+            myReaction: reactionType,
+            goodCount: reactionType === 'good' ? comment.goodCount + 1 : comment.goodCount,
+            badCount: reactionType === 'bad' ? comment.badCount + 1 : comment.badCount,
+          };
+        }
+        if (type === 'reply') {
+          return {
+            ...comment,
+            replies: comment.replies.map((reply) =>
+              reply.id === targetId
+                ? {
+                    ...reply,
+                    myReaction: reactionType,
+                    good_count: reactionType === 'good' ? reply.good_count + 1 : reply.good_count,
+                    bad_count: reactionType === 'bad' ? reply.bad_count + 1 : reply.bad_count,
+                  }
+                : reply
+            ),
+          };
+        }
+        return comment;
+      })
+    );
+
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/reaction` : `/api/replies/${targetId}/reaction`;
       const response = await fetch(`${API_URL}${endpoint}`, {
@@ -271,10 +309,11 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      saveReaction(type, targetId, reactionType);
-      await fetchPosts();
     } catch (error) {
       console.error('Failed to create reaction:', error);
+      // API失敗時はLocalStorageをクリアしてサーバーから最新状態を取得
+      removeReaction(type, targetId);
+      await fetchPosts();
     }
   };
 
