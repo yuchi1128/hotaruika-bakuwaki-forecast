@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveReaction, getReaction } from '@/lib/client-utils';
+import { saveReaction, getReaction, removeReaction } from '@/lib/client-utils';
 import {
   getWeatherFromCode,
   getWindDirection,
@@ -306,6 +306,36 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Failed to create reaction:', error);
+      // API失敗時はロールバック
+      removeReaction(type, targetId);
+      setComments((prevComments) =>
+        prevComments.map((comment) => {
+          if (type === 'post' && comment.id === targetId) {
+            return {
+              ...comment,
+              myReaction: null,
+              goodCount: reactionType === 'good' ? comment.goodCount - 1 : comment.goodCount,
+              badCount: reactionType === 'bad' ? comment.badCount - 1 : comment.badCount,
+            };
+          }
+          if (type === 'reply') {
+            return {
+              ...comment,
+              replies: comment.replies.map((reply) =>
+                reply.id === targetId
+                  ? {
+                      ...reply,
+                      myReaction: null,
+                      good_count: reactionType === 'good' ? reply.good_count - 1 : reply.good_count,
+                      bad_count: reactionType === 'bad' ? reply.bad_count - 1 : reply.bad_count,
+                    }
+                  : reply
+              ),
+            };
+          }
+          return comment;
+        })
+      );
     }
   };
 
