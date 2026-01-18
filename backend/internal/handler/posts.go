@@ -127,6 +127,25 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 		return
 	}
 
+	// ユーザー名と本文の検証
+	if strings.TrimSpace(post.Username) == "" {
+		http.Error(w, "ユーザー名を入力してください", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(post.Content) == "" {
+		http.Error(w, "本文を入力してください", http.StatusBadRequest)
+		return
+	}
+	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	if len([]rune(post.Username)) > 30 {
+		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
+		return
+	}
+	if len([]rune(post.Content)) > 1000 {
+		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+		return
+	}
+
 	if isAdmin {
 		if post.Label != "現地情報" && post.Label != "その他" && post.Label != "管理者" {
 			http.Error(w, "不正なラベルです", http.StatusBadRequest)
@@ -284,7 +303,29 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 
 func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int, isAdmin bool) {
 	var reply model.Reply
-	json.NewDecoder(r.Body).Decode(&reply)
+	if err := json.NewDecoder(r.Body).Decode(&reply); err != nil {
+		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
+		return
+	}
+
+	// ユーザー名と本文の検証
+	if strings.TrimSpace(reply.Username) == "" {
+		http.Error(w, "ユーザー名を入力してください", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(reply.Content) == "" {
+		http.Error(w, "本文を入力してください", http.StatusBadRequest)
+		return
+	}
+	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	if len([]rune(reply.Username)) > 30 {
+		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
+		return
+	}
+	if len([]rune(reply.Content)) > 1000 {
+		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+		return
+	}
 
 	// 管理者のみ「管理者」ラベルを使用可能
 	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {
@@ -307,7 +348,29 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 
 func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int, isAdmin bool) {
 	var reply model.Reply
-	json.NewDecoder(r.Body).Decode(&reply)
+	if err := json.NewDecoder(r.Body).Decode(&reply); err != nil {
+		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
+		return
+	}
+
+	// ユーザー名と本文の検証
+	if strings.TrimSpace(reply.Username) == "" {
+		http.Error(w, "ユーザー名を入力してください", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(reply.Content) == "" {
+		http.Error(w, "本文を入力してください", http.StatusBadRequest)
+		return
+	}
+	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	if len([]rune(reply.Username)) > 30 {
+		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
+		return
+	}
+	if len([]rune(reply.Content)) > 1000 {
+		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+		return
+	}
 
 	// 管理者のみ「管理者」ラベルを使用可能
 	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {

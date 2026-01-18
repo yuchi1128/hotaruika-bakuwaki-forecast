@@ -51,7 +51,11 @@ interface CommentSectionProps {
   fetchPosts: (label?: string | null) => void;
 }
 
-const CommentSection = ({ 
+// 文字数制限
+const MAX_USERNAME_LENGTH = 30;
+const MAX_CONTENT_LENGTH = 1000;
+
+const CommentSection = ({
   comments,
   handleReaction,
   formatTime,
@@ -202,20 +206,37 @@ const CommentSection = ({
         {/* コメント投稿フォーム */}
         <div className="mb-9 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <Input
-              placeholder="お名前"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              className="h-8 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
-            />
+            <div>
+              <Input
+                placeholder="お名前"
+                value={authorName}
+                onChange={(e) => setAuthorName(e.target.value)}
+                className={`h-8 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400 ${
+                  authorName.length > MAX_USERNAME_LENGTH ? 'border-red-500' : ''
+                }`}
+              />
+              {authorName.length > MAX_USERNAME_LENGTH && (
+                <div className="text-xs mt-1 text-red-400">
+                  ※{MAX_USERNAME_LENGTH}文字以内で入力してください（現在{authorName.length}文字）
+                </div>
+              )}
+            </div>
           </div>
           <Textarea
             placeholder="ホタルイカについてご自由にお書きください！"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            className="mb-4 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+            className={`mb-1 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400 ${
+              newComment.length > MAX_CONTENT_LENGTH ? 'border-red-500' : ''
+            }`}
             rows={5}
           />
+          {newComment.length > MAX_CONTENT_LENGTH && (
+            <div className="text-xs mb-3 text-red-400">
+              ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{newComment.length}文字）
+            </div>
+          )}
+          {newComment.length <= MAX_CONTENT_LENGTH && <div className="mb-4" />}
           <div className="mb-4">
             <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200 mb-2">
               <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
@@ -264,7 +285,13 @@ const CommentSection = ({
           </div>
           <Button
             onClick={handleSubmitComment}
-            disabled={!newComment.trim() || !authorName.trim() || isSubmittingComment}
+            disabled={
+              !newComment.trim() ||
+              !authorName.trim() ||
+              isSubmittingComment ||
+              authorName.length > MAX_USERNAME_LENGTH ||
+              newComment.length > MAX_CONTENT_LENGTH
+            }
             className="
               group relative inline-flex items-center gap-2
               rounded-xl px-4 py-2.5 text-sm font-semibold text-white
