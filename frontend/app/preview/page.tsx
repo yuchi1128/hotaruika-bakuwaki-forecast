@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveReaction, getReaction, removeReaction } from '@/lib/client-utils';
 import {
@@ -103,6 +103,7 @@ export default function Home() {
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const pendingReactions = useRef(new Set<string>());
 
   useEffect(() => {
     fetchForecasts();
@@ -259,10 +260,15 @@ export default function Home() {
   };
 
   const createReaction = async (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => {
-    // 既にリアクション済みの場合は何もしない（連打防止）
-    if (getReaction(type, targetId) !== null) {
+    const key = `${type}_${targetId}`;
+
+    // 既に処理中またはリアクション済みの場合は何もしない（連打防止）
+    if (pendingReactions.current.has(key) || getReaction(type, targetId) !== null) {
       return;
     }
+
+    // 処理中としてマーク（同期的に即座に設定）
+    pendingReactions.current.add(key);
 
     // APIリクエスト前にLocalStorageを更新してボタンを即座に無効化
     saveReaction(type, targetId, reactionType);
@@ -314,6 +320,9 @@ export default function Home() {
       // API失敗時はLocalStorageをクリアしてサーバーから最新状態を取得
       removeReaction(type, targetId);
       await fetchPosts();
+    } finally {
+      // 処理完了後にpendingから削除
+      pendingReactions.current.delete(key);
     }
   };
 
