@@ -50,6 +50,10 @@ interface CommentItemProps {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// 文字数制限
+const MAX_USERNAME_LENGTH = 30;
+const MAX_CONTENT_LENGTH = 1000;
+
 const linkify = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.split(urlRegex).map((part, i) => {
@@ -179,21 +183,41 @@ export default function CommentItem({
                     placeholder="お名前"
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
-                    className="h-8 text-sm w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                    className={`h-8 text-sm w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400 ${
+                      authorName.length > MAX_USERNAME_LENGTH ? 'border-red-500' : ''
+                    }`}
                   />
+                  {authorName.length > MAX_USERNAME_LENGTH && (
+                    <div className="text-xs mt-1 text-red-400">
+                      ※{MAX_USERNAME_LENGTH}文字以内で入力してください（現在{authorName.length}文字）
+                    </div>
+                  )}
                 </div>
                 <Textarea
                   placeholder="返信を書く..."
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  className="mb-2 text-sm bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                  className={`mb-1 text-sm bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400 ${
+                    replyContent.length > MAX_CONTENT_LENGTH ? 'border-red-500' : ''
+                  }`}
                   rows={2}
                 />
-                <div className="flex gap-2">
+                {replyContent.length > MAX_CONTENT_LENGTH && (
+                  <div className="text-xs mb-1 text-red-400">
+                    ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{replyContent.length}文字）
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
                   <Button
                     onClick={() => handleSubmitReply(reply.id, 'reply')}
                     className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!replyContent.trim() || !authorName.trim() || isSubmitting}
+                    disabled={
+                      !replyContent.trim() ||
+                      !authorName.trim() ||
+                      isSubmitting ||
+                      authorName.length > MAX_USERNAME_LENGTH ||
+                      replyContent.length > MAX_CONTENT_LENGTH
+                    }
                   >
                     {isSubmitting ? (
                       <>
@@ -362,21 +386,41 @@ export default function CommentItem({
                     placeholder="お名前"
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
-                    className="h-8 text-sm w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                    className={`h-8 text-sm w-full bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400 ${
+                      authorName.length > MAX_USERNAME_LENGTH ? 'border-red-500' : ''
+                    }`}
                   />
+                  {authorName.length > MAX_USERNAME_LENGTH && (
+                    <div className="text-xs mt-1 text-red-400">
+                      ※{MAX_USERNAME_LENGTH}文字以内で入力してください（現在{authorName.length}文字）
+                    </div>
+                  )}
                 </div>
                 <Textarea
                   placeholder="返信を書く..."
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  className="mb-2 text-sm bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400"
+                  className={`mb-1 text-sm bg-slate-600/50 border-blue-500/30 text-white placeholder-gray-400 ${
+                    replyContent.length > MAX_CONTENT_LENGTH ? 'border-red-500' : ''
+                  }`}
                   rows={2}
                 />
-                <div className="flex gap-2">
+                {replyContent.length > MAX_CONTENT_LENGTH && (
+                  <div className="text-xs mb-1 text-red-400">
+                    ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{replyContent.length}文字）
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2">
                   <Button
                     onClick={() => handleSubmitReply(comment.id, 'post')}
                     className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!replyContent.trim() || !authorName.trim() || isSubmitting}
+                    disabled={
+                      !replyContent.trim() ||
+                      !authorName.trim() ||
+                      isSubmitting ||
+                      authorName.length > MAX_USERNAME_LENGTH ||
+                      replyContent.length > MAX_CONTENT_LENGTH
+                    }
                   >
                     {isSubmitting ? (
                       <>
