@@ -2,6 +2,14 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Zen_Kaku_Gothic_New } from 'next/font/google';
 
+// Zen Kaku Gothic New (Google Fonts) の設定
+const zenKaku = Zen_Kaku_Gothic_New({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-zen-kaku',
+});
+
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const SITE_NAME = 'ホタルイカ爆湧き予報';
 
@@ -26,14 +34,6 @@ export const metadata: Metadata = {
     google: 'DUbWjtDoIJaM6FOqA7i3KI34R7GrC_Og6xCWjjsfjBw',
   },
 };
-
-// Zen Kaku Gothic New (Google Fonts) の設定
-const zenKaku = Zen_Kaku_Gothic_New({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  display: 'swap',
-  variable: '--font-zen-kaku',
-});
 
 export default function RootLayout({
   children,

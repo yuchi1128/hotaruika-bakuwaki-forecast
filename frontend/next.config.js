@@ -4,6 +4,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    // クリティカルCSSをインライン化してレンダリングブロックを削減
+    optimizeCss: true,
+  },
 };
 
 module.exports = nextConfig;

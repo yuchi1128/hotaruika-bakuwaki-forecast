@@ -47,7 +47,6 @@
   }
   body {
     @apply bg-slate-900;
-    /* font-family を layout.tsx で定義したCSS変数を使うように変更 */
     font-family: var(--font-zen-kaku), sans-serif;
   }
 }
