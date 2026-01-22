@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Noto_Sans_JP } from 'next/font/google';
-import localFont from 'next/font/local';
+import { Noto_Sans_JP, Zen_Kaku_Gothic_New } from 'next/font/google';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const SITE_NAME = 'ホタルイカ爆湧き予報';
@@ -36,18 +35,10 @@ const notoSansJp = Noto_Sans_JP({
   variable: '--font-noto-sans-jp',
 });
 
-// Zen Kaku Gothic New (ローカルファイル) の設定
-const zenKaku = localFont({
-  src: [
-    {
-      path: '../public/fonts/ZenKakuGothicNew-Regular.ttf',
-      weight: '400',
-    },
-    {
-      path: '../public/fonts/ZenKakuGothicNew-Bold.ttf',
-      weight: '700',
-    },
-  ],
+// Zen Kaku Gothic New (Google Fonts) の設定
+const zenKaku = Zen_Kaku_Gothic_New({
+  subsets: ['latin'],
+  weight: ['400', '700'],
   display: 'swap',
   variable: '--font-zen-kaku',
 });
