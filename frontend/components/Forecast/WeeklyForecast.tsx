@@ -1,4 +1,6 @@
+'use client';
 
+import { useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,8 +9,11 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import { Calendar, Thermometer, Cloudy, Wind, Moon, ChevronRight } from "lucide-react";
+
+const CAROUSEL_POSITION_KEY = 'weeklyForecastCarouselPosition';
 
 interface PredictionLevel {
   level: number;
@@ -36,13 +41,35 @@ interface WeeklyForecastProps {
   handleCardClick: (date: Date) => void;
 }
 
-const WeeklyForecast = ({ 
+const WeeklyForecast = ({
   weekPredictions,
   predictionLevels,
   formatDateForWeek,
   renderHotaruikaIcons,
   handleCardClick
 }: WeeklyForecastProps) => {
+  const setApi = useCallback((api: CarouselApi) => {
+    if (!api) return;
+
+    // 保存された位置を復元
+    const savedPosition = sessionStorage.getItem(CAROUSEL_POSITION_KEY);
+    if (savedPosition !== null) {
+      const position = parseInt(savedPosition, 10);
+      // 少し遅延させて確実に復元
+      setTimeout(() => {
+        api.scrollTo(position, true);
+      }, 0);
+    }
+
+    // 位置が変更されたら保存
+    const onSelect = () => {
+      const currentIndex = api.selectedScrollSnap();
+      sessionStorage.setItem(CAROUSEL_POSITION_KEY, currentIndex.toString());
+    };
+
+    api.on('select', onSelect);
+  }, []);
+
   return (
     <Card className="mb-16 bg-transparent border-none shadow-none">
       <CardHeader className="px-0">
@@ -57,6 +84,7 @@ const WeeklyForecast = ({
             align: "start",
             loop: true,
           }}
+          setApi={setApi}
           className="w-full max-w-6xl mx-auto"
         >
           <CarouselContent className="-ml-2 md:-ml-4">
