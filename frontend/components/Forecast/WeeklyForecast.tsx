@@ -82,7 +82,7 @@ const WeeklyForecast = ({
         <Carousel
           opts={{
             align: "start",
-            loop: true,
+            loop: false,
           }}
           setApi={setApi}
           className="w-full max-w-6xl mx-auto"

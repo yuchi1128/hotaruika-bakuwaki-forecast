@@ -200,6 +200,10 @@ const CarouselPrevious = React.forwardRef<
 >(({ className, variant = 'outline', size = 'icon', ...props }, ref) => {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel();
 
+  if (!canScrollPrev) {
+    return null;
+  }
+
   return (
     <Button
       ref={ref}
@@ -212,7 +216,6 @@ const CarouselPrevious = React.forwardRef<
           : '-top-12 left-1/2 -translate-x-1/2 rotate-90',
         className
       )}
-      disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}
     >
@@ -229,6 +232,10 @@ const CarouselNext = React.forwardRef<
 >(({ className, variant = 'outline', size = 'icon', ...props }, ref) => {
   const { orientation, scrollNext, canScrollNext } = useCarousel();
 
+  if (!canScrollNext) {
+    return null;
+  }
+
   return (
     <Button
       ref={ref}
@@ -241,7 +248,6 @@ const CarouselNext = React.forwardRef<
           : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
         className
       )}
-      disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}
     >
