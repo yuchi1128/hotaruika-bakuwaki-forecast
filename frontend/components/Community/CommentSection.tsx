@@ -6,7 +6,28 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import CustomSelect from '@/components/CustomSelect';
-import { MessageCircle, Send, Image as ImageIcon, X, Search, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  MessageCircle,
+  Send,
+  Image as ImageIcon,
+  X,
+  Search,
+  Loader2,
+  AlertCircle,
+  User,
+  Tag,
+  Heart,
+  CheckCircle,
+  Shield,
+} from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 
 // Interfaces
@@ -75,6 +96,7 @@ const CommentSection = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
@@ -200,6 +222,70 @@ const CommentSection = ({
         <CardTitle className="text-xl md:text-2xl font-bold text-purple-200 flex items-center gap-2">
           <MessageCircle className="w-6 h-6" />
           掲示板
+          <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="text-purple-300 hover:text-purple-100 transition-colors ml-1"
+                aria-label="掲示板の利用ガイドを見る"
+              >
+                <AlertCircle className="w-5 h-5 mt-0.5" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-purple-500/50 text-white shadow-lg backdrop-blur-md rounded-lg max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-purple-200">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>掲示板ご利用ガイド</span>
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  掲示板を利用する際の注意事項やマナーについて説明しています。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-2 space-y-5 py-2 text-sm">
+                {/* マナー関連 */}
+                <div className="flex items-start gap-3">
+                  <Heart className="w-5 h-5 mt-0.5 text-pink-300 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-slate-200 mb-1">マナーについて</h4>
+                    <ul className="text-slate-300 space-y-1 leading-relaxed">
+                      <li>・<strong className="text-red-300">誹謗中傷・攻撃的な投稿</strong>は禁止です。  </li>
+                      <li>・他のユーザーの方へは<strong className="text-white">丁寧な対応</strong>をお願いします。</li>
+                    </ul>
+                  </div>
+                </div>
+                {/* 投稿ルール */}
+                <div className="flex items-start gap-3">
+                  <User className="w-5 h-5 mt-0.5 text-blue-300 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-slate-200 mb-1">お名前について</h4>
+                    <p className="text-slate-300 leading-relaxed">
+                      なるべく<strong className="text-white">一人につき一つの名前</strong>で投稿してください。
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Tag className="w-5 h-5 mt-0.5 text-green-300 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-slate-200 mb-1">ラベルについて</h4>
+                    <p className="text-slate-300 leading-relaxed">
+                      投稿内容に合った<strong className="text-white">適切なラベル</strong>を選んでください。現地での目撃情報は「現地情報」、それ以外は「その他」です。
+                    </p>
+                  </div>
+                </div>
+                {/* 情報の信頼性関連 */}
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 mt-0.5 text-emerald-300 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-slate-200 mb-1">情報の信頼性について</h4>
+                    <ul className="text-slate-300 space-y-1 leading-relaxed">
+                      <li>・<strong className="text-red-300">虚偽の目撃情報</strong>を投稿しないでください。</li>
+                      <li>・現地情報は<strong className="text-white">日時・場所をできるだけ具体的</strong>に記載してください。</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardTitle>
       </CardHeader>
       <CardContent>
