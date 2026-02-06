@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { MapPin, TrendingUp, Info } from 'lucide-react';
+import { MapPin, TrendingUp, HelpCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +24,7 @@ const AppHeader = () => {
                   <TooltipTrigger asChild>
                     <Link href="/about" passHref>
                       <Button variant="ghost" size="icon" className="text-blue-200 hover:text-blue-100 rounded-full"> 
-                        <Info className="w-5 h-5" />
+                        <HelpCircle className="w-5 h-5" />
                         <span className="sr-only">このサイトについて</span>
                       </Button>
                     </Link>
