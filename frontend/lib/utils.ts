@@ -101,15 +101,15 @@ export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
   let level = 0;
 
   if (isSeason) {
-    if (predicted_amount >= 1.25) {
+    if (predicted_amount >= 1.4) {
       level = 5;
-    } else if (predicted_amount >= 1.0) {
+    } else if (predicted_amount >= 1.15) {
       level = 4;
-    } else if (predicted_amount >= 0.75) {
+    } else if (predicted_amount >= 0.9) {
       level = 3;
-    } else if (predicted_amount >= 0.5) {
+    } else if (predicted_amount >= 0.65) {
       level = 2;
-    } else if (predicted_amount >= 0.25) {
+    } else if (predicted_amount >= 0.4) {
       level = 1;
     } else {
       level = 0;
