@@ -136,15 +136,15 @@ export default function Home() {
           const isSeason = month >= 1 && month <= 4;
           let level = -1;
           if (isSeason) {
-            if (forecast.predicted_amount >= 1.25) {
+            if (forecast.predicted_amount >= 1.4) {
               level = 5;
-            } else if (forecast.predicted_amount >= 1.0) {
+            } else if (forecast.predicted_amount >= 1.15) {
               level = 4;
-            } else if (forecast.predicted_amount >= 0.75) {
+            } else if (forecast.predicted_amount >= 0.9) {
               level = 3;
-            } else if (forecast.predicted_amount >= 0.5) {
+            } else if (forecast.predicted_amount >= 0.65) {
               level = 2;
-            } else if (forecast.predicted_amount >= 0.25) {
+            } else if (forecast.predicted_amount >= 0.4) {
               level = 1;
             } else {
               level = 0;
