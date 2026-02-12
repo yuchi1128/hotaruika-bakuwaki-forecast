@@ -58,6 +58,12 @@ func (h *Handler) postDetailHandler(w http.ResponseWriter, r *http.Request) {
 		}).ServeHTTP(w, r)
 		return
 	}
+	if r.Method == http.MethodPatch && len(pathSegments) == 4 && pathSegments[3] == "label" {
+		h.authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			h.updatePostLabel(w, r, postID)
+		}).ServeHTTP(w, r)
+		return
+	}
 	if len(pathSegments) == 4 && pathSegments[3] == "replies" {
 		switch r.Method {
 		case http.MethodGet:
@@ -482,4 +488,42 @@ func (h *Handler) deleteItem(w http.ResponseWriter, _ *http.Request, itemType st
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) updatePostLabel(w http.ResponseWriter, r *http.Request, postID int) {
+	var req struct {
+		Label string `json:"label"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
+		return
+	}
+
+	// ラベルのバリデーション
+	if req.Label != "現地情報" && req.Label != "その他" && req.Label != "管理者" {
+		http.Error(w, "不正なラベルです", http.StatusBadRequest)
+		return
+	}
+
+	query := `UPDATE posts SET label = $1 WHERE id = $2`
+	result, err := h.db.Exec(query, req.Label, postID)
+	if err != nil {
+		h.logger.Error("ラベルの更新エラー", "error", err)
+		http.Error(w, "ラベルの更新に失敗しました", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		h.logger.Error("RowsAffectedの取得エラー", "error", err)
+		http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+		return
+	}
+	if rowsAffected == 0 {
+		http.Error(w, "投稿が見つかりません", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"label": req.Label})
 }
