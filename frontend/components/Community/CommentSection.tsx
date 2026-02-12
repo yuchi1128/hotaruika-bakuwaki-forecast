@@ -342,7 +342,7 @@ const CommentSection = ({
               </div>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4 mb-2">
             <span className="text-gray-300 text-xs font-bold">ラベル：</span>
 
             <Button
@@ -369,6 +369,9 @@ const CommentSection = ({
               その他
             </Button>
           </div>
+          <p className="text-[11px] text-gray-400 mb-4">
+            ※投稿内容に合ったラベルを選択してください
+          </p>
           <Button
             onClick={handleSubmitComment}
             disabled={
