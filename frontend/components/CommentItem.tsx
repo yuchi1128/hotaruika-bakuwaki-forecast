@@ -134,7 +134,7 @@ export default function CommentItem({
               <span className="font-semibold text-blue-200 text-xs sm:text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
                 {reply.username}
               </span>
-              <span className="text-[11px] sm:text-xs text-gray-400">
+              <span className="text-[13px] sm:text-[13px] text-gray-400">
                 {formatTime(new Date(reply.created_at))}
               </span>
               {reply.label && (
@@ -266,7 +266,7 @@ export default function CommentItem({
                 <span className="font-semibold text-purple-200 text-sm sm:text-base max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
                   {comment.username}
                 </span>
-                <span className="text-[11px] sm:text-xs text-gray-400">
+                <span className="text-[13px] sm:text-[13px] text-gray-400">
                   {formatTime(new Date(comment.created_at))}
                 </span>
               </div>
