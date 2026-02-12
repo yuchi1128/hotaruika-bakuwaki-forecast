@@ -370,7 +370,7 @@ const CommentSection = ({
             </Button>
           </div>
           <p className="text-[11px] text-gray-400 mb-4">
-            ※投稿内容にあったラベルを選択してください
+            ※投稿内容に合ったラベルを選択してください
           </p>
           <Button
             onClick={handleSubmitComment}
