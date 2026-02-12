@@ -289,7 +289,7 @@ export default function AdminPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle className="text-2xl">管理者ログイン</CardTitle>
@@ -305,7 +305,7 @@ export default function AdminPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'ログイン'}
                 </Button>
                 {error && <p className="text-red-500 text-sm text-center">{error}</p>}
@@ -318,21 +318,21 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="bg-slate-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
-          <h1 className="text-3xl font-bold text-slate-900">管理者ダッシュボード</h1>
-          <Button onClick={handleLogout} variant="outline" className="text-white">ログアウト</Button>
+        <header className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-900">管理者ダッシュボード</h1>
+          <Button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 text-white">ログアウト</Button>
         </header>
 
         {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-6">Error: {error}</p>}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-1">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm bg-white border border-gray-800">
               <CardHeader>
-                <CardTitle>管理者として投稿</CardTitle>
-                <CardDescription>お知らせなどを投稿します。</CardDescription>
+                <CardTitle className="text-gray-900">管理者として投稿</CardTitle>
+                <CardDescription className="text-gray-500">お知らせなどを投稿します。</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleAdminPost} className="space-y-4">
@@ -340,6 +340,7 @@ export default function AdminPage() {
                     value={newPostUsername}
                     onChange={(e) => setNewPostUsername(e.target.value)}
                     placeholder="ユーザー名 (デフォルト: 管理者)"
+                    className="bg-white border-gray-800 text-gray-900"
                   />
                   <Textarea
                     value={newPostContent}
@@ -347,9 +348,10 @@ export default function AdminPage() {
                     placeholder="新しいお知らせや情報を入力..."
                     required
                     rows={4}
+                    className="bg-white border-gray-800 text-gray-900"
                   />
                   <div className="space-y-2">
-                    <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-slate-600 hover:text-slate-800">
+                    <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-gray-600 hover:text-gray-800">
                       <ImageIcon className="w-5 h-5 mr-2" />
                       <span>画像を選択 ({selectedImages.length}/4)</span>
                     </label>
@@ -367,14 +369,14 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" className="w-full">投稿する</Button>
+                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white">投稿する</Button>
                 </form>
               </CardContent>
             </Card>
           </div>
 
           <div className="lg:col-span-2">
-              <h2 className="text-2xl font-semibold mb-4 text-slate-800">掲示板管理</h2>
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">掲示板管理</h2>
               <div className="mb-4">
                   <Input
                   type="text"
@@ -387,7 +389,7 @@ export default function AdminPage() {
 
               {isLoading ? (
                   <div className="flex justify-center items-center p-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                   </div>
               ) : (
                   <div className="space-y-4">
@@ -396,7 +398,7 @@ export default function AdminPage() {
                           <PostCard key={post.id} post={post} onDelete={handleDelete} onReply={handleAdminReply} onReplyToReply={handleAdminReplyToReply} onLabelChange={handleLabelChange} />
                       ))
                       ) : (
-                      <p className="text-slate-500 text-center py-8">該当する投稿はありません。</p>
+                      <p className="text-gray-500 text-center py-8">該当する投稿はありません。</p>
                       )}
                   </div>
               )}
@@ -414,6 +416,7 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChangingLabel, setIsChangingLabel] = useState(false);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [showPencil, setShowPencil] = useState(true);
   const [selectedLabel, setSelectedLabel] = useState(post.label);
 
   const handleSubmitReply = async () => {
@@ -431,12 +434,16 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
   const handleLabelConfirm = async () => {
     if (selectedLabel === post.label) {
       setIsEditingLabel(false);
+      setShowPencil(false);
+      setTimeout(() => setShowPencil(true), 150);
       return;
     }
     setIsChangingLabel(true);
     try {
       await onLabelChange(post.id, selectedLabel);
       setIsEditingLabel(false);
+      setShowPencil(false);
+      setTimeout(() => setShowPencil(true), 150);
     } finally {
       setIsChangingLabel(false);
     }
@@ -445,34 +452,48 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
   const handleCancelEdit = () => {
     setSelectedLabel(post.label);
     setIsEditingLabel(false);
+    setShowPencil(false);
+    setTimeout(() => setShowPencil(true), 150);
   };
 
   return (
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="bg-slate-100 p-4 border-b border-slate-200">
+      <CardHeader className="bg-gray-50 p-4 border-b border-gray-200">
         <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-                <p className="font-bold text-lg text-slate-800">{post.username}</p>
+                <p className="font-bold text-lg text-gray-800">{post.username}</p>
                 {!isEditingLabel ? (
                   <div className="flex items-center gap-1">
-                    <Badge className={isAdmin ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-slate-200 text-slate-700 border-slate-300'}>
+                    <Badge className={isAdmin ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-700 border-gray-200'}>
                       {post.label}
                     </Badge>
-                    <button
-                      onClick={() => setIsEditingLabel(true)}
-                      className="p-1 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
-                      title="ラベルを変更"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
+                    {showPencil && (
+                      <button
+                        onClick={() => setIsEditingLabel(true)}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
+                        title="ラベルを変更"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-1">
                     <select
                       value={selectedLabel}
-                      onChange={(e) => setSelectedLabel(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedLabel(e.target.value);
+                      }}
+                      onBlur={() => {
+                        if (!isChangingLabel) {
+                          setTimeout(() => {
+                            handleCancelEdit();
+                          }, 150);
+                        }
+                      }}
                       disabled={isChangingLabel}
-                      className="text-sm font-medium px-2 py-1 rounded-md border bg-white text-slate-700 border-slate-300"
+                      className="text-sm font-medium px-2 py-1 rounded-md border bg-white text-gray-700 border-gray-300"
+                      autoFocus
                     >
                       <option value="現地情報">現地情報</option>
                       <option value="その他">その他</option>
@@ -497,24 +518,29 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                   </div>
                 )}
             </div>
-            <Button onClick={() => onDelete('post', post.id)} variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-1.5"/>投稿を削除
+            <Button
+              onClick={() => onDelete('post', post.id)}
+              variant="ghost"
+              size="icon"
+              className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+            >
+                <Trash2 className="h-4 w-4"/>
             </Button>
         </div>
-        <p className="text-xs text-slate-500 pt-1">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
+        <p className="text-xs text-gray-500 pt-1">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
       </CardHeader>
 
       <CardContent className="p-4 bg-white">
-        <p className="whitespace-pre-wrap text-slate-800">{post.content}</p>
+        <p className="whitespace-pre-wrap text-gray-800">{post.content}</p>
         {post.image_urls && post.image_urls.length > 0 && (
           <div className="mt-4">
             <TwitterLikeMediaGrid images={post.image_urls.map(url => `${url}`)} />
           </div>
         )}
 
-        <div className="mt-4 pt-4 border-t border-slate-200">
+        <div className="mt-4 pt-4 border-t border-gray-200">
           {!isReplying ? (
-            <Button onClick={() => setIsReplying(true)} variant="outline" size="sm" className="text-blue-600 border-blue-300 hover:bg-blue-50">
+            <Button onClick={() => setIsReplying(true)} size="sm" className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-100">
               管理者として返信
             </Button>
           ) : (
@@ -524,10 +550,10 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="管理者として返信..."
                 rows={3}
-                className="w-full"
+                className="w-full bg-white border-gray-300 text-gray-900"
               />
               <div className="flex gap-2">
-                <Button onClick={handleSubmitReply} size="sm" disabled={!replyContent.trim() || isSubmitting}>
+                <Button onClick={handleSubmitReply} size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                   返信する
                 </Button>
@@ -541,8 +567,8 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
       </CardContent>
 
       {post.replies && post.replies.length > 0 && (
-        <CardFooter className="p-4 bg-slate-100 border-t border-slate-200 flex-col items-start">
-          <h4 className="font-semibold text-sm mb-3 text-slate-600">返信 ({post.replies.length}件)</h4>
+        <CardFooter className="p-4 bg-gray-50 border-t border-gray-200 flex-col items-start">
+          <h4 className="font-semibold text-sm mb-3 text-gray-600">返信 ({post.replies.length}件)</h4>
           <div className="space-y-3 w-full">
             {post.replies.map((reply) => (
               <ReplyItem key={reply.id} reply={reply} onDelete={onDelete} onReplyToReply={onReplyToReply} />
@@ -572,23 +598,23 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
   };
 
   return (
-    <div className="p-3 rounded-md bg-white border border-slate-200">
+    <div className="p-3 rounded-md bg-white border border-gray-200">
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-bold text-sm text-slate-800">{reply.username}</p>
+            <p className="font-bold text-sm text-gray-800">{reply.username}</p>
             {reply.label && (
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+              <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs">
                 {reply.label}
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
-          <p className="whitespace-pre-wrap text-sm text-slate-700">{reply.content}</p>
+          <p className="text-xs text-gray-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
+          <p className="whitespace-pre-wrap text-sm text-gray-700">{reply.content}</p>
 
           <div className="mt-2">
             {!isReplying ? (
-              <Button onClick={() => setIsReplying(true)} variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50 h-7 text-xs">
+              <Button onClick={() => setIsReplying(true)} variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 h-7 text-xs">
                 返信する
               </Button>
             ) : (
@@ -598,10 +624,10 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
                   onChange={(e) => setReplyContent(e.target.value)}
                   placeholder="管理者として返信..."
                   rows={2}
-                  className="w-full text-sm"
+                  className="w-full text-sm bg-white border-gray-300 text-gray-900"
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handleSubmitReply} size="sm" className="h-7 text-xs" disabled={!replyContent.trim() || isSubmitting}>
+                  <Button onClick={handleSubmitReply} size="sm" className="h-7 text-xs bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
                     {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                     返信
                   </Button>
@@ -613,7 +639,7 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
             )}
           </div>
         </div>
-        <Button onClick={() => onDelete('reply', reply.id)} variant="ghost" size="icon" className="text-slate-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
+        <Button onClick={() => onDelete('reply', reply.id)} variant="ghost" size="icon" className="text-gray-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
