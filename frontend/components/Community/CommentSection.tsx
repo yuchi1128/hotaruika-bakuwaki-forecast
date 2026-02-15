@@ -96,7 +96,8 @@ const CommentSection = ({
   const [selectedLabel, setSelectedLabel] = useState<string>('現地情報');
   const [selectedFilterLabel, setSelectedFilterLabel] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>(''); // 入力用
+  const [searchQuery, setSearchQuery] = useState<string>(''); // 検索実行用
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
   const COMMENTS_PER_PAGE = 30;
   const commentSectionRef = useRef<HTMLDivElement>(null);
@@ -110,7 +111,7 @@ const CommentSection = ({
     { value: 'bad', label: '低評価順' },
   ];
 
-  // API呼び出し: ラベル、検索、ソート、ページが変更されたとき
+  // API呼び出し: ラベル、検索、ソートが変更されたとき
   useEffect(() => {
     fetchPosts({
       label: selectedFilterLabel,
@@ -120,6 +121,24 @@ const CommentSection = ({
       sort: sortOrder,
     });
   }, [selectedFilterLabel, searchQuery, sortOrder]);
+
+  // 検索実行
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  // 検索クリア
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  // Enterキーで検索
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -421,24 +440,31 @@ const CommentSection = ({
         {/* 検索 */}
         <div className="mb-4 flex items-center gap-2">
           <span className="text-gray-300 text-xs font-bold whitespace-nowrap">検索：</span>
-          <div className="relative w-full md:w-2/3">
+          <div className="relative flex-1 md:w-2/3 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="名前・投稿内容で検索"
               className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
             />
-            {searchQuery && (
+            {searchInput && (
               <button
                 aria-label="検索をクリア"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-300 hover-bg-white-10"
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-300 hover:bg-white/10"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
+          <Button
+            onClick={handleSearch}
+            className="h-8 sm:h-9 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+          >
+            検索
+          </Button>
         </div>
 
         {/* 並び替え */}

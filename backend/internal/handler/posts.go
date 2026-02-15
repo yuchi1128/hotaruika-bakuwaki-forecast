@@ -321,34 +321,43 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// include=replies の場合、返信も一括取得
-	if includeReplies && len(posts) > 0 {
-		postIDs := make([]int, len(posts))
-		for i, p := range posts {
-			postIDs[i] = p.ID
-		}
+	// include=replies の場合
+	if includeReplies {
+		var postsWithReplies []model.PostWithReplies
 
-		repliesMap, err := h.getAllRepliesForPosts(postIDs)
-		if err != nil {
-			h.logger.Error("返信の一括取得に失敗しました", "error", err)
-			http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
-			return
-		}
+		if len(posts) > 0 {
+			postIDs := make([]int, len(posts))
+			for i, p := range posts {
+				postIDs[i] = p.ID
+			}
 
-		postsWithReplies := make([]model.PostWithReplies, len(posts))
-		for i, post := range posts {
-			postsWithReplies[i] = model.PostWithReplies{
-				Post:    post,
-				Replies: repliesMap[post.ID],
+			repliesMap, err := h.getAllRepliesForPosts(postIDs)
+			if err != nil {
+				h.logger.Error("返信の一括取得に失敗しました", "error", err)
+				http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
+				return
 			}
-			if postsWithReplies[i].Replies == nil {
-				postsWithReplies[i].Replies = []model.Reply{}
+
+			postsWithReplies = make([]model.PostWithReplies, len(posts))
+			for i, post := range posts {
+				postsWithReplies[i] = model.PostWithReplies{
+					Post:    post,
+					Replies: repliesMap[post.ID],
+				}
+				if postsWithReplies[i].Replies == nil {
+					postsWithReplies[i].Replies = []model.Reply{}
+				}
 			}
+		} else {
+			postsWithReplies = []model.PostWithReplies{}
 		}
 
 		// ページネーションレスポンス
 		if usePagination {
-			totalPages := (total + limit - 1) / limit
+			totalPages := 0
+			if total > 0 {
+				totalPages = (total + limit - 1) / limit
+			}
 			response := model.PaginatedPostsResponse{
 				Posts:      postsWithReplies,
 				Total:      total,
