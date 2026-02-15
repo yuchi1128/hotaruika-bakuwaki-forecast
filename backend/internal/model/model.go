@@ -58,3 +58,12 @@ type PostWithReplies struct {
 	Post
 	Replies []Reply `json:"replies"`
 }
+
+// PaginatedPostsResponseはページネーション付き投稿レスポンス
+type PaginatedPostsResponse struct {
+	Posts      []PostWithReplies `json:"posts"`
+	Total      int               `json:"total"`
+	Page       int               `json:"page"`
+	Limit      int               `json:"limit"`
+	TotalPages int               `json:"totalPages"`
+}
