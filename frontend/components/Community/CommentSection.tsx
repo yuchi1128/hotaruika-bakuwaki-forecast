@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -65,11 +65,14 @@ interface Comment extends Post {
 // Props
 interface CommentSectionProps {
   comments: Comment[];
+  totalComments: number;
+  totalPages: number;
+  currentPage: number;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string) => Promise<void>;
   createPost: (username: string, content: string, label: string, imageBase64s: string[]) => Promise<void>;
-  fetchPosts: (label?: string | null) => void;
+  fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
 }
 
 // 文字数制限
@@ -78,6 +81,9 @@ const MAX_CONTENT_LENGTH = 1000;
 
 const CommentSection = ({
   comments,
+  totalComments,
+  totalPages,
+  currentPage,
   handleReaction,
   formatTime,
   createReply,
@@ -93,7 +99,6 @@ const CommentSection = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
   const COMMENTS_PER_PAGE = 30;
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
@@ -105,12 +110,15 @@ const CommentSection = ({
     { value: 'bad', label: '低評価順' },
   ];
 
+  // API呼び出し: ラベル、検索、ソート、ページが変更されたとき
   useEffect(() => {
-    fetchPosts(selectedFilterLabel);
-  }, [selectedFilterLabel]);
-
-  useEffect(() => {
-    setCurrentPage(1);
+    fetchPosts({
+      label: selectedFilterLabel,
+      page: 1,
+      limit: COMMENTS_PER_PAGE,
+      search: searchQuery || undefined,
+      sort: sortOrder,
+    });
   }, [selectedFilterLabel, searchQuery, sortOrder]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,57 +172,23 @@ const CommentSection = ({
     }
   };
 
-  const normalizedQuery = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
-  const filteredComments = useMemo(() => {
-    if (!normalizedQuery) return comments;
-    return comments.filter((c) => {
-      const targets: string[] = [
-        c.username ?? '',
-        c.content ?? '',
-        ...c.replies.flatMap((r) => [r.username ?? '', r.content ?? '']),
-      ];
-      return targets.some((t) => (t || '').toLowerCase().includes(normalizedQuery));
-    });
-  }, [comments, normalizedQuery]);
-
-  const sortedComments = useMemo(() => {
-    const arr = filteredComments.slice();
-    switch (sortOrder) {
-      case 'newest':
-        arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'oldest':
-        arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        break;
-      case 'good':
-        arr.sort((a, b) => b.goodCount - a.goodCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      case 'bad':
-        arr.sort((a, b) => b.badCount - a.badCount || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-    }
-    return arr;
-  }, [filteredComments, sortOrder]);
-
-  useEffect(() => {
-    const totalPagesCalc = Math.max(1, Math.ceil(sortedComments.length / COMMENTS_PER_PAGE));
-    if (currentPage > totalPagesCalc) {
-      setCurrentPage(totalPagesCalc);
-    }
-  }, [sortedComments.length, currentPage]);
-
-  const totalComments = sortedComments.length;
-  const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
-  const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE;
-  const endIndex = Math.min(startIndex + COMMENTS_PER_PAGE, totalComments);
-  const paginatedComments = useMemo(() => sortedComments.slice(startIndex, endIndex), [sortedComments, startIndex, endIndex]);
-
+  // ページ変更
   const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
+    fetchPosts({
+      label: selectedFilterLabel,
+      page: newPage,
+      limit: COMMENTS_PER_PAGE,
+      search: searchQuery || undefined,
+      sort: sortOrder,
+    });
     if (filterSectionRef.current) {
       filterSectionRef.current.scrollIntoView({ behavior: 'auto' });
     }
   };
+
+  // 表示用の計算
+  const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE + 1;
+  const endIndex = Math.min(currentPage * COMMENTS_PER_PAGE, totalComments);
 
   return (
     <Card ref={commentSectionRef} className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
@@ -479,7 +453,7 @@ const CommentSection = ({
 
         {/* ページネーションコントロール（上部） */}
         <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex + 1}〜${endIndex}件 / 全${totalComments}件`}</div>
+          <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex}件 / 全${totalComments}件`}</div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -501,12 +475,12 @@ const CommentSection = ({
           </div>
         </div>
 
-        {/* コメント一覧（検索＋並び替え＋30件ごとに表示） */}
+        {/* コメント一覧 */}
         <div className="space-y-4">
-          {paginatedComments.length === 0 ? (
+          {comments.length === 0 ? (
             <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する投稿はありません' : '投稿はまだありません'}</div>
           ) : (
-            paginatedComments.map((comment) => (
+            comments.map((comment) => (
               <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} formatTime={formatTime} createReply={createReply} />
             ))
           )}
@@ -516,7 +490,7 @@ const CommentSection = ({
         {totalComments > 0 && (
           <div className="mt-6 flex items-center justify-between gap-3">
             <div className="text-xs text-gray-400">
-              {startIndex + 1}〜{endIndex}件 / 全{totalComments}件
+              {startIndex}〜{endIndex}件 / 全{totalComments}件
             </div>
             <div className="flex items-center gap-2">
               <Button

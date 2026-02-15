@@ -94,6 +94,15 @@ const predictionLevels: PredictionLevel[] = [
   { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
+// ページネーションレスポンスの型
+interface PaginatedPostsResponse {
+  posts: (Post & { replies: Reply[] })[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function Home() {
   const router = useRouter();
   const [predictions, setPredictions] = useState<DayPrediction[]>([]);
@@ -105,9 +114,14 @@ export default function Home() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const pendingReactions = useRef(new Set<string>());
 
+  // ページネーション用state
+  const [totalComments, setTotalComments] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+
   useEffect(() => {
     fetchForecasts();
-    fetchPosts();
+    fetchPosts({});
   }, []);
 
   const fetchForecasts = async () => {
@@ -171,51 +185,45 @@ export default function Home() {
     }
   };
 
-  const fetchPosts = async (label?: string | null) => {
+  const fetchPosts = async (params: {
+    label?: string | null;
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+  }) => {
     try {
-      let url = `${API_URL}/api/posts`;
+      const { label, page = 1, limit = 30, search, sort = 'newest' } = params;
+      let url = `${API_URL}/api/posts?include=replies&page=${page}&limit=${limit}&sort=${sort}`;
       if (label) {
-        url += `?label=${encodeURIComponent(label)}`;
+        url += `&label=${encodeURIComponent(label)}`;
+      }
+      if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
       }
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data: Post[] = await response.json();
-      const commentsWithReplies: Comment[] = await Promise.all(
-        data.map(async (post) => {
-          const replies = await fetchRepliesForPost(post.id);
-          return {
-            ...post,
-            replies: replies.map((reply) => ({
-              ...reply,
-              goodCount: reply.good_count,
-              badCount: reply.bad_count,
-              myReaction: getReaction('reply', reply.id),
-            })),
-            goodCount: post.good_count,
-            badCount: post.bad_count,
-            myReaction: getReaction('post', post.id),
-          };
-        })
-      );
+      const data: PaginatedPostsResponse = await response.json();
+      const commentsWithReplies: Comment[] = data.posts.map((post) => ({
+        ...post,
+        replies: post.replies.map((reply) => ({
+          ...reply,
+          goodCount: reply.good_count,
+          badCount: reply.bad_count,
+          myReaction: getReaction('reply', reply.id),
+        })),
+        goodCount: post.good_count,
+        badCount: post.bad_count,
+        myReaction: getReaction('post', post.id),
+      }));
       setComments(commentsWithReplies);
+      setTotalComments(data.total);
+      setTotalPages(data.totalPages);
+      setCurrentPage(data.page);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-    }
-  };
-
-  const fetchRepliesForPost = async (postId: number): Promise<Reply[]> => {
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${postId}/replies`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: Reply[] = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch replies for post ${postId}:`, error);
-      return [];
     }
   };
 
@@ -232,7 +240,7 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      await fetchPosts();
+      await fetchPosts({});
     } catch (error) {
       console.error('Failed to create post:', error);
     } finally {
@@ -253,7 +261,7 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      await fetchPosts();
+      await fetchPosts({});
     } catch (error) {
       console.error('Failed to create reply:', error);
     }
@@ -319,7 +327,7 @@ export default function Home() {
       console.error('Failed to create reaction:', error);
       // API失敗時はLocalStorageをクリアしてサーバーから最新状態を取得
       removeReaction(type, targetId);
-      await fetchPosts();
+      await fetchPosts({});
     } finally {
       // 処理完了後にpendingから削除
       pendingReactions.current.delete(key);
@@ -398,8 +406,11 @@ export default function Home() {
           handleCardClick={handleCardClick}
         />
 
-        <CommentSection 
+        <CommentSection
           comments={comments}
+          totalComments={totalComments}
+          totalPages={totalPages}
+          currentPage={currentPage}
           handleReaction={createReaction}
           formatTime={formatTime}
           createReply={createReply}
