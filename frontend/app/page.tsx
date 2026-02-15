@@ -168,49 +168,30 @@ export default function Home() {
 
   const fetchPosts = async (label?: string | null) => {
     try {
-      let url = `${API_URL}/api/posts`;
+      let url = `${API_URL}/api/posts?include=replies`;
       if (label) {
-        url += `?label=${encodeURIComponent(label)}`;
+        url += `&label=${encodeURIComponent(label)}`;
       }
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data: Post[] = await response.json();
-      const commentsWithReplies: Comment[] = await Promise.all(
-        data.map(async (post) => {
-          const replies = await fetchRepliesForPost(post.id);
-          return {
-            ...post,
-            replies: replies.map((reply) => ({
-              ...reply,
-              goodCount: reply.good_count,
-              badCount: reply.bad_count,
-              myReaction: getReaction('reply', reply.id),
-            })),
-            goodCount: post.good_count,
-            badCount: post.bad_count,
-            myReaction: getReaction('post', post.id),
-          };
-        })
-      );
+      const data: (Post & { replies: Reply[] })[] = await response.json();
+      const commentsWithReplies: Comment[] = data.map((post) => ({
+        ...post,
+        replies: post.replies.map((reply) => ({
+          ...reply,
+          goodCount: reply.good_count,
+          badCount: reply.bad_count,
+          myReaction: getReaction('reply', reply.id),
+        })),
+        goodCount: post.good_count,
+        badCount: post.bad_count,
+        myReaction: getReaction('post', post.id),
+      }));
       setComments(commentsWithReplies);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-    }
-  };
-
-  const fetchRepliesForPost = async (postId: number): Promise<Reply[]> => {
-    try {
-      const response = await fetch(`${API_URL}/api/posts/${postId}/replies`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: Reply[] = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch replies for post ${postId}:`, error);
-      return [];
     }
   };
 
