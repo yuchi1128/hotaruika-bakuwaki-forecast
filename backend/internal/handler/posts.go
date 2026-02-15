@@ -213,18 +213,85 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 
 func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	var posts []model.Post
+	var total int
 	label := r.URL.Query().Get("label")
 	includeReplies := r.URL.Query().Get("include") == "replies"
+	search := r.URL.Query().Get("search")
+	sort := r.URL.Query().Get("sort")
+
+	// ページネーションパラメータ
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+	page := 0
+	limit := 0
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+	usePagination := page > 0 && limit > 0
+	offset := 0
+	if usePagination {
+		offset = (page - 1) * limit
+	}
+
+	// ソート順の決定
+	orderBy := "p.created_at DESC"
+	switch sort {
+	case "oldest":
+		orderBy = "p.created_at ASC"
+	case "good":
+		orderBy = "good_count DESC, p.created_at DESC"
+	case "bad":
+		orderBy = "bad_count DESC, p.created_at DESC"
+	}
 
 	operation := func() error {
-		baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
-		var args []interface{}
-		query := ""
+		// WHERE句の構築
+		var conditions []string
+		var countArgs []interface{}
+		argIndex := 1
+
 		if label != "" {
-			query = baseQuery + " WHERE p.label = $1 ORDER BY p.created_at DESC"
-			args = append(args, label)
-		} else {
-			query = baseQuery + " ORDER BY p.created_at DESC"
+			conditions = append(conditions, fmt.Sprintf("p.label = $%d", argIndex))
+			countArgs = append(countArgs, label)
+			argIndex++
+		}
+		if search != "" {
+			conditions = append(conditions, fmt.Sprintf("(p.username ILIKE $%d OR p.content ILIKE $%d)", argIndex, argIndex))
+			countArgs = append(countArgs, "%"+search+"%")
+			argIndex++
+		}
+
+		whereClause := ""
+		if len(conditions) > 0 {
+			whereClause = " WHERE " + strings.Join(conditions, " AND ")
+		}
+
+		// 総件数を取得（ページネーション時のみ）
+		if usePagination {
+			countQuery := "SELECT COUNT(*) FROM posts p" + whereClause
+			if err := h.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+				h.logger.Error("投稿数のカウントエラー", "error", err)
+				return err
+			}
+		}
+
+		baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
+
+		args := make([]interface{}, len(countArgs))
+		copy(args, countArgs)
+
+		query := baseQuery + whereClause + " ORDER BY " + orderBy
+
+		if usePagination {
+			query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+			args = append(args, limit, offset)
 		}
 
 		rows, err := h.db.Query(query, args...)
@@ -277,6 +344,21 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			if postsWithReplies[i].Replies == nil {
 				postsWithReplies[i].Replies = []model.Reply{}
 			}
+		}
+
+		// ページネーションレスポンス
+		if usePagination {
+			totalPages := (total + limit - 1) / limit
+			response := model.PaginatedPostsResponse{
+				Posts:      postsWithReplies,
+				Total:      total,
+				Page:       page,
+				Limit:      limit,
+				TotalPages: totalPages,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
