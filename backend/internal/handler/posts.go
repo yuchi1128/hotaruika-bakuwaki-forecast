@@ -213,12 +213,13 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 
 func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	var posts []model.Post
+	label := r.URL.Query().Get("label")
+	includeReplies := r.URL.Query().Get("include") == "replies"
 
 	operation := func() error {
 		baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
 		var args []interface{}
 		query := ""
-		label := r.URL.Query().Get("label")
 		if label != "" {
 			query = baseQuery + " WHERE p.label = $1 ORDER BY p.created_at DESC"
 			args = append(args, label)
@@ -253,8 +254,88 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// include=replies の場合、返信も一括取得
+	if includeReplies && len(posts) > 0 {
+		postIDs := make([]int, len(posts))
+		for i, p := range posts {
+			postIDs[i] = p.ID
+		}
+
+		repliesMap, err := h.getAllRepliesForPosts(postIDs)
+		if err != nil {
+			h.logger.Error("返信の一括取得に失敗しました", "error", err)
+			http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
+			return
+		}
+
+		postsWithReplies := make([]model.PostWithReplies, len(posts))
+		for i, post := range posts {
+			postsWithReplies[i] = model.PostWithReplies{
+				Post:    post,
+				Replies: repliesMap[post.ID],
+			}
+			if postsWithReplies[i].Replies == nil {
+				postsWithReplies[i].Replies = []model.Reply{}
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(postsWithReplies)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
+}
+
+// getAllRepliesForPosts は複数の投稿IDに対する返信を一括取得する
+func (h *Handler) getAllRepliesForPosts(postIDs []int) (map[int][]model.Reply, error) {
+	repliesMap := make(map[int][]model.Reply)
+
+	if len(postIDs) == 0 {
+		return repliesMap, nil
+	}
+
+	query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.label, r.created_at,
+		COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count,
+		COALESCE(pr.username, p.username) as parent_username
+		FROM replies r
+		LEFT JOIN posts p ON r.post_id = p.id
+		LEFT JOIN replies pr ON r.parent_reply_id = pr.id
+		LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id
+		LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id
+		WHERE r.post_id = ANY($1)
+		ORDER BY r.created_at ASC`
+
+	rows, err := h.db.Query(query, pq.Array(postIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var reply model.Reply
+		var parentReplyID sql.NullInt64
+		var parentUsername sql.NullString
+		var label sql.NullString
+		if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+			h.logger.Error("返信行のスキャンエラー", "error", err)
+			continue
+		}
+		if parentReplyID.Valid {
+			val := int(parentReplyID.Int64)
+			reply.ParentReplyID = &val
+		}
+		if parentUsername.Valid {
+			reply.ParentUsername = &parentUsername.String
+		}
+		if label.Valid {
+			reply.Label = &label.String
+		}
+		repliesMap[reply.PostID] = append(repliesMap[reply.PostID], reply)
+	}
+
+	return repliesMap, rows.Err()
 }
 
 func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, postID int) {

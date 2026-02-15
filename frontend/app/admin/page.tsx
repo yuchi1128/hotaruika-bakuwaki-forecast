@@ -75,18 +75,10 @@ export default function AdminPage() {
     setIsLoading(true);
     setError('');
     try {
-      const postsRes = await fetch(`${API_URL}/api/posts`, { credentials: 'include' });
+      const postsRes = await fetch(`${API_URL}/api/posts?include=replies`, { credentials: 'include' });
       if (!postsRes.ok) throw new Error('取得に失敗しました');
-      const postsData: Post[] = await postsRes.json();
+      const postsWithReplies: (Post & { replies: Reply[] })[] = await postsRes.json();
 
-      const postsWithReplies = await Promise.all(
-        postsData.map(async (post) => {
-          const repliesRes = await fetch(`${API_URL}/api/posts/${post.id}/replies`, { credentials: 'include' });
-          const replies = repliesRes.ok ? await repliesRes.json() : [];
-          return { ...post, replies };
-        })
-      );
-      
       setPosts(postsWithReplies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');

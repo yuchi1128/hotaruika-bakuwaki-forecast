@@ -1,4 +1,4 @@
-//backend/internal/model/model.go
+// backend/internal/model/model.go
 package model
 
 import (
@@ -51,4 +51,10 @@ type Claims struct {
 // LoginRequestはログインリクエストのボディ
 type LoginRequest struct {
 	Password string `json:"password"`
+}
+
+// PostWithRepliesは返信を含む投稿
+type PostWithReplies struct {
+	Post
+	Replies []Reply `json:"replies"`
 }
