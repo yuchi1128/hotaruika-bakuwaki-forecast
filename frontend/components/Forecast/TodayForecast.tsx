@@ -19,11 +19,11 @@ import {
   Moon,
   ChevronRight,
 } from 'lucide-react';
-import type { PredictionLevel, DayPrediction } from '@/lib/types';
+import type { DayPrediction } from '@/lib/types';
+import { predictionLevels } from '@/lib/utils';
 
 interface TodayForecastProps {
   todayPrediction: DayPrediction;
-  predictionLevels: PredictionLevel[];
   lastUpdated: Date | null;
   handleCardClick: (date: Date) => void;
   formatDate: (date: Date) => string;
@@ -33,9 +33,8 @@ interface TodayForecastProps {
   setIsHelpDialogOpen: (isOpen: boolean) => void;
 }
 
-const TodayForecast = ({ 
+const TodayForecast = ({
   todayPrediction,
-  predictionLevels,
   lastUpdated,
   handleCardClick,
   formatDate,
@@ -44,7 +43,6 @@ const TodayForecast = ({
   isHelpDialogOpen,
   setIsHelpDialogOpen
 }: TodayForecastProps) => {
-
   const todayIcons = todayPrediction ? renderHotaruikaIcons(todayPrediction.level, '/hotaruika_aikon.png', 'w-16 h-16 md:w-20 md:h-20') : [];
 
   return (

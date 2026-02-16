@@ -12,13 +12,13 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { Calendar, Thermometer, Cloudy, Wind, Moon, ChevronRight } from "lucide-react";
-import type { PredictionLevel, DayPrediction } from '@/lib/types';
+import type { DayPrediction } from '@/lib/types';
+import { predictionLevels } from '@/lib/utils';
 
 const CAROUSEL_POSITION_KEY = 'weeklyForecastCarouselPosition';
 
 interface WeeklyForecastProps {
   weekPredictions: DayPrediction[];
-  predictionLevels: PredictionLevel[];
   formatDateForWeek: (date: Date) => string;
   renderHotaruikaIcons: (level: number, src: string, size?: string, animated?: boolean) => JSX.Element[];
   handleCardClick: (date: Date) => void;
@@ -26,7 +26,6 @@ interface WeeklyForecastProps {
 
 const WeeklyForecast = ({
   weekPredictions,
-  predictionLevels,
   formatDateForWeek,
   renderHotaruikaIcons,
   handleCardClick
