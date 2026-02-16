@@ -12,6 +12,7 @@ import {
   formatTime,
   getOffSeasonMessage,
   predictionLevels,
+  getPredictionLevel,
 } from '@/lib/utils';
 import type {
   DayPrediction,
@@ -19,6 +20,7 @@ import type {
   ForecastData,
   PaginatedPostsResponse,
 } from '@/lib/types';
+import { API_URL } from '@/lib/constants';
 
 import LoadingScreen from '@/components/common/LoadingScreen';
 import AppHeader from '@/components/common/AppHeader';
@@ -28,8 +30,6 @@ import WeeklyForecast from '@/components/Forecast/WeeklyForecast';
 import CommentSection from '@/components/Community/CommentSection';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function Home() {
   const router = useRouter();
@@ -74,27 +74,9 @@ export default function Home() {
             console.error('Invalid date received from API:', forecast.date);
             return null;
           }
-          const month = date.getMonth();
-          const isSeason = month >= 1 && month <= 4;
-          let level = -1;
-          if (isSeason) {
-            if (forecast.predicted_amount >= 1.4) {
-              level = 5;
-            } else if (forecast.predicted_amount >= 1.15) {
-              level = 4;
-            } else if (forecast.predicted_amount >= 0.9) {
-              level = 3;
-            } else if (forecast.predicted_amount >= 0.65) {
-              level = 2;
-            } else if (forecast.predicted_amount >= 0.4) {
-              level = 1;
-            } else {
-              level = 0;
-            }
-          }
           return {
             date,
-            level,
+            level: getPredictionLevel(forecast.predicted_amount, date),
             temperature_max: forecast.temperature_max,
             temperature_min: forecast.temperature_min,
             weather: getWeatherFromCode(forecast.weather_code),

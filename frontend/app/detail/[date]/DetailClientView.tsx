@@ -8,8 +8,7 @@ import HourlyForecast from '@/components/Detail/HourlyForecast';
 import ForecastCharts from '@/components/Detail/ForecastCharts';
 import BakuwakiIndexDisplay from '@/components/Detail/BakuwakiIndexDisplay';
 import { getBakuwakiLevelInfo } from '@/lib/utils';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+import { API_URL } from '@/lib/constants';
 
 interface DetailClientViewProps {
   date: string;

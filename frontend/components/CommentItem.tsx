@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import type { Comment, Reply } from '@/lib/types';
+import { API_URL, MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
 
 interface CommentItemProps {
   comment: Comment;
@@ -16,12 +17,6 @@ interface CommentItemProps {
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string) => Promise<void>;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-// 文字数制限
-const MAX_USERNAME_LENGTH = 30;
-const MAX_CONTENT_LENGTH = 1000;
 
 const linkify = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;

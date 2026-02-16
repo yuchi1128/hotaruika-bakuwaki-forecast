@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import type { Comment } from '@/lib/types';
+import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
 
 // Props
 interface CommentSectionProps {
@@ -43,10 +44,6 @@ interface CommentSectionProps {
   createPost: (username: string, content: string, label: string, imageBase64s: string[]) => Promise<void>;
   fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
 }
-
-// 文字数制限
-const MAX_USERNAME_LENGTH = 30;
-const MAX_CONTENT_LENGTH = 1000;
 
 const CommentSection = ({
   comments,

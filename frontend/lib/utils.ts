@@ -96,29 +96,25 @@ export const predictionLevels: PredictionLevel[] = [
   { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
-export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
+// レベル判定ロジック（共通）
+export const getPredictionLevel = (predicted_amount: number, date: Date): number => {
   const month = date.getMonth();
   const isSeason = month >= 1 && month <= 4; // 2月から5月
 
-  let level = 0;
-
-  if (isSeason) {
-    if (predicted_amount >= 1.4) {
-      level = 5;
-    } else if (predicted_amount >= 1.15) {
-      level = 4;
-    } else if (predicted_amount >= 0.9) {
-      level = 3;
-    } else if (predicted_amount >= 0.65) {
-      level = 2;
-    } else if (predicted_amount >= 0.4) {
-      level = 1;
-    } else {
-      level = 0;
-    }
-  } else {
-    level = -1; // シーズン外
+  if (!isSeason) {
+    return -1; // シーズン外
   }
+
+  if (predicted_amount >= 1.4) return 5;
+  if (predicted_amount >= 1.15) return 4;
+  if (predicted_amount >= 0.9) return 3;
+  if (predicted_amount >= 0.65) return 2;
+  if (predicted_amount >= 0.4) return 1;
+  return 0;
+};
+
+export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
+  const level = getPredictionLevel(predicted_amount, date);
 
   const bakuwakiIndex = Math.min(Math.round((predicted_amount / 1.5) * 100), 200); // 200%を上限とする
 
