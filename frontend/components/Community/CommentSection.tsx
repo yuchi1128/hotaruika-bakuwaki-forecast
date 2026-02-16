@@ -29,38 +29,7 @@ import {
   Shield,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
-
-// Interfaces
-interface Post {
-  id: number;
-  username: string;
-  content: string;
-  image_urls: string[];
-  label: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface Reply {
-  id: number;
-  post_id: number;
-  parent_reply_id: number | null;
-  username: string;
-  content: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-  myReaction: 'good' | 'bad' | null;
-  parent_username?: string;
-}
-
-interface Comment extends Post {
-  replies: Reply[];
-  goodCount: number;
-  badCount: number;
-  myReaction: 'good' | 'bad' | null;
-}
+import type { Comment } from '@/lib/types';
 
 // Props
 interface CommentSectionProps {

@@ -12,8 +12,13 @@ import {
   formatTime,
   getOffSeasonMessage,
   predictionLevels,
-  type PredictionLevel,
 } from '@/lib/utils';
+import type {
+  DayPrediction,
+  Comment,
+  ForecastData,
+  PaginatedPostsResponse,
+} from '@/lib/types';
 
 import LoadingScreen from '@/components/common/LoadingScreen';
 import AppHeader from '@/components/common/AppHeader';
@@ -25,68 +30,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Loader2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-// Interfaces
-interface DayPrediction {
-  date: Date;
-  level: number;
-  temperature_max: number;
-  temperature_min: number;
-  weather: string;
-  moonAge: number;
-  wind_direction: string;
-}
-
-interface Post {
-  id: number;
-  username: string;
-  content: string;
-  image_urls: string[];
-  label: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface Reply {
-  id: number;
-  post_id: number;
-  parent_reply_id: number | null;
-  username: string;
-  content: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-  myReaction: 'good' | 'bad' | null;
-  parent_username?: string;
-}
-
-interface Comment extends Post {
-  replies: Reply[];
-  goodCount: number;
-  badCount: number;
-  myReaction: 'good' | 'bad' | null;
-}
-
-interface ForecastData {
-  date: string;
-  predicted_amount: number;
-  moon_age: number;
-  weather_code: number;
-  temperature_max: number;
-  temperature_min: number;
-  precipitation_probability_max: number;
-  dominant_wind_direction: number;
-}
-
-// ページネーションレスポンスの型
-interface PaginatedPostsResponse {
-  posts: (Post & { replies: Reply[] })[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 export default function Home() {
   const router = useRouter();

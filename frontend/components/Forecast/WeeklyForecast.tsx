@@ -12,26 +12,9 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { Calendar, Thermometer, Cloudy, Wind, Moon, ChevronRight } from "lucide-react";
+import type { PredictionLevel, DayPrediction } from '@/lib/types';
 
 const CAROUSEL_POSITION_KEY = 'weeklyForecastCarouselPosition';
-
-interface PredictionLevel {
-  level: number;
-  name: string;
-  description: string;
-  color: string;
-  bgColor: string;
-}
-
-interface DayPrediction {
-  date: Date;
-  level: number;
-  temperature_max: number;
-  temperature_min: number;
-  weather: string;
-  moonAge: number;
-  wind_direction: string;
-}
 
 interface WeeklyForecastProps {
   weekPredictions: DayPrediction[];

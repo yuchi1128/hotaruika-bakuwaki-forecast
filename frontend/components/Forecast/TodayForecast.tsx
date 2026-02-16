@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,24 +19,7 @@ import {
   Moon,
   ChevronRight,
 } from 'lucide-react';
-
-interface PredictionLevel {
-  level: number;
-  name: string;
-  description: string;
-  color: string;
-  bgColor: string;
-}
-
-interface DayPrediction {
-  date: Date;
-  level: number;
-  temperature_max: number;
-  temperature_min: number;
-  weather: string;
-  moonAge: number;
-  wind_direction: string;
-}
+import type { PredictionLevel, DayPrediction } from '@/lib/types';
 
 interface TodayForecastProps {
   todayPrediction: DayPrediction;
