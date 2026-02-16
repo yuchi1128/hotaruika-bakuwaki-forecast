@@ -11,7 +11,6 @@ import {
   formatDate,
   formatTime,
   getOffSeasonMessage,
-  predictionLevels,
   getPredictionLevel,
 } from '@/lib/utils';
 import type {
@@ -295,9 +294,8 @@ export default function Home() {
 
       <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
         {todayPrediction && (
-          <TodayForecast 
+          <TodayForecast
             todayPrediction={todayPrediction}
-            predictionLevels={predictionLevels}
             lastUpdated={lastUpdated}
             handleCardClick={handleCardClick}
             formatDate={formatDate}
@@ -308,9 +306,8 @@ export default function Home() {
           />
         )}
 
-        <WeeklyForecast 
+        <WeeklyForecast
           weekPredictions={weekPredictions}
-          predictionLevels={predictionLevels}
           formatDateForWeek={formatDateForWeek}
           renderHotaruikaIcons={renderHotaruikaIcons}
           handleCardClick={handleCardClick}

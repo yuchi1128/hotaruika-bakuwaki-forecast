@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { PredictionLevel } from './types';
 
 // このファイルにはサーバーでもクライアントでも安全に使える関数だけを残します。
 export function cn(...inputs: ClassValue[]) {
@@ -84,8 +85,6 @@ export const getOffSeasonMessage = (date: Date) => {
   }
   return '現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。';
 };
-
-import type { PredictionLevel } from './types';
 
 export const predictionLevels: PredictionLevel[] = [
   { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
