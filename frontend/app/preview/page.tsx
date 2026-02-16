@@ -11,6 +11,8 @@ import {
   formatDate,
   formatTime,
   getOffSeasonMessage,
+  predictionLevels,
+  type PredictionLevel,
 } from '@/lib/utils';
 
 import LoadingScreen from '@/components/common/LoadingScreen';
@@ -25,14 +27,6 @@ import { Loader2 } from 'lucide-react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Interfaces
-interface PredictionLevel {
-  level: number;
-  name: string;
-  description: string;
-  color: string;
-  bgColor: string;
-}
-
 interface DayPrediction {
   date: Date;
   level: number;
@@ -84,15 +78,6 @@ interface ForecastData {
   precipitation_probability_max: number;
   dominant_wind_direction: number;
 }
-
-const predictionLevels: PredictionLevel[] = [
-  { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
-  { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
-  { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
-  { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-500/[.14] border border-green-400/20 backdrop-blur-sm' },
-  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます！！', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
-  { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
-];
 
 // ページネーションレスポンスの型
 interface PaginatedPostsResponse {

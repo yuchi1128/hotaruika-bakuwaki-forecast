@@ -85,7 +85,15 @@ export const getOffSeasonMessage = (date: Date) => {
   return '現在はホタルイカの身投げの時期ではありません。来年の2月から予測を再開します。';
 };
 
-export const predictionLevels = [
+export interface PredictionLevel {
+  level: number;
+  name: string;
+  description: string;
+  color: string;
+  bgColor: string;
+}
+
+export const predictionLevels: PredictionLevel[] = [
   { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
   { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
   { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
