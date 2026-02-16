@@ -11,7 +11,16 @@ import {
   formatDate,
   formatTime,
   getOffSeasonMessage,
+  predictionLevels,
+  getPredictionLevel,
 } from '@/lib/utils';
+import type {
+  DayPrediction,
+  Comment,
+  ForecastData,
+  PaginatedPostsResponse,
+} from '@/lib/types';
+import { API_URL } from '@/lib/constants';
 
 import LoadingScreen from '@/components/common/LoadingScreen';
 import AppHeader from '@/components/common/AppHeader';
@@ -21,87 +30,6 @@ import WeeklyForecast from '@/components/Forecast/WeeklyForecast';
 import CommentSection from '@/components/Community/CommentSection';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-// Interfaces
-interface PredictionLevel {
-  level: number;
-  name: string;
-  description: string;
-  color: string;
-  bgColor: string;
-}
-
-interface DayPrediction {
-  date: Date;
-  level: number;
-  temperature_max: number;
-  temperature_min: number;
-  weather: string;
-  moonAge: number;
-  wind_direction: string;
-}
-
-interface Post {
-  id: number;
-  username: string;
-  content: string;
-  image_urls: string[];
-  label: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface Reply {
-  id: number;
-  post_id: number;
-  parent_reply_id: number | null;
-  username: string;
-  content: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-  myReaction: 'good' | 'bad' | null;
-  parent_username?: string;
-}
-
-interface Comment extends Post {
-  replies: Reply[];
-  goodCount: number;
-  badCount: number;
-  myReaction: 'good' | 'bad' | null;
-}
-
-interface ForecastData {
-  date: string;
-  predicted_amount: number;
-  moon_age: number;
-  weather_code: number;
-  temperature_max: number;
-  temperature_min: number;
-  precipitation_probability_max: number;
-  dominant_wind_direction: number;
-}
-
-const predictionLevels: PredictionLevel[] = [
-  { level: 0, name: '湧きなし', description: '身投げは期待できません', color: 'text-gray-300', bgColor: 'bg-gray-500/20 border border-gray-400/20 backdrop-blur-sm' },
-  { level: 1, name: 'プチ湧き', description: '少し期待できるかも', color: 'text-blue-300', bgColor: 'bg-blue-500/[.14] border border-blue-400/20 backdrop-blur-sm' },
-  { level: 2, name: 'チョイ湧き', description: 'そこそこ期待できます', color: 'text-cyan-300', bgColor: 'bg-cyan-500/[.14] border border-cyan-400/20 backdrop-blur-sm' },
-  { level: 3, name: '湧き', description: '良い身投げが期待できます', color: 'text-green-300', bgColor: 'bg-green-500/[.14] border border-green-400/20 backdrop-blur-sm' },
-  { level: 4, name: '大湧き', description: '素晴らしい身投げが期待できます！！', color: 'text-yellow-300', bgColor: 'bg-yellow-500/[.14] border border-yellow-400/20 backdrop-blur-sm' },
-  { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
-];
-
-// ページネーションレスポンスの型
-interface PaginatedPostsResponse {
-  posts: (Post & { replies: Reply[] })[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 export default function Home() {
   const router = useRouter();
@@ -146,27 +74,9 @@ export default function Home() {
             console.error('Invalid date received from API:', forecast.date);
             return null;
           }
-          const month = date.getMonth();
-          const isSeason = month >= 1 && month <= 4;
-          let level = -1;
-          if (isSeason) {
-            if (forecast.predicted_amount >= 1.4) {
-              level = 5;
-            } else if (forecast.predicted_amount >= 1.15) {
-              level = 4;
-            } else if (forecast.predicted_amount >= 0.9) {
-              level = 3;
-            } else if (forecast.predicted_amount >= 0.65) {
-              level = 2;
-            } else if (forecast.predicted_amount >= 0.4) {
-              level = 1;
-            } else {
-              level = 0;
-            }
-          }
           return {
             date,
-            level,
+            level: getPredictionLevel(forecast.predicted_amount, date),
             temperature_max: forecast.temperature_max,
             temperature_min: forecast.temperature_min,
             weather: getWeatherFromCode(forecast.weather_code),

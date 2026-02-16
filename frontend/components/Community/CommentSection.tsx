@@ -29,38 +29,8 @@ import {
   Shield,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
-
-// Interfaces
-interface Post {
-  id: number;
-  username: string;
-  content: string;
-  image_urls: string[];
-  label: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface Reply {
-  id: number;
-  post_id: number;
-  parent_reply_id: number | null;
-  username: string;
-  content: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-  myReaction: 'good' | 'bad' | null;
-  parent_username?: string;
-}
-
-interface Comment extends Post {
-  replies: Reply[];
-  goodCount: number;
-  badCount: number;
-  myReaction: 'good' | 'bad' | null;
-}
+import type { Comment } from '@/lib/types';
+import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
 
 // Props
 interface CommentSectionProps {
@@ -74,10 +44,6 @@ interface CommentSectionProps {
   createPost: (username: string, content: string, label: string, imageBase64s: string[]) => Promise<void>;
   fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
 }
-
-// 文字数制限
-const MAX_USERNAME_LENGTH = 30;
-const MAX_CONTENT_LENGTH = 1000;
 
 const CommentSection = ({
   comments,
