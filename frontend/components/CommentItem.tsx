@@ -107,10 +107,10 @@ export default function CommentItem({
                 </Badge>
               )}
             </div>
-            <p className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
-              {reply.parent_username && <span className="text-blue-300 mr-1">@{reply.parent_username}</span>}
-              {linkify(reply.content)}
-            </p>
+            <div className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
+              {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
+              <div>{linkify(reply.content)}</div>
+            </div>
             <Button
               variant="ghost"
               size="sm"
