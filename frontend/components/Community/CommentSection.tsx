@@ -40,7 +40,7 @@ interface CommentSectionProps {
   currentPage: number;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
   formatTime: (date: Date) => string;
-  createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string) => Promise<void>;
+  createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
   createPost: (username: string, content: string, label: string, imageBase64s: string[]) => Promise<void>;
   fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
 }
