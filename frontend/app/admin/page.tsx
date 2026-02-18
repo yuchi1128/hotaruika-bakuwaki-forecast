@@ -25,6 +25,7 @@ interface Reply {
   post_id: number;
   username: string;
   content: string;
+  image_urls?: string[];
   label?: string;
   created_at: string;
   parent_username?: string;
@@ -202,16 +203,20 @@ export default function AdminPage() {
     }
   };
   
-  const handleAdminReply = async (postId: number, content: string) => {
+  const handleAdminReply = async (postId: number, content: string, imageBase64s?: string[]) => {
     try {
+      const body: Record<string, unknown> = {
+        username: '管理者',
+        content: content,
+        label: '管理者',
+      };
+      if (imageBase64s && imageBase64s.length > 0) {
+        body.image_urls = imageBase64s;
+      }
       const res = await fetch(`${API_URL}/api/posts/${postId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: '管理者',
-          content: content,
-          label: '管理者',
-        }),
+        body: JSON.stringify(body),
         credentials: 'include',
       });
       if (!res.ok) {
@@ -224,16 +229,20 @@ export default function AdminPage() {
     }
   };
 
-  const handleAdminReplyToReply = async (replyId: number, content: string) => {
+  const handleAdminReplyToReply = async (replyId: number, content: string, imageBase64s?: string[]) => {
     try {
+      const body: Record<string, unknown> = {
+        username: '管理者',
+        content: content,
+        label: '管理者',
+      };
+      if (imageBase64s && imageBase64s.length > 0) {
+        body.image_urls = imageBase64s;
+      }
       const res = await fetch(`${API_URL}/api/replies/${replyId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: '管理者',
-          content: content,
-          label: '管理者',
-        }),
+        body: JSON.stringify(body),
         credentials: 'include',
       });
       if (!res.ok) {
@@ -399,22 +408,49 @@ export default function AdminPage() {
   );
 }
 
-function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string) => Promise<void>, onReplyToReply: (replyId: number, content: string) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void> }) {
+function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string, imageBase64s?: string[]) => Promise<void>, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void> }) {
   const isAdmin = post.label === '管理者';
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [replyImages, setReplyImages] = useState<File[]>([]);
   const [isChangingLabel, setIsChangingLabel] = useState(false);
   const [isEditingLabel, setIsEditingLabel] = useState(false);
   const [showPencil, setShowPencil] = useState(true);
   const [selectedLabel, setSelectedLabel] = useState(post.label);
 
+  const handleReplyImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      if (replyImages.length + files.length > 4) {
+        alert('写真は最大4枚までです。');
+        const remaining = 4 - replyImages.length;
+        if (remaining > 0) setReplyImages(prev => [...prev, ...files.slice(0, remaining)]);
+      } else {
+        setReplyImages(prev => [...prev, ...files]);
+      }
+      event.target.value = '';
+    }
+  };
+
   const handleSubmitReply = async () => {
     if (!replyContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onReply(post.id, replyContent);
+      let imageBase64s: string[] = [];
+      if (replyImages.length > 0) {
+        imageBase64s = await Promise.all(
+          replyImages.map(file => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+          }))
+        );
+      }
+      await onReply(post.id, replyContent, imageBase64s.length > 0 ? imageBase64s : undefined);
       setReplyContent('');
+      setReplyImages([]);
       setIsReplying(false);
     } finally {
       setIsSubmitting(false);
@@ -542,12 +578,37 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                 rows={3}
                 className="w-full bg-white border-gray-300 text-gray-900"
               />
+              <label htmlFor={`admin-reply-post-${post.id}`} className="cursor-pointer flex items-center text-sm text-gray-500 hover:text-gray-700">
+                <ImageIcon className="w-4 h-4 mr-1" />
+                <span>画像を選択 ({replyImages.length}/4)</span>
+              </label>
+              <input
+                id={`admin-reply-post-${post.id}`}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleReplyImageChange}
+                className="hidden"
+                disabled={replyImages.length >= 4}
+              />
+              {replyImages.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {replyImages.map((image, index) => (
+                    <div key={index} className="relative">
+                      <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
+                      <button onClick={() => setReplyImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button onClick={handleSubmitReply} size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                   返信する
                 </Button>
-                <Button onClick={() => { setIsReplying(false); setReplyContent(''); }} variant="ghost" size="sm">
+                <Button onClick={() => { setIsReplying(false); setReplyContent(''); setReplyImages([]); }} variant="ghost" size="sm">
                   キャンセル
                 </Button>
               </div>
@@ -570,17 +631,44 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
   );
 }
 
-function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number) => void, onReplyToReply: (replyId: number, content: string) => Promise<void> }) {
+function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number) => void, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void> }) {
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [replyImages, setReplyImages] = useState<File[]>([]);
+
+  const handleReplyImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      if (replyImages.length + files.length > 4) {
+        alert('写真は最大4枚までです。');
+        const remaining = 4 - replyImages.length;
+        if (remaining > 0) setReplyImages(prev => [...prev, ...files.slice(0, remaining)]);
+      } else {
+        setReplyImages(prev => [...prev, ...files]);
+      }
+      event.target.value = '';
+    }
+  };
 
   const handleSubmitReply = async () => {
     if (!replyContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onReplyToReply(reply.id, replyContent);
+      let imageBase64s: string[] = [];
+      if (replyImages.length > 0) {
+        imageBase64s = await Promise.all(
+          replyImages.map(file => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+          }))
+        );
+      }
+      await onReplyToReply(reply.id, replyContent, imageBase64s.length > 0 ? imageBase64s : undefined);
       setReplyContent('');
+      setReplyImages([]);
       setIsReplying(false);
     } finally {
       setIsSubmitting(false);
@@ -601,6 +689,11 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
           </div>
           <p className="text-xs text-gray-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
           <p className="whitespace-pre-wrap text-sm text-gray-700">{reply.content}</p>
+          {reply.image_urls && reply.image_urls.length > 0 && (
+            <div className="mt-2">
+              <TwitterLikeMediaGrid images={reply.image_urls.map(url => `${url}`)} />
+            </div>
+          )}
 
           <div className="mt-2">
             {!isReplying ? (
@@ -616,12 +709,37 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
                   rows={2}
                   className="w-full text-sm bg-white border-gray-300 text-gray-900"
                 />
+                <label htmlFor={`admin-reply-reply-${reply.id}`} className="cursor-pointer flex items-center text-sm text-gray-500 hover:text-gray-700">
+                  <ImageIcon className="w-4 h-4 mr-1" />
+                  <span>画像を選択 ({replyImages.length}/4)</span>
+                </label>
+                <input
+                  id={`admin-reply-reply-${reply.id}`}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleReplyImageChange}
+                  className="hidden"
+                  disabled={replyImages.length >= 4}
+                />
+                {replyImages.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {replyImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
+                        <button onClick={() => setReplyImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button onClick={handleSubmitReply} size="sm" className="h-7 text-xs bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
                     {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                     返信
                   </Button>
-                  <Button onClick={() => { setIsReplying(false); setReplyContent(''); }} variant="ghost" size="sm" className="h-7 text-xs">
+                  <Button onClick={() => { setIsReplying(false); setReplyContent(''); setReplyImages([]); }} variant="ghost" size="sm" className="h-7 text-xs">
                     キャンセル
                   </Button>
                 </div>
