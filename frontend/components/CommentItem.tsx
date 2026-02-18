@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X } from 'lucide-react';
+import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import type { Comment, Reply } from '@/lib/types';
 import { API_URL, MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
@@ -15,7 +15,7 @@ interface CommentItemProps {
   comment: Comment;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
   formatTime: (date: Date) => string;
-  createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string) => Promise<void>;
+  createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
 }
 
 const linkify = (text: string) => {
@@ -50,10 +50,13 @@ export default function CommentItem({
   const [authorName, setAuthorName] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [modalImages, setModalImages] = useState<string[]>([]);
 
-  const handleImageClick = (index: number) => {
+  const handleImageClick = (index: number, images: string[]) => {
+    setModalImages(images);
     setCurrentImageIndex(index);
     setShowImageModal(true);
     document.body.style.overflow = 'hidden';
@@ -64,19 +67,54 @@ export default function CommentItem({
     document.body.style.overflow = '';
   };
 
+  const handleReplyImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      if (selectedImages.length + files.length > 4) {
+        alert('写真は最大4枚までです。');
+        const remainingSlots = 4 - selectedImages.length;
+        if (remainingSlots > 0) {
+          setSelectedImages(prev => [...prev, ...files.slice(0, remainingSlots)]);
+        }
+      } else {
+        setSelectedImages(prev => [...prev, ...files]);
+      }
+      event.target.value = '';
+    }
+  };
+
+  const handleRemoveReplyImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmitReply = async (targetId: number, type: 'post' | 'reply') => {
     if (!replyContent.trim() || !authorName.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      await createReply(targetId, type, authorName, replyContent);
-      
+      let imageBase64s: string[] = [];
+      if (selectedImages.length > 0) {
+        imageBase64s = await Promise.all(
+          selectedImages.map(file => {
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = error => reject(error);
+            });
+          })
+        );
+      }
+
+      await createReply(targetId, type, authorName, replyContent, imageBase64s.length > 0 ? imageBase64s : undefined);
+
       if (type === 'post') {
         setShowReplies(true);
       }
 
       setReplyContent('');
       setAuthorName('');
+      setSelectedImages([]);
       setIsReplying(false);
       setReplyingTo(null);
     } catch (error) {
@@ -111,6 +149,17 @@ export default function CommentItem({
               {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
               <div>{linkify(reply.content)}</div>
             </div>
+            {reply.image_urls && reply.image_urls.length > 0 && (
+              <div className="mb-2">
+                <TwitterLikeMediaGrid
+                  images={reply.image_urls}
+                  baseUrl={API_URL}
+                  onOpen={(i) => handleImageClick(i, reply.image_urls!)}
+                  className="md:max-w-[400px] lg:max-w-[440px]"
+                  maxVH={30}
+                />
+              </div>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -171,6 +220,31 @@ export default function CommentItem({
                     ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{replyContent.length}文字）
                   </div>
                 )}
+                <label htmlFor={`reply-image-${reply.id}`} className="cursor-pointer flex items-center text-sm text-gray-400 hover:text-gray-200 mt-2 mb-3">
+                  <ImageIcon className="w-4 h-4 mr-1" />
+                  <span>画像を選択 ({selectedImages.length}/4)</span>
+                </label>
+                <input
+                  id={`reply-image-${reply.id}`}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleReplyImageChange}
+                  className="hidden"
+                  disabled={selectedImages.length >= 4}
+                />
+                {selectedImages.length > 0 && (
+                  <div className="mt-1 mb-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {selectedImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
+                        <button onClick={() => handleRemoveReplyImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2">
                   <Button
                     onClick={() => handleSubmitReply(reply.id, 'reply')}
@@ -194,7 +268,7 @@ export default function CommentItem({
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => setReplyingTo(null)}
+                    onClick={() => { setReplyingTo(null); setSelectedImages([]); }}
                     className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300 active:bg-slate-600/50 rounded-md"
                   >
                     キャンセル
@@ -242,61 +316,59 @@ export default function CommentItem({
             <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{linkify(comment.content)}</p>
 
             {comment.image_urls && comment.image_urls.length > 0 && (
-              <>
-                <TwitterLikeMediaGrid
-                  images={comment.image_urls}
-                  baseUrl={API_URL}
-                  onOpen={(i) => handleImageClick(i)}
-                  className="md:max-w-[460px] lg:max-w-[500px]"
-                  maxVH={35}
-                />
+              <TwitterLikeMediaGrid
+                images={comment.image_urls}
+                baseUrl={API_URL}
+                onOpen={(i) => handleImageClick(i, comment.image_urls)}
+                className="md:max-w-[460px] lg:max-w-[500px]"
+                maxVH={35}
+              />
+            )}
 
-                {showImageModal && (
-                  <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+            {showImageModal && modalImages.length > 0 && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+                onClick={handleCloseImageModal}
+              >
+                <div
+                  className="relative bg-transparent rounded-lg flex items-center justify-center"
+                  style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 z-10"
+                    aria-label="閉じる"
                     onClick={handleCloseImageModal}
                   >
-                    <div
-                      className="relative bg-transparent rounded-lg flex items-center justify-center"
-                      style={{ maxWidth: '90vw', maxHeight: '90vh' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  {modalImages.length > 1 && (
+                    <>
                       <button
-                        className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 z-10"
-                        aria-label="閉じる"
-                        onClick={handleCloseImageModal}
+                        onClick={() =>
+                          setCurrentImageIndex((prev) => (prev - 1 + modalImages.length) % modalImages.length)
+                        }
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
                       >
-                        <X className="w-5 h-5" />
+                        &#10094;
                       </button>
+                      <button
+                        onClick={() => setCurrentImageIndex((prev) => (prev + 1) % modalImages.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
+                      >
+                        &#10095;
+                      </button>
+                    </>
+                  )}
 
-                      {comment.image_urls.length > 1 && (
-                        <>
-                          <button
-                            onClick={() =>
-                              setCurrentImageIndex((prev) => (prev - 1 + comment.image_urls.length) % comment.image_urls.length)
-                            }
-                            className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
-                          >
-                            &#10094;
-                          </button>
-                          <button
-                            onClick={() => setCurrentImageIndex((prev) => (prev + 1) % comment.image_urls.length)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80"
-                          >
-                            &#10095;
-                          </button>
-                        </>
-                      )}
-
-                      <img
-                        src={`${comment.image_urls[currentImageIndex]}`}
-                        alt="拡大画像"
-                        className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
-                      />
-                    </div>
-                  </div>
-                )}
-              </>
+                  <img
+                    src={`${modalImages[currentImageIndex]}`}
+                    alt="拡大画像"
+                    className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
+                  />
+                </div>
+              </div>
             )}
 
             <div>
@@ -374,6 +446,31 @@ export default function CommentItem({
                     ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{replyContent.length}文字）
                   </div>
                 )}
+                <label htmlFor="reply-image-post" className="cursor-pointer flex items-center text-sm text-gray-400 hover:text-gray-200 mt-2 mb-3">
+                  <ImageIcon className="w-4 h-4 mr-1" />
+                  <span>画像を選択 ({selectedImages.length}/4)</span>
+                </label>
+                <input
+                  id="reply-image-post"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleReplyImageChange}
+                  className="hidden"
+                  disabled={selectedImages.length >= 4}
+                />
+                {selectedImages.length > 0 && (
+                  <div className="mt-1 mb-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {selectedImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
+                        <button onClick={() => handleRemoveReplyImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2">
                   <Button
                     onClick={() => handleSubmitReply(comment.id, 'post')}
@@ -397,7 +494,7 @@ export default function CommentItem({
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => setIsReplying(false)}
+                    onClick={() => { setIsReplying(false); setSelectedImages([]); }}
                     className="h-7 px-3 text-xs text-gray-400 hover-text-gray-300 active:bg-slate-600/50 rounded-md"
                   >
                     キャンセル

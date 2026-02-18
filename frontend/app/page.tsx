@@ -151,15 +151,19 @@ export default function Home() {
     }
   };
 
-  const createReply = async (targetId: number, type: 'post' | 'reply', username: string, content: string) => {
+  const createReply = async (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => {
     try {
       const endpoint = type === 'post' ? `/api/posts/${targetId}/replies` : `/api/replies/${targetId}/replies`;
+      const body: Record<string, unknown> = { username, content };
+      if (imageBase64s && imageBase64s.length > 0) {
+        body.image_urls = imageBase64s;
+      }
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, content }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
