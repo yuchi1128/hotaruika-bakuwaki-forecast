@@ -133,19 +133,19 @@ export default function CommentItem({
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-xs sm:text-sm max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+              <span className="font-semibold text-blue-200 text-sm sm:text-[15px] max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
                 {reply.username}
               </span>
               <span className="text-[13px] sm:text-[13px] text-gray-400">
                 {formatTime(new Date(reply.created_at))}
               </span>
               {reply.label && (
-                <Badge variant="secondary" className="bg-blue-700/50 text-blue-200 text-[10px]">
+                <Badge variant="secondary" className="bg-blue-700/50 text-blue-200 text-[12px]">
                   {reply.label}
                 </Badge>
               )}
             </div>
-            <div className="text-gray-200 text-xs mb-2 whitespace-pre-wrap leading-relaxed">
+            <div className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
               {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
               <div>{linkify(reply.content)}</div>
             </div>
@@ -301,19 +301,19 @@ export default function CommentItem({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-purple-200 text-sm sm:text-base max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+                <span className="font-semibold text-purple-200 text-sm sm:text-[15px] max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
                   {comment.username}
                 </span>
-                <span className="text-[13px] sm:text-[13px] text-gray-400">
+                <span className="text-[14px] sm:text-[14px] text-gray-400">
                   {formatTime(new Date(comment.created_at))}
                 </span>
               </div>
-              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[11px]">
+              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px]">
                 {comment.label}
               </Badge>
             </div>
 
-            <p className="text-gray-200 mb-3 whitespace-pre-wrap text-xs leading-relaxed">{linkify(comment.content)}</p>
+            <p className="text-gray-200 mb-3 whitespace-pre-wrap text-[13px] leading-relaxed">{linkify(comment.content)}</p>
 
             {comment.image_urls && comment.image_urls.length > 0 && (
               <TwitterLikeMediaGrid
@@ -408,7 +408,7 @@ export default function CommentItem({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowReplies(!showReplies)}
-                  className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
+                  className="text-[13px] text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
                 >
                   {showReplies ? '返信を隠す' : `${comment.replies.length}件の返信を表示`}
                 </Button>
