@@ -49,6 +49,7 @@ export interface Reply {
   parent_reply_id: number | null;
   username: string;
   content: string;
+  image_urls?: string[];
   label?: string;
   created_at: string;
   good_count: number;

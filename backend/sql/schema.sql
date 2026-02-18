@@ -13,6 +13,7 @@ CREATE TABLE replies (
     parent_reply_id INTEGER REFERENCES replies(id) ON DELETE CASCADE,
     username TEXT NOT NULL,
     content TEXT NOT NULL,
+    image_urls TEXT[],
     label VARCHAR(20) DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
