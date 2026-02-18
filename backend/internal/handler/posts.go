@@ -168,34 +168,10 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 		}
 	}
 
-	var imageURLs []string
-	if len(post.ImageURLs) > 0 {
-		for _, dataURL := range post.ImageURLs {
-			parts := strings.SplitN(dataURL, ";base64,", 2)
-			if len(parts) != 2 {
-				http.Error(w, "画像データが不正です", http.StatusBadRequest)
-				return
-			}
-			mimeType := strings.TrimPrefix(parts[0], "data:")
-			extension := "jpeg"
-			if strings.Contains(mimeType, "png") {
-				extension = "png"
-			}
-			decoded, err := base64.StdEncoding.DecodeString(parts[1])
-			if err != nil {
-				http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
-
-			if err := storage.UploadFileToSupabase(h.logger, "post-images", filename, decoded, mimeType); err != nil {
-				h.logger.Error("画像のアップロードに失敗しました", "error", err)
-				http.Error(w, "画像のアップロードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			publicURL := fmt.Sprintf("%s/storage/v1/object/public/post-images/%s", os.Getenv("SUPABASE_URL"), filename)
-			imageURLs = append(imageURLs, publicURL)
-		}
+	imageURLs, err := h.uploadBase64Images(post.ImageURLs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	query := `INSERT INTO posts (username, content, image_urls, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
@@ -511,37 +487,14 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	var imageURLs []string
-	if len(reply.ImageURLs) > 0 {
-		for _, dataURL := range reply.ImageURLs {
-			parts := strings.SplitN(dataURL, ";base64,", 2)
-			if len(parts) != 2 {
-				http.Error(w, "画像データが不正です", http.StatusBadRequest)
-				return
-			}
-			mimeType := strings.TrimPrefix(parts[0], "data:")
-			extension := "jpeg"
-			if strings.Contains(mimeType, "png") {
-				extension = "png"
-			}
-			decoded, err := base64.StdEncoding.DecodeString(parts[1])
-			if err != nil {
-				http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
-			if err := storage.UploadFileToSupabase(h.logger, "post-images", filename, decoded, mimeType); err != nil {
-				h.logger.Error("画像のアップロードに失敗しました", "error", err)
-				http.Error(w, "画像のアップロードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			publicURL := fmt.Sprintf("%s/storage/v1/object/public/post-images/%s", os.Getenv("SUPABASE_URL"), filename)
-			imageURLs = append(imageURLs, publicURL)
-		}
+	imageURLs, err := h.uploadBase64Images(reply.ImageURLs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	query := `INSERT INTO replies (post_id, username, content, label, image_urls) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
-	err := h.db.QueryRow(query, postID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs)).Scan(&reply.ID, &reply.CreatedAt)
+	err = h.db.QueryRow(query, postID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs)).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		h.logger.Error("投稿への返信エラー", "error", err)
 		http.Error(w, "返信できませんでした", http.StatusInternalServerError)
@@ -586,35 +539,7 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		return
 	}
 
-	var imageURLs []string
-	if len(reply.ImageURLs) > 0 {
-		for _, dataURL := range reply.ImageURLs {
-			parts := strings.SplitN(dataURL, ";base64,", 2)
-			if len(parts) != 2 {
-				http.Error(w, "画像データが不正です", http.StatusBadRequest)
-				return
-			}
-			mimeType := strings.TrimPrefix(parts[0], "data:")
-			extension := "jpeg"
-			if strings.Contains(mimeType, "png") {
-				extension = "png"
-			}
-			decoded, err := base64.StdEncoding.DecodeString(parts[1])
-			if err != nil {
-				http.Error(w, "画像のデコードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
-			if err := storage.UploadFileToSupabase(h.logger, "post-images", filename, decoded, mimeType); err != nil {
-				h.logger.Error("画像のアップロードに失敗しました", "error", err)
-				http.Error(w, "画像のアップロードに失敗しました", http.StatusInternalServerError)
-				return
-			}
-			publicURL := fmt.Sprintf("%s/storage/v1/object/public/post-images/%s", os.Getenv("SUPABASE_URL"), filename)
-			imageURLs = append(imageURLs, publicURL)
-		}
-	}
-
+	// 親返信の存在確認を画像アップロードより先に行う
 	var postID int
 	err := h.db.QueryRow("SELECT post_id FROM replies WHERE id = $1", parentReplyID).Scan(&postID)
 	if err != nil {
@@ -622,6 +547,13 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		http.Error(w, "返信できませんでした", http.StatusNotFound)
 		return
 	}
+
+	imageURLs, imgErr := h.uploadBase64Images(reply.ImageURLs)
+	if imgErr != nil {
+		http.Error(w, imgErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	query := `INSERT INTO replies (post_id, parent_reply_id, username, content, label, image_urls) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`
 	err = h.db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs)).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
@@ -669,6 +601,34 @@ func (h *Handler) createReplyReaction(w http.ResponseWriter, r *http.Request, re
 	json.NewEncoder(w).Encode(reaction)
 }
 
+// uploadBase64Images はBase64エンコードされた画像データをSupabase Storageにアップロードし、公開URLの配列を返す
+func (h *Handler) uploadBase64Images(dataURLs []string) ([]string, error) {
+	var imageURLs []string
+	for _, dataURL := range dataURLs {
+		parts := strings.SplitN(dataURL, ";base64,", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("画像データが不正です")
+		}
+		mimeType := strings.TrimPrefix(parts[0], "data:")
+		extension := "jpeg"
+		if strings.Contains(mimeType, "png") {
+			extension = "png"
+		}
+		decoded, err := base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("画像のデコードに失敗しました")
+		}
+		filename := fmt.Sprintf("%d.%s", time.Now().UnixNano(), extension)
+		if err := storage.UploadFileToSupabase(h.logger, "post-images", filename, decoded, mimeType); err != nil {
+			h.logger.Error("画像のアップロードに失敗しました", "error", err)
+			return nil, fmt.Errorf("画像のアップロードに失敗しました")
+		}
+		publicURL := fmt.Sprintf("%s/storage/v1/object/public/post-images/%s", os.Getenv("SUPABASE_URL"), filename)
+		imageURLs = append(imageURLs, publicURL)
+	}
+	return imageURLs, nil
+}
+
 func (h *Handler) deleteItem(w http.ResponseWriter, _ *http.Request, itemType string, itemID int) {
 	var tableName, imageColumn string
 	if itemType == "posts" {
@@ -688,6 +648,8 @@ func (h *Handler) deleteItem(w http.ResponseWriter, _ *http.Request, itemType st
 	}
 	defer tx.Rollback()
 
+	// 対象アイテム自体の画像URLを収集
+	var allFileNames []string
 	if imageColumn != "" {
 		var imageURLs pq.StringArray
 		query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", imageColumn, tableName)
@@ -696,14 +658,31 @@ func (h *Handler) deleteItem(w http.ResponseWriter, _ *http.Request, itemType st
 			http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
 			return
 		}
-		if len(imageURLs) > 0 {
-			fileNames := make([]string, len(imageURLs))
-			for i, url := range imageURLs {
-				fileNames[i] = filepath.Base(url)
+		for _, url := range imageURLs {
+			allFileNames = append(allFileNames, filepath.Base(url))
+		}
+	}
+
+	// カスケード削除される子返信の画像URLも収集
+	if itemType == "posts" {
+		rows, err := tx.Query("SELECT image_urls FROM replies WHERE post_id = $1 AND image_urls IS NOT NULL", itemID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var urls pq.StringArray
+				if err := rows.Scan(&urls); err == nil {
+					for _, url := range urls {
+						allFileNames = append(allFileNames, filepath.Base(url))
+					}
+				}
 			}
-			if err := storage.DeleteFileFromSupabase(h.logger, "post-images", fileNames); err != nil {
-				h.logger.Warn("Supabaseからの画像ファイル削除に失敗しました", "filenames", fileNames, "error", err)
-			}
+		}
+	}
+
+	// Supabase Storageから画像を削除
+	if len(allFileNames) > 0 {
+		if err := storage.DeleteFileFromSupabase(h.logger, "post-images", allFileNames); err != nil {
+			h.logger.Warn("Supabaseからの画像ファイル削除に失敗しました", "filenames", allFileNames, "error", err)
 		}
 	}
 

@@ -446,12 +446,12 @@ export default function CommentItem({
                     ※{MAX_CONTENT_LENGTH}文字以内で入力してください（現在{replyContent.length}文字）
                   </div>
                 )}
-                <label htmlFor="reply-image-post" className="cursor-pointer flex items-center text-sm text-gray-400 hover:text-gray-200 mt-2 mb-3">
+                <label htmlFor={`reply-image-post-${comment.id}`} className="cursor-pointer flex items-center text-sm text-gray-400 hover:text-gray-200 mt-2 mb-3">
                   <ImageIcon className="w-4 h-4 mr-1" />
                   <span>画像を選択 ({selectedImages.length}/4)</span>
                 </label>
                 <input
-                  id="reply-image-post"
+                  id={`reply-image-post-${comment.id}`}
                   type="file"
                   accept="image/*"
                   multiple
