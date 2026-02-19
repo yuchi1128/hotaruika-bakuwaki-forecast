@@ -104,6 +104,13 @@ export const getPredictionLevel = (predicted_amount: number, date: Date): number
     return -1; // シーズン外
   }
 
+  // if (predicted_amount >= 1.25) return 5;
+  // if (predicted_amount >= 1.0) return 4;
+  // if (predicted_amount >= 0.75) return 3;
+  // if (predicted_amount >= 0.5) return 2;
+  // if (predicted_amount >= 0.25) return 1;
+  // return 0;
+
   if (predicted_amount >= 1.4) return 5;
   if (predicted_amount >= 1.15) return 4;
   if (predicted_amount >= 0.9) return 3;
