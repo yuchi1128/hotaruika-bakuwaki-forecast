@@ -167,7 +167,7 @@ export default function CommentItem({
               className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
               disabled={reply.myReaction !== null}
             >
-              <ThumbsUp className={`w-3 h-3 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
+              <ThumbsUp className={`w-4 h-4 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
               {reply.good_count}
             </Button>
             <Button
@@ -177,7 +177,7 @@ export default function CommentItem({
               className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
               disabled={reply.myReaction !== null}
             >
-              <ThumbsDown className={`w-3 h-3 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+              <ThumbsDown className={`w-4 h-4 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
               {reply.bad_count}
             </Button>
             <Button
