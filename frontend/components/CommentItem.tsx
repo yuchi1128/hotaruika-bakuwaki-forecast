@@ -132,15 +132,15 @@ export default function CommentItem({
       >
         <div className="flex items-start gap-2">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-blue-200 text-sm sm:text-[15px] max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+            <div className="flex items-center gap-2 mb-1 min-w-0">
+              <span className="font-semibold text-blue-200 text-sm sm:text-[15px] truncate min-w-0">
                 {reply.username}
               </span>
-              <span className="text-[13px] sm:text-[13px] text-gray-400">
+              <span className="text-[13px] sm:text-[13px] text-gray-400 shrink-0">
                 {formatTime(new Date(reply.created_at))}
               </span>
               {reply.label && (
-                <Badge variant="secondary" className="bg-blue-700/50 text-blue-200 text-[12px]">
+                <Badge variant="secondary" className="bg-blue-700/50 text-blue-200 text-[12px] shrink-0">
                   {reply.label}
                 </Badge>
               )}
@@ -300,15 +300,15 @@ export default function CommentItem({
         <div className="flex items-start gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-purple-200 text-sm sm:text-[15px] max-w-[120px] truncate block sm:max-w-none sm:overflow-visible sm:whitespace-normal">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className="font-semibold text-purple-200 text-sm sm:text-[15px] truncate min-w-0">
                   {comment.username}
                 </span>
-                <span className="text-[14px] sm:text-[14px] text-gray-400">
+                <span className="text-[14px] sm:text-[14px] text-gray-400 shrink-0">
                   {formatTime(new Date(comment.created_at))}
                 </span>
               </div>
-              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px]">
+              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px] shrink-0">
                 {comment.label}
               </Badge>
             </div>
