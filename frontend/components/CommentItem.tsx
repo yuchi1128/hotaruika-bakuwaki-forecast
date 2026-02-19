@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,47 @@ const linkify = (text: string) => {
     }
     return part;
   });
+};
+
+const ExpandableText = ({ children, maxLines, className }: {
+  children: React.ReactNode;
+  maxLines: number;
+  className?: string;
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const textRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) {
+      setIsClamped(el.scrollHeight > el.clientHeight + 1);
+    }
+  }, [children]);
+
+  return (
+    <div className={className}>
+      <div
+        ref={textRef}
+        style={!isExpanded ? {
+          display: '-webkit-box',
+          WebkitLineClamp: maxLines,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        } as React.CSSProperties : undefined}
+      >
+        {children}
+      </div>
+      {isClamped && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-blue-400 hover:text-blue-300 text-[13px] mt-1"
+        >
+          {isExpanded ? '閉じる' : '続きを読む'}
+        </button>
+      )}
+    </div>
+  );
 };
 
 export default function CommentItem({
@@ -145,10 +186,10 @@ export default function CommentItem({
                 </Badge>
               )}
             </div>
-            <div className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
+            <ExpandableText maxLines={4} className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
               {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
               <div>{linkify(reply.content)}</div>
-            </div>
+            </ExpandableText>
             {reply.image_urls && reply.image_urls.length > 0 && (
               <div className="mb-2">
                 <TwitterLikeMediaGrid
@@ -313,7 +354,9 @@ export default function CommentItem({
               </Badge>
             </div>
 
-            <p className="text-gray-200 mb-3 whitespace-pre-wrap text-[13px] leading-relaxed">{linkify(comment.content)}</p>
+            <ExpandableText maxLines={6} className="text-gray-200 mb-3 whitespace-pre-wrap text-[13px] leading-relaxed">
+              {linkify(comment.content)}
+            </ExpandableText>
 
             {comment.image_urls && comment.image_urls.length > 0 && (
               <TwitterLikeMediaGrid
