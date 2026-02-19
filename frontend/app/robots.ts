@@ -8,7 +8,28 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/preview'],
+        disallow: ['/admin', '/preview', '/api'],
+      },
+      // 攻撃的なクローラーをブロック
+      {
+        userAgent: 'AhrefsBot',
+        disallow: '/',
+      },
+      {
+        userAgent: 'SemrushBot',
+        disallow: '/',
+      },
+      {
+        userAgent: 'MJ12bot',
+        disallow: '/',
+      },
+      {
+        userAgent: 'DotBot',
+        disallow: '/',
+      },
+      {
+        userAgent: 'BLEXBot',
+        disallow: '/',
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
