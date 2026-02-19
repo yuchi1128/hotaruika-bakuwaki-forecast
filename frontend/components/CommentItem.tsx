@@ -67,12 +67,12 @@ const ExpandableText = ({ children, maxLines, className }: {
       >
         {children}
       </div>
-      {isClamped && (
+      {isClamped && !isExpanded && (
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => setIsExpanded(true)}
           className="text-blue-400 hover:text-blue-300 text-[13px] mt-1"
         >
-          {isExpanded ? '閉じる' : '続きを読む'}
+          続きを読む
         </button>
       )}
     </div>
@@ -186,7 +186,7 @@ export default function CommentItem({
                 </Badge>
               )}
             </div>
-            <ExpandableText maxLines={4} className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
+            <ExpandableText maxLines={6} className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
               {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
               <div>{linkify(reply.content)}</div>
             </ExpandableText>
