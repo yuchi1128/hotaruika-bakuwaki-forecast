@@ -104,18 +104,30 @@ export const getPredictionLevel = (predicted_amount: number, date: Date): number
     return -1; // シーズン外
   }
 
+  // 爆湧き
   if (predicted_amount >= 1.25) return 5;
+  // 大湧き
   if (predicted_amount >= 1.0) return 4;
+  // 湧き
   if (predicted_amount >= 0.75) return 3;
+  // チョイ湧き
   if (predicted_amount >= 0.5) return 2;
+  // プチ湧き
   if (predicted_amount >= 0.25) return 1;
+  // 湧きなし
   return 0;
 
+  // // 爆湧き
   // if (predicted_amount >= 1.4) return 5;
+  // // 大湧き
   // if (predicted_amount >= 1.15) return 4;
+  // // 湧き
   // if (predicted_amount >= 0.9) return 3;
+  // // チョイ湧き
   // if (predicted_amount >= 0.65) return 2;
+  // // プチ湧き
   // if (predicted_amount >= 0.4) return 1;
+  // // 湧きなし
   // return 0;
 };
 

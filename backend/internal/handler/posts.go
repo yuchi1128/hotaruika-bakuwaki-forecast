@@ -142,13 +142,13 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 		http.Error(w, "本文を入力してください", http.StatusBadRequest)
 		return
 	}
-	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	// テキスト長の上限チェック（名前30文字、本文150文字）
 	if len([]rune(post.Username)) > 30 {
 		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
 		return
 	}
-	if len([]rune(post.Content)) > 1000 {
-		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+	if len([]rune(post.Content)) > 150 {
+		http.Error(w, "本文が長すぎます（150文字以内）", http.StatusBadRequest)
 		return
 	}
 
@@ -471,13 +471,13 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 		http.Error(w, "本文を入力してください", http.StatusBadRequest)
 		return
 	}
-	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	// テキスト長の上限チェック（名前30文字、本文150文字）
 	if len([]rune(reply.Username)) > 30 {
 		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
 		return
 	}
-	if len([]rune(reply.Content)) > 1000 {
-		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+	if len([]rune(reply.Content)) > 150 {
+		http.Error(w, "本文が長すぎます（150文字以内）", http.StatusBadRequest)
 		return
 	}
 
@@ -523,13 +523,13 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		http.Error(w, "本文を入力してください", http.StatusBadRequest)
 		return
 	}
-	// テキスト長の上限チェック（名前30文字、本文1000文字）
+	// テキスト長の上限チェック（名前30文字、本文150文字）
 	if len([]rune(reply.Username)) > 30 {
 		http.Error(w, "ユーザー名が長すぎます（30文字以内）", http.StatusBadRequest)
 		return
 	}
-	if len([]rune(reply.Content)) > 1000 {
-		http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
+	if len([]rune(reply.Content)) > 150 {
+		http.Error(w, "本文が長すぎます（150文字以内）", http.StatusBadRequest)
 		return
 	}
 
