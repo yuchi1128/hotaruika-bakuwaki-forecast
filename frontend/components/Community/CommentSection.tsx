@@ -208,7 +208,7 @@ const CommentSection = ({
                     <ul className="text-slate-300 space-y-1 leading-relaxed">
                       <li>・<strong className="text-red-300">誹謗中傷・攻撃的な投稿</strong>は禁止です。  </li>
                       <li>・他のユーザーの方へは<strong className="text-white">丁寧な対応</strong>をお願いします。</li>
-                      <li>・「〜してください」「〜すべきです」のような、<strong className="text-white">他のユーザーへの指示にあたる表現</strong>はお控えください。</li>
+                      <li>・「〜するべきです」のような、<strong className="text-white">他のユーザーへの指示にあたる表現</strong>はお控えください。</li>
                     </ul>
                   </div>
                 </div>
