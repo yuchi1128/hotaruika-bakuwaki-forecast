@@ -26,7 +26,6 @@ import {
   Tag,
   Heart,
   CheckCircle,
-  Shield,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import type { Comment } from '@/lib/types';
@@ -209,6 +208,7 @@ const CommentSection = ({
                     <ul className="text-slate-300 space-y-1 leading-relaxed">
                       <li>・<strong className="text-red-300">誹謗中傷・攻撃的な投稿</strong>は禁止です。  </li>
                       <li>・他のユーザーの方へは<strong className="text-white">丁寧な対応</strong>をお願いします。</li>
+                      <li>・「〜してください」「〜すべきです」のような、<strong className="text-white">他のユーザーへの指示にあたる表現</strong>はお控えください。</li>
                     </ul>
                   </div>
                 </div>
@@ -217,9 +217,10 @@ const CommentSection = ({
                   <User className="w-5 h-5 mt-0.5 text-blue-300 flex-shrink-0" />
                   <div>
                     <h4 className="font-semibold text-slate-200 mb-1">お名前について</h4>
-                    <p className="text-slate-300 leading-relaxed">
-                      なるべく<strong className="text-white">一人につき一つの名前</strong>で投稿してください。
-                    </p>
+                    <ul className="text-slate-300 space-y-1 leading-relaxed">
+                      <li>・なるべく<strong className="text-white">一人につき一つの名前</strong>で投稿してください。</li>
+                      <li>・公式や管理者など、<strong className="text-red-300">特別な立場を連想させる名前</strong>での投稿はご遠慮ください。</li>
+                    </ul>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -241,6 +242,12 @@ const CommentSection = ({
                       <li>・現地情報は<strong className="text-white">日時・場所をできるだけ具体的</strong>に記載してください。</li>
                     </ul>
                   </div>
+                </div>
+                {/* 注意書き */}
+                <div className="pt-2 border-t border-purple-500/20">
+                  <p className="text-xs text-red-300/80 leading-relaxed">
+                    ※ 上記のルールを守っていない投稿は、編集または削除させていただく場合があります。
+                  </p>
                 </div>
               </div>
             </DialogContent>
