@@ -169,7 +169,7 @@ export default function CommentItem({
     return replies.map((reply) => (
       <div
         key={reply.id}
-        className={`ml-${level * 6} bg-slate-700/20 rounded-lg p-2 md:p-3 border-l border-dotted border-slate-600 mt-1 md:mt-3`}
+        className={`ml-${level * 6} bg-slate-700/30 rounded-lg p-2 md:p-3 border-l-[1.5px] border-blue-500/30 mt-1 md:mt-3`}
       >
         <div className="flex items-start gap-2">
           <div className="flex-1">
