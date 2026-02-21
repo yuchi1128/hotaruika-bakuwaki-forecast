@@ -1,4 +1,5 @@
 import type { PaginatedPostsResponse } from '@/lib/types';
+import { COMMENTS_PER_PAGE } from '@/lib/constants';
 import { apiFetch } from './client';
 
 export interface FetchPostsParams {
@@ -10,7 +11,7 @@ export interface FetchPostsParams {
 }
 
 export async function fetchPosts(params: FetchPostsParams = {}): Promise<PaginatedPostsResponse> {
-  const { label, page = 1, limit = 30, search, sort = 'newest' } = params;
+  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest' } = params;
   let url = `/api/posts?include=replies&page=${page}&limit=${limit}&sort=${sort}`;
   if (label) {
     url += `&label=${encodeURIComponent(label)}`;

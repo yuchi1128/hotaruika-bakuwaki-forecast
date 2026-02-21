@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import type { Comment } from '@/lib/types';
-import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
+import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
 
 // Props
 interface CommentSectionProps {
@@ -66,7 +66,7 @@ const CommentSection = ({
   const [searchInput, setSearchInput] = useState<string>(''); // 入力用
   const [searchQuery, setSearchQuery] = useState<string>(''); // 検索実行用
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
-  const COMMENTS_PER_PAGE = 30;
+
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
