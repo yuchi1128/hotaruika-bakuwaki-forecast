@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import type { Comment, Reply } from '@/lib/types';
@@ -95,6 +95,8 @@ export default function CommentItem({
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [modalImages, setModalImages] = useState<string[]>([]);
+  const [isReplyConfirmOpen, setIsReplyConfirmOpen] = useState(false);
+  const [pendingReplyTarget, setPendingReplyTarget] = useState<{ targetId: number; type: 'post' | 'reply' } | null>(null);
 
   const handleImageClick = (index: number, images: string[]) => {
     setModalImages(images);
@@ -128,6 +130,11 @@ export default function CommentItem({
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const openReplyConfirm = (targetId: number, type: 'post' | 'reply') => {
+    setPendingReplyTarget({ targetId, type });
+    setIsReplyConfirmOpen(true);
+  };
+
   const handleSubmitReply = async (targetId: number, type: 'post' | 'reply') => {
     if (!replyContent.trim() || !authorName.trim() || isSubmitting) return;
 
@@ -153,6 +160,8 @@ export default function CommentItem({
         setShowReplies(true);
       }
 
+      setIsReplyConfirmOpen(false);
+      setPendingReplyTarget(null);
       setReplyContent('');
       setAuthorName('');
       setSelectedImages([]);
@@ -288,7 +297,7 @@ export default function CommentItem({
                 )}
                 <div className="flex gap-2 mt-2">
                   <Button
-                    onClick={() => handleSubmitReply(reply.id, 'reply')}
+                    onClick={() => openReplyConfirm(reply.id, 'reply')}
                     className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={
                       !replyContent.trim() ||
@@ -336,7 +345,74 @@ export default function CommentItem({
           <span>返信を送信中です...</span>
         </DialogContent>
       </Dialog>
-      
+
+      {/* 返信確認モーダル */}
+      <Dialog open={isReplyConfirmOpen} onOpenChange={setIsReplyConfirmOpen}>
+        <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-purple-500/50 text-white shadow-lg backdrop-blur-md rounded-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-purple-200">返信内容の確認</DialogTitle>
+            <DialogDescription className="text-gray-400 text-sm">
+              以下の内容で返信します。よろしいですか？
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <span className="text-xs font-bold text-gray-400">お名前</span>
+              <p className="mt-1 text-sm text-white break-all">{authorName}</p>
+            </div>
+            <div>
+              <span className="text-xs font-bold text-gray-400">返信内容</span>
+              <p className="mt-1 text-sm text-white whitespace-pre-wrap break-all">{replyContent}</p>
+            </div>
+            {selectedImages.length > 0 && (
+              <div>
+                <span className="text-xs font-bold text-gray-400">画像（{selectedImages.length}枚）</span>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  {selectedImages.map((image, index) => (
+                    <img
+                      key={index}
+                      src={URL.createObjectURL(image)}
+                      alt={`確認画像 ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-md"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex-row gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setIsReplyConfirmOpen(false)}
+              className="text-gray-300 hover:text-white hover:bg-slate-700/50"
+            >
+              修正
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingReplyTarget) {
+                  handleSubmitReply(pendingReplyTarget.targetId, pendingReplyTarget.type);
+                }
+              }}
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  送信中...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-4 h-4 mr-1" />
+                  返信する
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div key={comment.id} className="pb-2 border-b border-purple-500/30">
         <div className="flex items-start gap-3">
           <div className="flex-1">
@@ -516,7 +592,7 @@ export default function CommentItem({
                 )}
                 <div className="flex gap-2 mt-2">
                   <Button
-                    onClick={() => handleSubmitReply(comment.id, 'post')}
+                    onClick={() => openReplyConfirm(comment.id, 'post')}
                     className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={
                       !replyContent.trim() ||
