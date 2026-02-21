@@ -1,11 +1,13 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Zen_Kaku_Gothic_New } from 'next/font/google';
+import localFont from 'next/font/local';
 
-// Zen Kaku Gothic New (Google Fonts) の設定
-const zenKaku = Zen_Kaku_Gothic_New({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+// Zen Kaku Gothic New (ローカルフォント)
+const zenKaku = localFont({
+  src: [
+    { path: '../public/fonts/ZenKakuGothicNew-Regular.ttf', weight: '400', style: 'normal' },
+    { path: '../public/fonts/ZenKakuGothicNew-Bold.ttf', weight: '700', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-zen-kaku',
 });
