@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import CustomSelect from '@/components/CustomSelect';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogFooter,
   DialogTitle,
   DialogTrigger,
   DialogDescription,
@@ -68,6 +70,7 @@ const CommentSection = ({
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
@@ -145,6 +148,7 @@ const CommentSection = ({
         );
       }
       await createPost(authorName, newComment, selectedLabel, imageBase64s);
+      setIsConfirmDialogOpen(false);
       setNewComment('');
       setAuthorName('');
       setSelectedImages([]);
@@ -339,7 +343,7 @@ const CommentSection = ({
             ※投稿内容に合ったラベルを選択してください
           </p>
           <Button
-            onClick={handleSubmitComment}
+            onClick={() => setIsConfirmDialogOpen(true)}
             disabled={
               !newComment.trim() ||
               !authorName.trim() ||
@@ -376,6 +380,80 @@ const CommentSection = ({
             )}
           </Button>
         </div>
+
+        {/* 投稿確認モーダル */}
+        <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+          <DialogContent className="w-[90vw] max-w-md bg-slate-800/80 border-purple-500/50 text-white shadow-lg backdrop-blur-md rounded-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-purple-200">投稿内容の確認</DialogTitle>
+              <DialogDescription className="text-gray-400 text-sm">
+                以下の内容で投稿します。よろしいですか？
+              </DialogDescription>
+            </DialogHeader>
+            <div className="divide-y divide-purple-500/20 py-2">
+              <div className="pb-3">
+                <span className="text-xs font-bold text-gray-400">お名前</span>
+                <p className="mt-1 text-sm text-white break-all">{authorName}</p>
+              </div>
+              <div className="py-3">
+                <span className="text-xs font-bold text-gray-400">投稿内容</span>
+                <p className="mt-1 text-sm text-white whitespace-pre-wrap break-all">{newComment}</p>
+              </div>
+              <div className="py-3">
+                <span className="text-xs font-bold text-gray-400">ラベル</span>
+                <div className="mt-1">
+                  <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px]">
+                    {selectedLabel}
+                  </Badge>
+                </div>
+                <p className="mt-1.5 text-xs text-red-300/80">
+                  ※投稿内容に合ったラベルが選択されていますか？ 現地での目撃情報は「現地情報」、それ以外は「その他」です。
+                </p>
+              </div>
+              {selectedImages.length > 0 && (
+                <div className="pt-3">
+                  <span className="text-xs font-bold text-gray-400">画像（{selectedImages.length}枚）</span>
+                  <div className="mt-1 grid grid-cols-2 gap-2">
+                    {selectedImages.map((image, index) => (
+                      <img
+                        key={index}
+                        src={URL.createObjectURL(image)}
+                        alt={`確認画像 ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="flex-row gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setIsConfirmDialogOpen(false)}
+                className="text-gray-300 hover:text-white hover:bg-slate-700/50"
+              >
+                修正
+              </Button>
+              <Button
+                onClick={handleSubmitComment}
+                disabled={isSubmittingComment}
+                className="bg-gradient-to-r from-indigo-600/90 via-fuchsia-600/90 to-rose-600/90 text-white font-semibold hover:brightness-105"
+              >
+                {isSubmittingComment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    投稿中...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-1" />
+                    投稿する
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ラベルフィルター */}
         <div ref={filterSectionRef} style={{ scrollMarginTop: '80px' }} className="mb-4 flex flex-wrap items-center gap-2">
