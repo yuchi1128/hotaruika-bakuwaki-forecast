@@ -7,3 +7,4 @@ export const COMMENTS_PER_PAGE = 20;
 // 文字数制限
 export const MAX_USERNAME_LENGTH = 30;
 export const MAX_CONTENT_LENGTH = 150;
+export const MAX_ADMIN_CONTENT_LENGTH = 1000;

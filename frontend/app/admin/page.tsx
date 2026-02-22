@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Trash2, ImageIcon, X, Pencil, Check } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
-import { API_URL } from '@/lib/constants';
+import { API_URL, MAX_ADMIN_CONTENT_LENGTH } from '@/lib/constants';
 
 // 型定義
 interface Post {
@@ -347,8 +347,15 @@ export default function AdminPage() {
                     placeholder="新しいお知らせや情報を入力..."
                     required
                     rows={4}
-                    className="bg-white border-gray-800 text-gray-900"
+                    className={`bg-white border-gray-800 text-gray-900 ${
+                      newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ? 'border-red-500' : ''
+                    }`}
                   />
+                  {newPostContent.length > MAX_ADMIN_CONTENT_LENGTH && (
+                    <p className="text-xs text-red-500">
+                      ※{MAX_ADMIN_CONTENT_LENGTH}文字以内で入力してください（現在{newPostContent.length}文字）
+                    </p>
+                  )}
                   <div className="space-y-2">
                     <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-gray-600 hover:text-gray-800">
                       <ImageIcon className="w-5 h-5 mr-2" />
@@ -368,7 +375,7 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white">投稿する</Button>
+                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={newPostContent.length > MAX_ADMIN_CONTENT_LENGTH}>投稿する</Button>
                 </form>
               </CardContent>
             </Card>
