@@ -4,6 +4,8 @@ import { ShieldAlert } from 'lucide-react';
 import { mockWeather, mockTide, mockPrediction, MOCK_DATE } from './mockData';
 import { getLastUpdateTime } from '@/lib/utils';
 
+export const revalidate = 3600;
+
 // --- データ取得関数 ---
 async function fetchDetailData(date: string): Promise<{ weather: HourlyWeather[], tide: TideData, prediction: Prediction | null }> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';

@@ -76,7 +76,7 @@ export default function DetailPageHeader({
 
         <div className="flex items-center gap-2">
           {isMounted && prevDate ? (
-            <Link href={`/detail/${prevDate}`} passHref>
+            <Link href={`/detail/${prevDate}`} prefetch={false} passHref>
               <Button
                 variant="ghost"
                 className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg"
@@ -97,7 +97,7 @@ export default function DetailPageHeader({
           )}
 
           {isMounted && nextDate ? (
-            <Link href={`/detail/${nextDate}`} passHref>
+            <Link href={`/detail/${nextDate}`} prefetch={false} passHref>
               <Button
                 variant="ghost"
                 className="h-8 sm:h-9 px-2 text-white hover:bg-white/10 rounded-sm sm:rounded-lg"
