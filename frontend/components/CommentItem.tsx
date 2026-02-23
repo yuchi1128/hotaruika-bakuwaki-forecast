@@ -355,17 +355,17 @@ export default function CommentItem({
               以下の内容で返信します。よろしいですか？
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
+          <div className="divide-y divide-purple-500/20 py-2">
+            <div className="pb-3">
               <span className="text-xs font-bold text-gray-400">お名前</span>
               <p className="mt-1 text-sm text-white break-all">{authorName}</p>
             </div>
-            <div>
+            <div className="py-3">
               <span className="text-xs font-bold text-gray-400">返信内容</span>
               <p className="mt-1 text-sm text-white whitespace-pre-wrap break-all">{replyContent}</p>
             </div>
             {selectedImages.length > 0 && (
-              <div>
+              <div className="pt-3">
                 <span className="text-xs font-bold text-gray-400">画像（{selectedImages.length}枚）</span>
                 <div className="mt-1 grid grid-cols-2 gap-2">
                   {selectedImages.map((image, index) => (

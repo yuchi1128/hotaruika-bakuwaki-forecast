@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 const XIcon = ({ className }: { className?: string }) => (
   <svg
@@ -15,26 +14,26 @@ const XIcon = ({ className }: { className?: string }) => (
 
 const AppFooter = () => {
   return (
-    <footer className="text-center py-4 text-gray-400 border-t border-blue-500/20">
-      <div className="flex flex-col justify-center items-center space-y-1">
-        <div className="space-y-2">
+    <footer className="text-center py-6 text-gray-400 border-t border-blue-500/20">
+      <div className="flex flex-col justify-center items-center space-y-3">
+        <div className="space-y-1">
           <p className="mb-0">© 2026 ホタルイカ爆湧き予報</p>
-          <p className="text-xs">
-            AIで身投げを予測。ホタルイカ掬いの好機を、予報と掲示板でチェック。
+          <p className="text-xs max-w-[340px] md:max-w-none">
+            身投げの予測と掲示板でホタルイカ掬いの参考に。
           </p>
         </div>
 
-        <div className="flex gap-4">
-          <Button variant="ghost" size="icon" className="hover:text-white" asChild>
-            <Link
-              href="https://x.com/bakuwaki_jp"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="X (Twitter) アカウントへ"
-            >
-              <XIcon className="h-5 w-5" />
-            </Link>
-          </Button>
+        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+          <span>ご連絡はこちらまで</span>
+          <Link
+            href="https://x.com/bakuwaki_jp"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
+          >
+            <XIcon className="h-4 w-4" />
+            <span className="underline underline-offset-2">@bakuwaki_jp</span>
+          </Link>
         </div>
       </div>
     </footer>
