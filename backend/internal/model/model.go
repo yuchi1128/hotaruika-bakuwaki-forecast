@@ -9,14 +9,41 @@ import (
 
 // Postは投稿
 type Post struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Content   string    `json:"content"`
-	ImageURLs []string  `json:"image_urls"`
-	Label     string    `json:"label"`
-	CreatedAt time.Time `json:"created_at"`
-	GoodCount int       `json:"good_count"`
-	BadCount  int       `json:"bad_count"`
+	ID          int                `json:"id"`
+	Username    string             `json:"username"`
+	Content     string             `json:"content"`
+	ImageURLs   []string           `json:"image_urls"`
+	Label       string             `json:"label"`
+	CreatedAt   time.Time          `json:"created_at"`
+	GoodCount   int                `json:"good_count"`
+	BadCount    int                `json:"bad_count"`
+	Poll        *Poll              `json:"poll,omitempty"`
+	PollRequest *CreatePollRequest `json:"poll_request,omitempty"`
+}
+
+// Pollはアンケート
+type Poll struct {
+	ID         int          `json:"id"`
+	PostID     int          `json:"post_id"`
+	ExpiresAt  time.Time    `json:"expires_at"`
+	TotalVotes int          `json:"total_votes"`
+	CreatedAt  time.Time    `json:"created_at"`
+	Options    []PollOption `json:"options"`
+}
+
+// PollOptionはアンケートの選択肢
+type PollOption struct {
+	ID           int    `json:"id"`
+	PollID       int    `json:"poll_id"`
+	OptionText   string `json:"option_text"`
+	VoteCount    int    `json:"vote_count"`
+	DisplayOrder int    `json:"display_order"`
+}
+
+// CreatePollRequestはアンケート作成リクエスト
+type CreatePollRequest struct {
+	Options      []string `json:"options"`
+	DurationDays int      `json:"duration_days"`
 }
 
 // Replyは投稿や他の返信への返信
