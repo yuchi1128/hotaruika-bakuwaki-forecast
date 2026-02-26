@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchPosts as apiFetchPosts,
   createPost as apiCreatePost,
@@ -16,8 +16,10 @@ export function usePosts() {
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const lastFetchParamsRef = useRef<FetchPostsParams>({});
 
   const fetchPosts = useCallback(async (params: FetchPostsParams = {}) => {
+    lastFetchParamsRef.current = params;
     try {
       const data = await apiFetchPosts(params);
       const commentsWithReplies: Comment[] = data.posts.map((post) => ({
@@ -54,7 +56,7 @@ export function usePosts() {
     setIsSubmitting(true);
     try {
       await apiCreatePost(username, content, label, imageBase64s);
-      await fetchPosts({});
+      await fetchPosts({ ...lastFetchParamsRef.current, page: 1 });
     } catch (error) {
       console.error('Failed to create post:', error);
     } finally {
@@ -71,7 +73,7 @@ export function usePosts() {
   ) => {
     try {
       await apiCreateReply(targetId, type, username, content, imageBase64s);
-      await fetchPosts({});
+      await fetchPosts(lastFetchParamsRef.current);
     } catch (error) {
       console.error('Failed to create reply:', error);
     }

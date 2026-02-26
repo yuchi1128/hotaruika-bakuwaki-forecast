@@ -144,7 +144,7 @@ const TodayForecast = ({
             </div>
           </div>
         ) : (
-          <div className={`inline-block px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
+          <div className={`inline-block max-w-[280px] sm:max-w-none px-4 sm:px-8 py-4 rounded-2xl ${predictionLevels[todayPrediction.level].bgColor} mb-6`}>
             {todayPrediction.level > 0 && (
               <div
                 className={`
