@@ -31,7 +31,7 @@ export default function PollDisplay({ poll, myVotedOptionId, onVote, isExpired }
   );
 
   return (
-    <div className="my-3 p-3 bg-slate-800/40 rounded-lg border border-purple-500/15">
+    <div className="my-3 p-3 bg-slate-700/30 rounded-lg border border-purple-500/15 md:max-w-[480px]">
       <div className="space-y-2">
         {poll.options.map((option) => {
           const percentage = poll.total_votes > 0
@@ -43,19 +43,19 @@ export default function PollDisplay({ poll, myVotedOptionId, onVote, isExpired }
           if (showResults) {
             return (
               <div key={option.id} className="relative">
-                <div className="relative overflow-hidden rounded-md bg-slate-700/30 h-9">
+                <div className="relative overflow-hidden rounded-md bg-slate-900/50 h-7">
                   <div
                     className={`absolute inset-y-0 left-0 rounded-md transition-all duration-500 ease-out ${
-                      isLeading ? 'bg-purple-500/35' : 'bg-slate-600/40'
+                      isLeading ? 'bg-purple-500/50' : 'bg-purple-400/30'
                     }`}
-                    style={{ width: `${percentage}%` }}
+                    style={{ width: percentage > 0 ? `${percentage}%` : '0%' }}
                   />
                   <div className="relative flex items-center justify-between px-3 h-full">
                     <span className={`text-[13px] truncate ${isVoted ? 'font-bold text-purple-200' : 'text-gray-200'}`}>
                       {isVoted && <Check className="w-3.5 h-3.5 inline mr-1" />}
                       {option.option_text}
                     </span>
-                    <span className={`text-[13px] ml-2 shrink-0 ${isLeading ? 'font-bold text-purple-200' : 'text-gray-400'}`}>
+                    <span className={`text-[13px] ml-2 shrink-0 tabular-nums ${isLeading ? 'font-bold text-purple-200' : 'text-gray-400'}`}>
                       {percentage}%
                     </span>
                   </div>
@@ -68,7 +68,7 @@ export default function PollDisplay({ poll, myVotedOptionId, onVote, isExpired }
             <button
               key={option.id}
               onClick={() => onVote(poll.id, option.id)}
-              className="w-full text-left px-3 h-9 rounded-md border border-purple-500/30 text-[13px] text-gray-200 hover:bg-purple-600/20 hover:border-purple-400/50 transition-colors"
+              className="w-full text-left px-3 h-7 rounded-md border border-purple-500/30 text-[13px] text-gray-200 hover:bg-purple-600/20 hover:border-purple-400/50 transition-colors"
             >
               {option.option_text}
             </button>

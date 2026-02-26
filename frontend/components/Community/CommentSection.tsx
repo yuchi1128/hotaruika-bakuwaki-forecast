@@ -296,6 +296,7 @@ const CommentSection = ({
             </div>
           )}
           {newComment.length <= MAX_CONTENT_LENGTH && <div className="mb-4" />}
+          <PollCreator onChange={setPollData} onReset={pollReset} />
           <div className="mb-4">
             <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm md:text-base text-gray-400 hover:text-gray-200 mb-2">
               <ImageIcon className="w-4 h-4 md:w-5 md:h-5 mr-1" />
@@ -345,7 +346,6 @@ const CommentSection = ({
           <p className="text-[11px] text-gray-400 mb-4">
             ※投稿内容に合ったラベルを選択してください
           </p>
-          <PollCreator onChange={setPollData} onReset={pollReset} />
           <Button
             onClick={() => setIsConfirmDialogOpen(true)}
             disabled={
