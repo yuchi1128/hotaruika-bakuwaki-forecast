@@ -10,6 +10,7 @@ import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon } from 'luci
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import type { Comment, Reply } from '@/lib/types';
 import { API_URL, MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
+import { compressImageToBase64 } from '@/lib/image-compression';
 
 interface CommentItemProps {
   comment: Comment;
@@ -143,14 +144,7 @@ export default function CommentItem({
       let imageBase64s: string[] = [];
       if (selectedImages.length > 0) {
         imageBase64s = await Promise.all(
-          selectedImages.map(file => {
-            return new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = error => reject(error);
-            });
-          })
+          selectedImages.map(file => compressImageToBase64(file))
         );
       }
 
