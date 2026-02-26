@@ -15,13 +15,13 @@ interface PollCreatorProps {
 export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [options, setOptions] = useState<string[]>(['', '']);
-  const [durationDays, setDurationDays] = useState<number>(1);
+  const [durationHours, setDurationHours] = useState<number>(24);
 
   // 親からリセットされた場合
   if (onReset && isEnabled) {
     setIsEnabled(false);
     setOptions(['', '']);
-    setDurationDays(1);
+    setDurationHours(24);
     onChange(null);
   }
 
@@ -29,7 +29,7 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
     if (isEnabled) {
       setIsEnabled(false);
       setOptions(['', '']);
-      setDurationDays(1);
+      setDurationHours(24);
       onChange(null);
     } else {
       setIsEnabled(true);
@@ -40,14 +40,14 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
-    emitChange(newOptions, durationDays);
+    emitChange(newOptions, durationHours);
   };
 
   const addOption = () => {
     if (options.length < MAX_POLL_OPTIONS) {
       const newOptions = [...options, ''];
       setOptions(newOptions);
-      emitChange(newOptions, durationDays);
+      emitChange(newOptions, durationHours);
     }
   };
 
@@ -55,19 +55,19 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
     if (options.length > MIN_POLL_OPTIONS) {
       const newOptions = options.filter((_, i) => i !== index);
       setOptions(newOptions);
-      emitChange(newOptions, durationDays);
+      emitChange(newOptions, durationHours);
     }
   };
 
-  const handleDurationChange = (days: number) => {
-    setDurationDays(days);
-    emitChange(options, days);
+  const handleDurationChange = (hours: number) => {
+    setDurationHours(hours);
+    emitChange(options, hours);
   };
 
-  const emitChange = (opts: string[], days: number) => {
+  const emitChange = (opts: string[], hours: number) => {
     const filledOptions = opts.filter((o) => o.trim() !== '');
     if (filledOptions.length >= MIN_POLL_OPTIONS) {
-      onChange({ options: opts.map((o) => o.trim()), duration_days: days });
+      onChange({ options: opts.map((o) => o.trim()), duration_hours: hours });
     } else {
       onChange(null);
     }
@@ -138,19 +138,19 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
           <div>
             <span className="text-xs text-gray-400 font-bold">投票期間：</span>
             <div className="flex gap-2 mt-1">
-              {POLL_DURATION_OPTIONS.map((days) => (
+              {POLL_DURATION_OPTIONS.map((opt) => (
                 <Button
-                  key={days}
+                  key={opt.hours}
                   type="button"
                   className={`h-7 px-3 text-xs font-bold ${
-                    durationDays === days
+                    durationHours === opt.hours
                       ? 'bg-purple-600 hover:bg-purple-700 text-white'
                       : 'border-purple-500 text-purple-300 hover:bg-purple-900/20'
                   }`}
-                  variant={durationDays === days ? 'default' : 'outline'}
-                  onClick={() => handleDurationChange(days)}
+                  variant={durationHours === opt.hours ? 'default' : 'outline'}
+                  onClick={() => handleDurationChange(opt.hours)}
                 >
-                  {days}日
+                  {opt.label}
                 </Button>
               ))}
             </div>

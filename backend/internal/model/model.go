@@ -43,7 +43,7 @@ type PollOption struct {
 // CreatePollRequestはアンケート作成リクエスト
 type CreatePollRequest struct {
 	Options      []string `json:"options"`
-	DurationDays int      `json:"duration_days"`
+	DurationHours int     `json:"duration_hours"`
 }
 
 // Replyは投稿や他の返信への返信

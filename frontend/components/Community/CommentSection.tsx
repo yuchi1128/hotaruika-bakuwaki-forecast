@@ -425,7 +425,7 @@ const CommentSection = ({
                       </div>
                     ))}
                   </div>
-                  <p className="mt-1 text-xs text-gray-400">投票期間: {pollData.duration_days}日</p>
+                  <p className="mt-1 text-xs text-gray-400">投票期間: {pollData.duration_hours >= 24 ? `${pollData.duration_hours / 24}日` : `${pollData.duration_hours}時間`}</p>
                 </div>
               )}
               {selectedImages.length > 0 && (

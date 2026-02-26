@@ -13,4 +13,9 @@ export const MAX_ADMIN_CONTENT_LENGTH = 1000;
 export const MAX_POLL_OPTION_LENGTH = 15;
 export const MIN_POLL_OPTIONS = 2;
 export const MAX_POLL_OPTIONS = 4;
-export const POLL_DURATION_OPTIONS = [1, 3, 7] as const;
+export const POLL_DURATION_OPTIONS = [
+  { hours: 6, label: '6時間' },
+  { hours: 12, label: '12時間' },
+  { hours: 24, label: '1日' },
+  { hours: 72, label: '3日' },
+] as const;

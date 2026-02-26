@@ -24,7 +24,7 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<Paginat
 
 export interface CreatePollParams {
   options: string[];
-  duration_days: number;
+  duration_hours: number;
 }
 
 export async function createPost(

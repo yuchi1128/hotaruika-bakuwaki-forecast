@@ -191,8 +191,8 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 			http.Error(w, "選択肢は2〜4個で入力してください", http.StatusBadRequest)
 			return
 		}
-		if pollReq.DurationDays != 1 && pollReq.DurationDays != 3 && pollReq.DurationDays != 7 {
-			http.Error(w, "期間は1日、3日、7日のいずれかを選択してください", http.StatusBadRequest)
+		if pollReq.DurationHours != 6 && pollReq.DurationHours != 12 && pollReq.DurationHours != 24 && pollReq.DurationHours != 72 {
+			http.Error(w, "期間は6時間、12時間、1日、3日のいずれかを選択してください", http.StatusBadRequest)
 			return
 		}
 		for _, opt := range pollReq.Options {
@@ -226,7 +226,7 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	// アンケート作成（オプション）
 	if post.PollRequest != nil {
 		pollReq := post.PollRequest
-		expiresAt := time.Now().Add(time.Duration(pollReq.DurationDays) * 24 * time.Hour)
+		expiresAt := time.Now().Add(time.Duration(pollReq.DurationHours) * time.Hour)
 
 		var poll model.Poll
 		pollQuery := `INSERT INTO polls (post_id, expires_at) VALUES ($1, $2) RETURNING id, created_at, total_votes`
