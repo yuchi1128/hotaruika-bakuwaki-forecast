@@ -68,7 +68,7 @@ export default function PollDisplay({ poll, myVotedOptionId, onVote, isExpired }
             <button
               key={option.id}
               onClick={() => onVote(poll.id, option.id)}
-              className="w-full text-left px-3 h-7 rounded-md border border-purple-500/30 text-[13px] text-gray-200 hover:bg-purple-600/20 hover:border-purple-400/50 transition-colors"
+              className="w-full text-left px-3 h-7 rounded-md border border-purple-400/40 bg-slate-900/50 text-[13px] text-gray-200 hover:bg-purple-600/25 hover:border-purple-400/60 transition-colors cursor-pointer"
             >
               {option.option_text}
             </button>
