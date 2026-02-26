@@ -6,6 +6,7 @@ import {
   createPost as apiCreatePost,
   createReply as apiCreateReply,
   type FetchPostsParams,
+  type CreatePollParams,
 } from '@/lib/api/posts';
 import { getReaction } from '@/lib/client-utils';
 import type { Comment } from '@/lib/types';
@@ -52,10 +53,11 @@ export function usePosts() {
     content: string,
     label: string,
     imageBase64s: string[],
+    pollRequest?: CreatePollParams,
   ) => {
     setIsSubmitting(true);
     try {
-      await apiCreatePost(username, content, label, imageBase64s);
+      await apiCreatePost(username, content, label, imageBase64s, pollRequest);
       await fetchPosts({ ...lastFetchParamsRef.current, page: 1 });
     } catch (error) {
       console.error('Failed to create post:', error);
