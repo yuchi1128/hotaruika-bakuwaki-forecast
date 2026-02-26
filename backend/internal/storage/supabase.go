@@ -23,6 +23,7 @@ func UploadFileToSupabase(logger *slog.Logger, bucketName, fileName string, file
 	req.Header.Set("apikey", key)
 	req.Header.Set("Authorization", "Bearer "+key)
 	req.Header.Set("Content-Type", mimeType)
+	req.Header.Set("Cache-Control", "public, max-age=31536000, immutable")
 	client := &http.Client{Timeout: time.Second * 10}
 	resp, err := client.Do(req)
 	if err != nil {

@@ -32,6 +32,7 @@ import {
 import CommentItem from '@/components/CommentItem';
 import type { Comment } from '@/lib/types';
 import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
+import { compressImageToBase64 } from '@/lib/image-compression';
 
 // Props
 interface CommentSectionProps {
@@ -137,14 +138,7 @@ const CommentSection = ({
       let imageBase64s: string[] = [];
       if (selectedImages.length > 0) {
         imageBase64s = await Promise.all(
-          selectedImages.map(file => {
-            return new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = error => reject(error);
-            });
-          })
+          selectedImages.map(file => compressImageToBase64(file))
         );
       }
       await createPost(authorName, newComment, selectedLabel, imageBase64s);
