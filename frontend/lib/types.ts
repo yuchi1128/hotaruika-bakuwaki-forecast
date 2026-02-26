@@ -30,6 +30,25 @@ export interface ForecastData {
   dominant_wind_direction: number;
 }
 
+// アンケート選択肢
+export interface PollOption {
+  id: number;
+  poll_id: number;
+  option_text: string;
+  vote_count: number;
+  display_order: number;
+}
+
+// アンケート
+export interface Poll {
+  id: number;
+  post_id: number;
+  expires_at: string;
+  total_votes: number;
+  created_at: string;
+  options: PollOption[];
+}
+
 // 投稿
 export interface Post {
   id: number;
@@ -40,6 +59,7 @@ export interface Post {
   created_at: string;
   good_count: number;
   bad_count: number;
+  poll?: Poll;
 }
 
 // 返信

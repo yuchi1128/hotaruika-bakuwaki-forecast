@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Trash2, ImageIcon, X, Pencil, Check } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
-import { API_URL, MAX_ADMIN_CONTENT_LENGTH } from '@/lib/constants';
+import PollCreator from '@/components/PollCreator';
+import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH } from '@/lib/constants';
+import type { CreatePollParams } from '@/lib/api/posts';
 
 // 型定義
 interface Post {
@@ -44,6 +46,8 @@ export default function AdminPage() {
   const [newPostUsername, setNewPostUsername] = useState('管理者');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [pollData, setPollData] = useState<CreatePollParams | null>(null);
+  const [pollReset, setPollReset] = useState(false);
 
   useEffect(() => {
     checkLoginStatus();
@@ -188,6 +192,7 @@ export default function AdminPage() {
           content: newPostContent,
           label: '管理者',
           image_urls: imageBase64s,
+          ...(pollData && { poll_request: pollData }),
         }),
         credentials: 'include',
       });
@@ -197,6 +202,9 @@ export default function AdminPage() {
       }
       setNewPostContent('');
       setSelectedImages([]);
+      setPollData(null);
+      setPollReset(true);
+      setTimeout(() => setPollReset(false), 0);
       fetchAllData();
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
@@ -356,6 +364,7 @@ export default function AdminPage() {
                       ※{MAX_ADMIN_CONTENT_LENGTH}文字以内で入力してください（現在{newPostContent.length}文字）
                     </p>
                   )}
+                  <PollCreator onChange={setPollData} onReset={pollReset} />
                   <div className="space-y-2">
                     <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-gray-600 hover:text-gray-800">
                       <ImageIcon className="w-5 h-5 mr-2" />
@@ -375,7 +384,10 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={newPostContent.length > MAX_ADMIN_CONTENT_LENGTH}>投稿する</Button>
+                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={
+                    newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ||
+                    (pollData !== null && pollData.options.some((o) => o.trim() === '' || o.length > MAX_POLL_OPTION_LENGTH))
+                  }>投稿する</Button>
                 </form>
               </CardContent>
             </Card>

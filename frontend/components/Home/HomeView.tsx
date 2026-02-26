@@ -12,6 +12,7 @@ import {
 import { useForecast } from '@/hooks/useForecast';
 import { usePosts } from '@/hooks/usePosts';
 import { useReactions } from '@/hooks/useReactions';
+import { usePollVote } from '@/hooks/usePollVote';
 
 import LoadingScreen from '@/components/common/LoadingScreen';
 import AppHeader from '@/components/common/AppHeader';
@@ -43,6 +44,7 @@ export default function HomeView({ mode }: HomeViewProps) {
     createReply,
   } = usePosts();
   const { handleReaction } = useReactions(setComments, fetchPosts);
+  const { handlePollVote } = usePollVote(setComments, fetchPosts);
 
   const renderHotaruikaIcons = (level: number, src: string, size = 'w-8 h-8', animated = true) => {
     if (level <= 0) return [];
@@ -117,6 +119,7 @@ export default function HomeView({ mode }: HomeViewProps) {
           totalPages={totalPages}
           currentPage={currentPage}
           handleReaction={handleReaction}
+          handlePollVote={handlePollVote}
           formatTime={formatTime}
           createReply={createReply}
           createPost={createPost}

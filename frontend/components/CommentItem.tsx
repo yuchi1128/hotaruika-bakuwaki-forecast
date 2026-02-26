@@ -8,13 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
+import PollDisplay from '@/components/PollDisplay';
 import type { Comment, Reply } from '@/lib/types';
 import { API_URL, MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-compression';
+import { getPollVote } from '@/lib/client-utils';
 
 interface CommentItemProps {
   comment: Comment;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
+  handlePollVote: (pollId: number, optionId: number) => void;
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
 }
@@ -83,6 +86,7 @@ const ExpandableText = ({ children, maxLines, className }: {
 export default function CommentItem({
   comment,
   handleReaction,
+  handlePollVote,
   formatTime,
   createReply,
 }: CommentItemProps) {
@@ -427,6 +431,15 @@ export default function CommentItem({
             <ExpandableText maxLines={6} className="text-gray-200 mb-3 whitespace-pre-wrap text-[13px] leading-relaxed">
               {linkify(comment.content)}
             </ExpandableText>
+
+            {comment.poll && (
+              <PollDisplay
+                poll={comment.poll}
+                myVotedOptionId={getPollVote(comment.poll.id)}
+                onVote={handlePollVote}
+                isExpired={new Date(comment.poll.expires_at) < new Date()}
+              />
+            )}
 
             {comment.image_urls && comment.image_urls.length > 0 && (
               <TwitterLikeMediaGrid

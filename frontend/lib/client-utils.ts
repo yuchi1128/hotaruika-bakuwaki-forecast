@@ -18,3 +18,19 @@ export const getReaction = (type: TargetType, id: number): ReactionType | null =
 export const removeReaction = (type: TargetType, id: number) => {
   localStorage.removeItem(getLocalStorageKey(type, id));
 };
+
+// アンケート投票の重複防止（localStorageベース）
+const getPollVoteKey = (pollId: number) => `poll_vote_${pollId}`;
+
+export const savePollVote = (pollId: number, optionId: number) => {
+  localStorage.setItem(getPollVoteKey(pollId), String(optionId));
+};
+
+export const getPollVote = (pollId: number): number | null => {
+  const val = localStorage.getItem(getPollVoteKey(pollId));
+  return val ? parseInt(val, 10) : null;
+};
+
+export const removePollVote = (pollId: number) => {
+  localStorage.removeItem(getPollVoteKey(pollId));
+};

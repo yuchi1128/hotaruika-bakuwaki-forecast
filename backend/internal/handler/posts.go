@@ -184,14 +184,84 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 		return
 	}
 
+	// アンケートのバリデーション（DB操作前に実施）
+	if post.PollRequest != nil {
+		pollReq := post.PollRequest
+		if len(pollReq.Options) < 2 || len(pollReq.Options) > 4 {
+			http.Error(w, "選択肢は2〜4個で入力してください", http.StatusBadRequest)
+			return
+		}
+		if pollReq.DurationHours != 6 && pollReq.DurationHours != 12 && pollReq.DurationHours != 24 && pollReq.DurationHours != 72 {
+			http.Error(w, "期間は6時間、12時間、1日、3日のいずれかを選択してください", http.StatusBadRequest)
+			return
+		}
+		for _, opt := range pollReq.Options {
+			if strings.TrimSpace(opt) == "" {
+				http.Error(w, "空の選択肢は使用できません", http.StatusBadRequest)
+				return
+			}
+			if len([]rune(opt)) > 15 {
+				http.Error(w, "選択肢は15文字以内で入力してください", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	// トランザクションで投稿+アンケートを一括作成
+	tx, err := h.db.Begin()
+	if err != nil {
+		h.logger.Error("トランザクション開始エラー", "error", err)
+		http.Error(w, "投稿の作成に失敗しました", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
 	query := `INSERT INTO posts (username, content, image_urls, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
-	if err := h.db.QueryRow(query, post.Username, post.Content, pq.Array(imageURLs), post.Label).Scan(&post.ID, &post.CreatedAt); err != nil {
+	if err := tx.QueryRow(query, post.Username, post.Content, pq.Array(imageURLs), post.Label).Scan(&post.ID, &post.CreatedAt); err != nil {
 		h.logger.Error("投稿の挿入エラー", "error", err)
 		http.Error(w, "投稿の作成に失敗しました", http.StatusInternalServerError)
 		return
 	}
 
+	// アンケート作成（オプション）
+	if post.PollRequest != nil {
+		pollReq := post.PollRequest
+		expiresAt := time.Now().Add(time.Duration(pollReq.DurationHours) * time.Hour)
+
+		var poll model.Poll
+		pollQuery := `INSERT INTO polls (post_id, expires_at) VALUES ($1, $2) RETURNING id, created_at, total_votes`
+		if err := tx.QueryRow(pollQuery, post.ID, expiresAt).Scan(&poll.ID, &poll.CreatedAt, &poll.TotalVotes); err != nil {
+			h.logger.Error("アンケートの挿入エラー", "error", err)
+			http.Error(w, "アンケートの作成に失敗しました", http.StatusInternalServerError)
+			return
+		}
+		poll.PostID = post.ID
+		poll.ExpiresAt = expiresAt
+
+		for i, optText := range pollReq.Options {
+			var option model.PollOption
+			optQuery := `INSERT INTO poll_options (poll_id, option_text, display_order) VALUES ($1, $2, $3) RETURNING id, vote_count`
+			if err := tx.QueryRow(optQuery, poll.ID, optText, i).Scan(&option.ID, &option.VoteCount); err != nil {
+				h.logger.Error("選択肢の挿入エラー", "error", err)
+				http.Error(w, "選択肢の作成に失敗しました", http.StatusInternalServerError)
+				return
+			}
+			option.PollID = poll.ID
+			option.OptionText = optText
+			option.DisplayOrder = i
+			poll.Options = append(poll.Options, option)
+		}
+		post.Poll = &poll
+	}
+
+	if err := tx.Commit(); err != nil {
+		h.logger.Error("トランザクションコミットエラー", "error", err)
+		http.Error(w, "投稿の作成に失敗しました", http.StatusInternalServerError)
+		return
+	}
+
 	post.ImageURLs = imageURLs
+	post.PollRequest = nil // レスポンスには含めない
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(post)
@@ -305,6 +375,25 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("投稿の取得に失敗しました（リトライ上限到達）", "error", err)
 		http.Error(w, "投稿の取得に失敗しました", http.StatusInternalServerError)
 		return
+	}
+
+	// アンケートデータを注入
+	if len(posts) > 0 {
+		postIDs := make([]int, len(posts))
+		for i, p := range posts {
+			postIDs[i] = p.ID
+		}
+		pollsMap, pollErr := h.getPollsForPosts(postIDs)
+		if pollErr != nil {
+			h.logger.Error("アンケートの取得に失敗しました", "error", pollErr)
+			// 致命的ではないのでアンケートなしで続行
+		} else {
+			for i := range posts {
+				if poll, ok := pollsMap[posts[i].ID]; ok {
+					posts[i].Poll = poll
+				}
+			}
+		}
 	}
 
 	// include=replies の場合

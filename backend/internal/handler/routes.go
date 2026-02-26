@@ -35,6 +35,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/posts", h.postsHandler)
 	mux.HandleFunc("/api/posts/", h.postDetailHandler)
 	mux.HandleFunc("/api/replies/", h.replyDetailHandler)
+	mux.HandleFunc("/api/polls/", h.pollHandler)
 	mux.HandleFunc("/api/admin/login", h.adminLoginHandler)
 	mux.HandleFunc("/api/admin/logout", h.adminLogoutHandler)
 	mux.HandleFunc("/api/admin/check", h.authMiddleware(h.adminCheckHandler))
