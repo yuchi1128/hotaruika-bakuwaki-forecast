@@ -30,8 +30,10 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
+import PollCreator from '@/components/PollCreator';
 import type { Comment } from '@/lib/types';
-import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
+import type { CreatePollParams } from '@/lib/api/posts';
+import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-compression';
 
 // Props
@@ -41,9 +43,10 @@ interface CommentSectionProps {
   totalPages: number;
   currentPage: number;
   handleReaction: (targetId: number, type: 'post' | 'reply', reactionType: 'good' | 'bad') => void;
+  handlePollVote: (pollId: number, optionId: number) => void;
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
-  createPost: (username: string, content: string, label: string, imageBase64s: string[]) => Promise<void>;
+  createPost: (username: string, content: string, label: string, imageBase64s: string[], pollRequest?: CreatePollParams) => Promise<void>;
   fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
 }
 
@@ -53,6 +56,7 @@ const CommentSection = ({
   totalPages,
   currentPage,
   handleReaction,
+  handlePollVote,
   formatTime,
   createReply,
   createPost,
@@ -67,6 +71,8 @@ const CommentSection = ({
   const [searchInput, setSearchInput] = useState<string>(''); // 入力用
   const [searchQuery, setSearchQuery] = useState<string>(''); // 検索実行用
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
+  const [pollData, setPollData] = useState<CreatePollParams | null>(null);
+  const [pollReset, setPollReset] = useState(false);
 
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
@@ -141,12 +147,15 @@ const CommentSection = ({
           selectedImages.map(file => compressImageToBase64(file))
         );
       }
-      await createPost(authorName, newComment, selectedLabel, imageBase64s);
+      await createPost(authorName, newComment, selectedLabel, imageBase64s, pollData ?? undefined);
       setIsConfirmDialogOpen(false);
       setNewComment('');
       setAuthorName('');
       setSelectedImages([]);
       setSelectedLabel('現地情報');
+      setPollData(null);
+      setPollReset(true);
+      setTimeout(() => setPollReset(false), 0);
     } catch (error) {
       console.error('Failed to submit comment:', error);
     } finally {
@@ -336,6 +345,7 @@ const CommentSection = ({
           <p className="text-[11px] text-gray-400 mb-4">
             ※投稿内容に合ったラベルを選択してください
           </p>
+          <PollCreator onChange={setPollData} onReset={pollReset} />
           <Button
             onClick={() => setIsConfirmDialogOpen(true)}
             disabled={
@@ -343,7 +353,8 @@ const CommentSection = ({
               !authorName.trim() ||
               isSubmittingComment ||
               authorName.length > MAX_USERNAME_LENGTH ||
-              newComment.length > MAX_CONTENT_LENGTH
+              newComment.length > MAX_CONTENT_LENGTH ||
+              (pollData !== null && pollData.options.some((o) => o.trim() === '' || o.length > MAX_POLL_OPTION_LENGTH))
             }
             className="
               group relative inline-flex items-center gap-2
@@ -404,6 +415,19 @@ const CommentSection = ({
                   ※投稿内容に合ったラベルが選択されていますか？ 現地での目撃情報は「現地情報」、それ以外は「その他」です。
                 </p>
               </div>
+              {pollData && (
+                <div className="py-3">
+                  <span className="text-xs font-bold text-gray-400">アンケート</span>
+                  <div className="mt-1 space-y-1">
+                    {pollData.options.map((opt, i) => (
+                      <div key={i} className="text-sm text-white bg-slate-700/30 px-3 py-1.5 rounded">
+                        {opt || `（選択肢${i + 1}）`}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">投票期間: {pollData.duration_days}日</p>
+                </div>
+              )}
               {selectedImages.length > 0 && (
                 <div className="pt-3">
                   <span className="text-xs font-bold text-gray-400">画像（{selectedImages.length}枚）</span>
@@ -552,7 +576,7 @@ const CommentSection = ({
             <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する投稿はありません' : '投稿はまだありません'}</div>
           ) : (
             comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} formatTime={formatTime} createReply={createReply} />
+              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} handlePollVote={handlePollVote} formatTime={formatTime} createReply={createReply} />
             ))
           )}
         </div>
