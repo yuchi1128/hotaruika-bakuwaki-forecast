@@ -22,16 +22,38 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<Paginat
   return apiFetch<PaginatedPostsResponse>(url);
 }
 
+export interface CreatePollParams {
+  options: string[];
+  duration_days: number;
+}
+
 export async function createPost(
   username: string,
   content: string,
   label: string,
   imageBase64s: string[],
+  pollRequest?: CreatePollParams,
 ): Promise<void> {
+  const body: Record<string, unknown> = {
+    username,
+    content,
+    label,
+    image_urls: imageBase64s,
+  };
+  if (pollRequest) {
+    body.poll_request = pollRequest;
+  }
   await apiFetch('/api/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, content, label, image_urls: imageBase64s }),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function votePollOption(optionId: number): Promise<void> {
+  await apiFetch(`/api/polls/${optionId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
