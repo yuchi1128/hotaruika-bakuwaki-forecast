@@ -354,7 +354,10 @@ const CommentSection = ({
               isSubmittingComment ||
               authorName.length > MAX_USERNAME_LENGTH ||
               newComment.length > MAX_CONTENT_LENGTH ||
-              (pollData !== null && pollData.options.some((o) => o.trim() === '' || o.length > MAX_POLL_OPTION_LENGTH))
+              (pollData !== null && (
+                pollData.options.filter((o) => o.trim() !== '').length < 2 ||
+                pollData.options.some((o) => o.length > MAX_POLL_OPTION_LENGTH)
+              ))
             }
             className="
               group relative inline-flex items-center gap-2
