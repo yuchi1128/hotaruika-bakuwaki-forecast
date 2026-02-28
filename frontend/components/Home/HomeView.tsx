@@ -92,7 +92,7 @@ export default function HomeView({ mode }: HomeViewProps) {
 
       <AppHeader />
 
-      <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-12">
+      <div className="main-container max-w-6xl mx-auto px-3 sm:px-4 pb-8">
         {todayPrediction && (
           <TodayForecast
             todayPrediction={todayPrediction}
