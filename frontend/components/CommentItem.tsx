@@ -413,17 +413,15 @@ export default function CommentItem({
 
       <div key={comment.id} className="pb-2 border-b border-purple-500/30">
         <div className="flex items-start gap-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-baseline gap-2 min-w-0">
-                <span className="font-semibold text-purple-200 text-sm sm:text-[15px] truncate min-w-0">
-                  {comment.username}
-                </span>
-                <span className="text-[14px] sm:text-[14px] text-gray-400 shrink-0">
-                  {formatTime(new Date(comment.created_at))}
-                </span>
-              </div>
-              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px] shrink-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 mb-2 min-w-0">
+              <span className="font-semibold text-purple-200 text-sm sm:text-[15px] truncate min-w-0 shrink">
+                {comment.username}
+              </span>
+              <span className="text-[14px] text-gray-400 shrink-0 whitespace-nowrap">
+                {formatTime(new Date(comment.created_at))}
+              </span>
+              <Badge variant="secondary" className="bg-purple-700/50 text-purple-200 text-[12px] shrink-0 whitespace-nowrap">
                 {comment.label}
               </Badge>
             </div>
