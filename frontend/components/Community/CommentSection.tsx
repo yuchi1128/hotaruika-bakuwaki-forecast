@@ -28,6 +28,8 @@ import {
   Tag,
   Heart,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import CommentItem from '@/components/CommentItem';
 import PollCreator from '@/components/PollCreator';
@@ -180,6 +182,28 @@ const CommentSection = ({
   // 表示用の計算
   const startIndex = (currentPage - 1) * COMMENTS_PER_PAGE + 1;
   const endIndex = Math.min(currentPage * COMMENTS_PER_PAGE, totalComments);
+
+  // ページ番号リストを生成
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | 'ellipsis')[] = [];
+    const nearby = new Set<number>();
+    nearby.add(1);
+    nearby.add(totalPages);
+    for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+      if (i >= 1 && i <= totalPages) nearby.add(i);
+    }
+    const sorted = Array.from(nearby).sort((a, b) => a - b);
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+        pages.push('ellipsis');
+      }
+      pages.push(sorted[i]);
+    }
+    return pages;
+  };
 
   return (
     <Card ref={commentSectionRef} className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
@@ -354,7 +378,10 @@ const CommentSection = ({
               isSubmittingComment ||
               authorName.length > MAX_USERNAME_LENGTH ||
               newComment.length > MAX_CONTENT_LENGTH ||
-              (pollData !== null && pollData.options.some((o) => o.trim() === '' || o.length > MAX_POLL_OPTION_LENGTH))
+              (pollData !== null && (
+                pollData.options.filter((o) => o.trim() !== '').length < 2 ||
+                pollData.options.some((o) => o.length > MAX_POLL_OPTION_LENGTH)
+              ))
             }
             className="
               group relative inline-flex items-center gap-2
@@ -546,29 +573,8 @@ const CommentSection = ({
           />
         </div>
 
-        {/* ページネーションコントロール（上部） */}
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="text-xs text-gray-400">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex}件 / 全${totalComments}件`}</div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
-              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              前へ
-            </Button>
-            <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
-            <Button
-              variant="ghost"
-              className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
-              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages || totalComments === 0}
-            >
-              次へ
-            </Button>
-          </div>
-        </div>
+        {/* 件数表示 */}
+        <div className="mb-4 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件中`}</div>
 
         {/* コメント一覧 */}
         <div className="space-y-4">
@@ -583,29 +589,43 @@ const CommentSection = ({
 
         {/* ページネーションコントロール（下部） */}
         {totalComments > 0 && (
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <div className="text-xs text-gray-400">
-              {startIndex}〜{endIndex}件 / 全{totalComments}件
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+          <div className="mt-8 flex flex-col items-center gap-2.5">
+            <div className="flex items-center gap-1 md:gap-2">
+              <button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
+                className="p-1 text-purple-300 hover:text-purple-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                前へ
-              </Button>
-              <span className="text-xs text-gray-300">ページ {currentPage} / {totalPages}</span>
-              <Button
-                variant="ghost"
-                className="h-7 px-3 text-xs border border-blue-500/40 text-blue-100 bg-background hover-bg-white-10"
+                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+              {getPageNumbers().map((page, i) =>
+                page === 'ellipsis' ? (
+                  <span key={`ellipsis-${i}`} className="w-6 h-7 md:w-8 md:h-8 flex items-center justify-center text-gray-500 text-[11px] md:text-xs">…</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`w-7 h-7 md:w-8 md:h-8 rounded-md text-[11px] md:text-xs font-medium transition-all ${
+                      page === currentPage
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
+                        : 'border border-purple-400/50 bg-slate-800/50 text-purple-300 hover:bg-slate-700/50 hover:border-purple-400/70'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
+                className="p-1 text-purple-300 hover:text-purple-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                次へ
-              </Button>
+                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
             </div>
+            <span className="text-[13px] font-medium text-gray-400">
+               {startIndex}〜{endIndex} 件目 / 全 {totalComments} 件中
+            </span>
           </div>
         )}
       </CardContent>

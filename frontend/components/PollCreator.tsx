@@ -65,15 +65,12 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
   };
 
   const emitChange = (opts: string[], hours: number) => {
-    const filledOptions = opts.filter((o) => o.trim() !== '');
-    if (filledOptions.length >= MIN_POLL_OPTIONS) {
-      onChange({ options: opts.map((o) => o.trim()), duration_hours: hours });
-    } else {
-      onChange(null);
-    }
+    onChange({ options: opts.map((o) => o.trim()), duration_hours: hours });
   };
 
+  const filledCount = options.filter((o) => o.trim() !== '').length;
   const hasError = options.some((o) => o.length > MAX_POLL_OPTION_LENGTH);
+  const hasInsufficientOptions = isEnabled && filledCount < MIN_POLL_OPTIONS;
 
   return (
     <div className="mb-4">
@@ -118,6 +115,11 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
             {hasError && (
               <p className="text-xs text-red-400">
                 ※選択肢は{MAX_POLL_OPTION_LENGTH}文字以内で入力してください
+              </p>
+            )}
+            {hasInsufficientOptions && !hasError && (
+              <p className="text-xs text-red-400">
+                ※選択肢を{MIN_POLL_OPTIONS}つ以上入力してください
               </p>
             )}
           </div>

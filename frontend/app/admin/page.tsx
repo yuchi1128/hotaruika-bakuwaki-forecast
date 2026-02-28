@@ -386,7 +386,10 @@ export default function AdminPage() {
                   </div>
                   <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={
                     newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ||
-                    (pollData !== null && pollData.options.some((o) => o.trim() === '' || o.length > MAX_POLL_OPTION_LENGTH))
+                    (pollData !== null && (
+                      pollData.options.filter((o) => o.trim() !== '').length < 2 ||
+                      pollData.options.some((o) => o.length > MAX_POLL_OPTION_LENGTH)
+                    ))
                   }>投稿する</Button>
                 </form>
               </CardContent>
