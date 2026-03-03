@@ -13,7 +13,7 @@ interface PollDisplayProps {
 
 function formatRemaining(expiresAt: string): string {
   const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return '終了';
+  if (diff <= 0) return '投票終了';
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -81,7 +81,7 @@ export default function PollDisplay({ poll, myVotedOptionId, onVote, isExpired }
         <BarChart2 className="w-3.5 h-3.5" />
         <span>{poll.total_votes}票</span>
         <span>·</span>
-        <span>{isExpired ? '終了' : formatRemaining(poll.expires_at)}</span>
+        <span>{isExpired ? '投票終了' : formatRemaining(poll.expires_at)}</span>
       </div>
     </div>
   );
