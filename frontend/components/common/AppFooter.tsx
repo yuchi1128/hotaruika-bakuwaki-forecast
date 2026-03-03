@@ -24,8 +24,7 @@ const AppFooter = () => {
         </div>
 
         <p className="text-xs text-gray-500">
-           本サイトはYouTube・X・ブログなどでのご紹介、大歓迎です。<br />
-           お気軽にシェアしてください。
+          本サイトの各種SNSでのご紹介は事前連絡不要で大歓迎です。
         </p>
 
         <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
