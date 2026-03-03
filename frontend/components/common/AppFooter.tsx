@@ -23,8 +23,13 @@ const AppFooter = () => {
           </p>
         </div>
 
+        <p className="text-xs text-gray-500">
+           本サイトはYouTube・X・ブログなどでのご紹介、大歓迎です。<br />
+           お気軽にシェアしてください。
+        </p>
+
         <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-          <span>ご連絡はこちらまで</span>
+          <span>各種ご連絡はこちらまで</span>
           <Link
             href="https://x.com/bakuwaki_jp"
             target="_blank"

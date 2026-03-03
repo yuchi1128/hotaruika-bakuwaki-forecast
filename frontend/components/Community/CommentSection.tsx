@@ -564,7 +564,7 @@ const CommentSection = ({
         </div>
 
         {/* 並び替え */}
-        <div className="mb-5 flex items-center gap-2">
+        <div className="mb-1 flex items-center gap-2">
           <span className="text-gray-300 text-xs font-bold whitespace-nowrap">並び替え：</span>
           <CustomSelect
             options={sortOptions}
@@ -573,8 +573,28 @@ const CommentSection = ({
           />
         </div>
 
+        {/* ページネーションコントロール（上部） */}
+        {totalPages > 1 && (
+          <div className="mb-2 flex justify-end gap-2">
+            <button
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="w-7 h-6 md:w-8 md:h-7 rounded-md text-[11px] md:text-xs font-medium transition-all border border-purple-400/50 bg-slate-800/50 text-purple-300 hover:bg-slate-700/50 hover:border-purple-400/70 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="w-7 h-6 md:w-8 md:h-7 rounded-md text-[11px] md:text-xs font-medium transition-all border border-purple-400/50 bg-slate-800/50 text-purple-300 hover:bg-slate-700/50 hover:border-purple-400/70 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* 件数表示 */}
-        <div className="mb-4 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件中`}</div>
+        <div className="mb-4 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件`}</div>
 
         {/* コメント一覧 */}
         <div className="space-y-4">
@@ -589,7 +609,7 @@ const CommentSection = ({
 
         {/* ページネーションコントロール（下部） */}
         {totalComments > 0 && (
-          <div className="mt-8 flex flex-col items-center gap-2.5">
+          <div className="mt-6 flex flex-col items-center gap-2.5">
             <div className="flex items-center gap-1 md:gap-2">
               <button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
@@ -600,12 +620,12 @@ const CommentSection = ({
               </button>
               {getPageNumbers().map((page, i) =>
                 page === 'ellipsis' ? (
-                  <span key={`ellipsis-${i}`} className="w-6 h-7 md:w-8 md:h-8 flex items-center justify-center text-gray-500 text-[11px] md:text-xs">…</span>
+                  <span key={`ellipsis-${i}`} className="w-6 h-[26px] md:w-8 md:h-[30px] flex items-center justify-center text-gray-500 text-[11px] md:text-xs">…</span>
                 ) : (
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`w-7 h-7 md:w-8 md:h-8 rounded-md text-[11px] md:text-xs font-medium transition-all ${
+                    className={`w-7 h-[26px] md:w-8 md:h-[30px] rounded-md text-[11px] md:text-xs font-medium transition-all ${
                       page === currentPage
                         ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
                         : 'border border-purple-400/50 bg-slate-800/50 text-purple-300 hover:bg-slate-700/50 hover:border-purple-400/70'
@@ -624,7 +644,7 @@ const CommentSection = ({
               </button>
             </div>
             <span className="text-[13px] font-medium text-gray-400">
-               {startIndex}〜{endIndex} 件目 / 全 {totalComments} 件中
+               {startIndex}〜{endIndex} 件目 / 全 {totalComments} 件
             </span>
           </div>
         )}
