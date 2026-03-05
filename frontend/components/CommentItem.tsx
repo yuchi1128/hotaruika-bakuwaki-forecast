@@ -225,6 +225,7 @@ export default function CommentItem({
                 size="sm"
                 onClick={() => handleReaction(reply.id, 'reply', 'bad')}
                 className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
+                style={{ marginTop: '1px' }}
                 disabled={reply.myReaction !== null}
               >
                 <ThumbsDown className={`w-4 h-4 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
@@ -516,6 +517,7 @@ export default function CommentItem({
                   size="sm"
                   onClick={() => handleReaction(comment.id, 'post', 'bad')}
                   className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
+                  style={{ marginTop: '1px' }}
                   disabled={comment.myReaction !== null}
                 >
                   <ThumbsDown className={`w-4 h-4 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
