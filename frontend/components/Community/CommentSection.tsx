@@ -369,6 +369,7 @@ const CommentSection = ({
           <p className="text-[11px] text-gray-400 mb-4">
             ※投稿内容に合ったラベルを選択してください
           </p>
+          <div className="flex items-center gap-3">
           <Button
             onClick={() => setIsConfirmDialogOpen(true)}
             disabled={
@@ -410,6 +411,24 @@ const CommentSection = ({
               </>
             )}
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setNewComment('');
+              setAuthorName('');
+              setSelectedImages([]);
+              setSelectedLabel('現地情報');
+              setPollData(null);
+              setPollReset(true);
+              setTimeout(() => setPollReset(false), 0);
+            }}
+            disabled={isSubmittingComment || (!newComment && !authorName && selectedImages.length === 0 && pollData === null)}
+            className="text-sm text-gray-400 hover:text-white hover:bg-slate-700/50 disabled:opacity-30"
+          >
+            リセット
+          </Button>
+          </div>
         </div>
 
         {/* 投稿確認モーダル */}
@@ -470,14 +489,7 @@ const CommentSection = ({
                 </div>
               )}
             </div>
-            <DialogFooter className="flex-row gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setIsConfirmDialogOpen(false)}
-                className="text-gray-300 hover:text-white hover:bg-slate-700/50"
-              >
-                修正
-              </Button>
+            <DialogFooter className="flex-row gap-2 sm:justify-start">
               <Button
                 onClick={handleSubmitComment}
                 disabled={isSubmittingComment}
@@ -494,6 +506,13 @@ const CommentSection = ({
                     投稿する
                   </>
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsConfirmDialogOpen(false)}
+                className="text-gray-300 hover:text-white hover:bg-slate-700/50"
+              >
+                修正
               </Button>
             </DialogFooter>
           </DialogContent>

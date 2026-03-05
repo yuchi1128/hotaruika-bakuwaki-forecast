@@ -377,14 +377,7 @@ export default function CommentItem({
               </div>
             )}
           </div>
-          <DialogFooter className="flex-row gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsReplyConfirmOpen(false)}
-              className="text-gray-300 hover:text-white hover:bg-slate-700/50"
-            >
-              修正
-            </Button>
+          <DialogFooter className="flex-row gap-2 sm:justify-start">
             <Button
               onClick={() => {
                 if (pendingReplyTarget) {
@@ -405,6 +398,13 @@ export default function CommentItem({
                   返信する
                 </>
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsReplyConfirmOpen(false)}
+              className="text-gray-300 hover:text-white hover:bg-slate-700/50"
+            >
+              修正
             </Button>
           </DialogFooter>
         </DialogContent>
