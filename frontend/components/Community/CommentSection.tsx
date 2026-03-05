@@ -72,7 +72,7 @@ const CommentSection = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [searchInput, setSearchInput] = useState<string>(''); // 入力用
   const [searchQuery, setSearchQuery] = useState<string>(''); // 検索実行用
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good' | 'bad'>('newest');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good'>('newest');
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
 
@@ -85,7 +85,6 @@ const CommentSection = ({
     { value: 'newest', label: '新しい順' },
     { value: 'oldest', label: '古い順' },
     { value: 'good', label: '高評価順' },
-    { value: 'bad', label: '低評価順' },
   ];
 
   // API呼び出し: ラベル、検索、ソートが変更されたとき
@@ -569,7 +568,7 @@ const CommentSection = ({
           <CustomSelect
             options={sortOptions}
             value={sortOrder}
-            onChange={(value) => setSortOrder(value as 'newest' | 'oldest' | 'good' | 'bad')}
+            onChange={(value) => setSortOrder(value as 'newest' | 'oldest' | 'good')}
           />
         </div>
 

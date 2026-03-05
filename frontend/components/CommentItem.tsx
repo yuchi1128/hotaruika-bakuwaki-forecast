@@ -225,8 +225,7 @@ export default function CommentItem({
               className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
               disabled={reply.myReaction !== null}
             >
-              <ThumbsDown className={`w-4 h-4 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
-              {reply.bad_count}
+              <ThumbsDown className={`w-4 h-4 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
             </Button>
             <Button
               variant="ghost"
@@ -514,8 +513,7 @@ export default function CommentItem({
                   className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
                   disabled={comment.myReaction !== null}
                 >
-                  <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
-                  {comment.badCount}
+                  <ThumbsDown className={`w-4 h-4 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
                 </Button>
                 <Button
                   variant="ghost"
