@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ImageIcon, X, Pencil, Check } from 'lucide-react';
+import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import PollCreator from '@/components/PollCreator';
 import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH } from '@/lib/constants';
@@ -20,6 +20,8 @@ interface Post {
   image_urls: string[];
   label: string;
   created_at: string;
+  good_count: number;
+  bad_count: number;
 }
 
 interface Reply {
@@ -31,6 +33,8 @@ interface Reply {
   label?: string;
   created_at: string;
   parent_username?: string;
+  good_count: number;
+  bad_count: number;
 }
 
 // 投稿と返信をまとめた型
@@ -575,7 +579,17 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                 <Trash2 className="h-4 w-4"/>
             </Button>
         </div>
-        <p className="text-xs text-gray-500 pt-1">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
+        <div className="flex items-center gap-3 pt-1">
+          <p className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
+          <span className="flex items-center gap-1 text-xs text-green-600">
+            <ThumbsUp className="w-3.5 h-3.5" />
+            {post.good_count}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-red-500">
+            <ThumbsDown className="w-3.5 h-3.5" />
+            {post.bad_count}
+          </span>
+        </div>
       </CardHeader>
 
       <CardContent className="p-4 bg-white">
@@ -709,7 +723,17 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
               </Badge>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 mb-1.5">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
+          <div className="flex items-center gap-3 mt-0.5 mb-1.5">
+            <p className="text-xs text-gray-500">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <ThumbsUp className="w-3 h-3" />
+              {reply.good_count}
+            </span>
+            <span className="flex items-center gap-1 text-xs text-red-500">
+              <ThumbsDown className="w-3 h-3" />
+              {reply.bad_count}
+            </span>
+          </div>
           <p className="whitespace-pre-wrap text-sm text-gray-700">{reply.content}</p>
           {reply.image_urls && reply.image_urls.length > 0 && (
             <div className="mt-2">

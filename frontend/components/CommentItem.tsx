@@ -208,35 +208,39 @@ export default function CommentItem({
                 />
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'good')}
-              className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
-              disabled={reply.myReaction !== null}
-            >
-              <ThumbsUp className={`w-4 h-4 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
-              {reply.good_count}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(reply.id, 'reply', 'bad')}
-              className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
-              disabled={reply.myReaction !== null}
-            >
-              <ThumbsDown className={`w-4 h-4 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
-              {reply.bad_count}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
-              className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
-            >
-              <MessageCircle className="w-4 h-4 mr-1" />
-              返信
-            </Button>
+            <div className="flex items-center gap-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleReaction(reply.id, 'reply', 'good')}
+                className={`text-xs ${reply.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
+                style={{ marginTop: '-2px' }}
+                disabled={reply.myReaction !== null}
+              >
+                <ThumbsUp className={`w-4 h-4 mr-1 ${reply.myReaction === 'good' ? 'fill-current' : ''}`} />
+                {reply.good_count}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleReaction(reply.id, 'reply', 'bad')}
+                className={`text-xs ${reply.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
+                style={{ marginTop: '1px' }}
+                disabled={reply.myReaction !== null}
+              >
+                <ThumbsDown className={`w-4 h-4 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
+                className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg ml-2"
+                style={{ marginTop: '-2px' }}
+              >
+                <MessageCircle className="w-4 h-4 mr-1" />
+                返信
+              </Button>
+            </div>
             {replyingTo === reply.id && (
               <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
                 <div className="md:w-1/2 mb-2">
@@ -378,14 +382,7 @@ export default function CommentItem({
               </div>
             )}
           </div>
-          <DialogFooter className="flex-row gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsReplyConfirmOpen(false)}
-              className="text-gray-300 hover:text-white hover:bg-slate-700/50"
-            >
-              修正
-            </Button>
+          <DialogFooter className="flex-row gap-2 sm:justify-start">
             <Button
               onClick={() => {
                 if (pendingReplyTarget) {
@@ -406,6 +403,13 @@ export default function CommentItem({
                   返信する
                 </>
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsReplyConfirmOpen(false)}
+              className="text-gray-300 hover:text-white hover:bg-slate-700/50"
+            >
+              修正
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -496,12 +500,13 @@ export default function CommentItem({
             )}
 
             <div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-0">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleReaction(comment.id, 'post', 'good')}
                   className={`text-xs ${comment.myReaction === 'good' ? 'text-green-400' : 'text-gray-400'} hover-text-green-300 active:bg-slate-600/50 rounded-lg`}
+                  style={{ marginTop: '-2px' }}
                   disabled={comment.myReaction !== null}
                 >
                   <ThumbsUp className={`w-4 h-4 mr-1 ${comment.myReaction === 'good' ? 'fill-current' : ''}`} />
@@ -512,16 +517,17 @@ export default function CommentItem({
                   size="sm"
                   onClick={() => handleReaction(comment.id, 'post', 'bad')}
                   className={`text-xs ${comment.myReaction === 'bad' ? 'text-red-400' : 'text-gray-400'} hover-text-red-300 active:bg-slate-600/50 rounded-lg`}
+                  style={{ marginTop: '1px' }}
                   disabled={comment.myReaction !== null}
                 >
-                  <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
-                  {comment.badCount}
+                  <ThumbsDown className={`w-4 h-4 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsReplying(!isReplying)}
-                  className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg"
+                  className="text-xs text-gray-400 hover-text-blue-300 active:bg-slate-600/50 rounded-lg ml-2"
+                  style={{ marginTop: '-2px' }}
                 >
                   <MessageCircle className="w-4 h-4 mr-1" />
                   返信
