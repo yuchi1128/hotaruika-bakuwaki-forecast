@@ -593,7 +593,7 @@ const CommentSection = ({
 
         {/* ページネーションコントロール（上部） */}
         {totalPages > 1 && (
-          <div className="mb-1.5 flex justify-end gap-2">
+          <div className="mb-1.5 flex justify-end gap-3">
             <button
               onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
