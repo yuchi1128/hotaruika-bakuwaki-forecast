@@ -8,16 +8,24 @@ export interface FetchPostsParams {
   limit?: number;
   search?: string;
   sort?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 export async function fetchPosts(params: FetchPostsParams = {}): Promise<PaginatedPostsResponse> {
-  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest' } = params;
+  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest', date_from, date_to } = params;
   let url = `/api/posts?include=replies&page=${page}&limit=${limit}&sort=${sort}`;
   if (label) {
     url += `&label=${encodeURIComponent(label)}`;
   }
   if (search) {
     url += `&search=${encodeURIComponent(search)}`;
+  }
+  if (date_from) {
+    url += `&date_from=${encodeURIComponent(date_from)}`;
+  }
+  if (date_to) {
+    url += `&date_to=${encodeURIComponent(date_to)}`;
   }
   return apiFetch<PaginatedPostsResponse>(url);
 }

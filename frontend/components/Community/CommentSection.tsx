@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,10 +31,14 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import CommentItem from '@/components/CommentItem';
 import PollCreator from '@/components/PollCreator';
 import type { Comment } from '@/lib/types';
 import type { CreatePollParams } from '@/lib/api/posts';
+import { getDateFilterOptions, getCustomDateRange } from '@/lib/date-filter';
+import { format as formatDate } from 'date-fns';
 import { MAX_USERNAME_LENGTH, MAX_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-compression';
 
@@ -49,7 +53,7 @@ interface CommentSectionProps {
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
   createPost: (username: string, content: string, label: string, imageBase64s: string[], pollRequest?: CreatePollParams) => Promise<void>;
-  fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string }) => void;
+  fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string; date_from?: string; date_to?: string }) => void;
 }
 
 const CommentSection = ({
@@ -75,6 +79,15 @@ const CommentSection = ({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good'>('newest');
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<string | undefined>(undefined);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState<Date | undefined>(undefined);
+  const [customDateTo, setCustomDateTo] = useState<Date | undefined>(undefined);
+  const [customDateLabel, setCustomDateLabel] = useState<string>('');
+  const [selectingDateType, setSelectingDateType] = useState<'from' | 'to'>('from');
+  const [dateError, setDateError] = useState<string>('');
 
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
@@ -87,7 +100,80 @@ const CommentSection = ({
     { value: 'good', label: '高評価順' },
   ];
 
-  // API呼び出し: ラベル、検索、ソートが変更されたとき
+  const dateFilterOptions = useMemo(() => getDateFilterOptions(), []);
+
+  // 日付フィルターのCustomSelect用オプション（カスタム日付選択時はラベルを差し替え）
+  const dateSelectOptions = useMemo(() => {
+    if (selectedDateFilter === 'custom' && customDateLabel) {
+      return dateFilterOptions.map(opt =>
+        opt.value === 'custom' ? { ...opt, label: customDateLabel } : opt
+      );
+    }
+    return dateFilterOptions;
+  }, [dateFilterOptions, selectedDateFilter, customDateLabel]);
+
+  // 現在選択中の日付範囲テキスト
+  const activeDateRangeText = useMemo(() => {
+    if (selectedDateFilter === 'all') return null;
+    if (selectedDateFilter === 'custom') {
+      if (customDateFrom && customDateTo) {
+        const rangeFrom = getCustomDateRange(customDateFrom);
+        const rangeTo = getCustomDateRange(customDateTo);
+        return `${rangeFrom.rangeText.split(' 〜 ')[0]} 〜 ${rangeTo.rangeText.split(' 〜 ')[1]}`;
+      }
+      if (customDateFrom) {
+        const rangeFrom = getCustomDateRange(customDateFrom);
+        return `${rangeFrom.rangeText.split(' 〜 ')[0]} 〜（終了日を選択）`;
+      }
+      return null;
+    }
+    const option = dateFilterOptions.find(o => o.value === selectedDateFilter);
+    return option?.rangeText ?? null;
+  }, [selectedDateFilter, dateFilterOptions, customDateFrom, customDateTo]);
+
+  const handleDateFilterChange = (value: string) => {
+    if (value === 'custom') {
+      setSelectedDateFilter('custom');
+      setCustomDateFrom(undefined);
+      setCustomDateTo(undefined);
+      setSelectingDateType('from');
+      setIsCalendarOpen(true);
+      return;
+    }
+    setSelectedDateFilter(value);
+    setCustomDateFrom(undefined);
+    setCustomDateTo(undefined);
+    setCustomDateLabel('');
+    const option = dateFilterOptions.find(o => o.value === value);
+    setDateFrom(option?.dateFrom);
+    setDateTo(option?.dateTo);
+  };
+
+  const handleCustomDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    setDateError('');
+    if (selectingDateType === 'from') {
+      setCustomDateFrom(date);
+      setSelectingDateType('to');
+    } else {
+      const fromDate = customDateFrom!;
+      const toDate = date;
+      if (toDate < fromDate) {
+        setDateError('終了日は開始日より後の日を選択してください');
+        return;
+      }
+      setCustomDateFrom(fromDate);
+      setCustomDateTo(toDate);
+      const rangeFrom = getCustomDateRange(fromDate);
+      const rangeTo = getCustomDateRange(toDate);
+      setDateFrom(rangeFrom.dateFrom);
+      setDateTo(rangeTo.dateTo);
+      setCustomDateLabel(`${formatDate(fromDate, 'M/d')} 〜 ${formatDate(toDate, 'M/d')}`);
+      setIsCalendarOpen(false);
+    }
+  };
+
+  // API呼び出し: ラベル、検索、ソート、日付が変更されたとき
   useEffect(() => {
     fetchPosts({
       label: selectedFilterLabel,
@@ -95,8 +181,10 @@ const CommentSection = ({
       limit: COMMENTS_PER_PAGE,
       search: searchQuery || undefined,
       sort: sortOrder,
+      date_from: dateFrom,
+      date_to: dateTo,
     });
-  }, [selectedFilterLabel, searchQuery, sortOrder]);
+  }, [selectedFilterLabel, searchQuery, sortOrder, dateFrom, dateTo]);
 
   // 検索実行
   const handleSearch = () => {
@@ -172,6 +260,8 @@ const CommentSection = ({
       limit: COMMENTS_PER_PAGE,
       search: searchQuery || undefined,
       sort: sortOrder,
+      date_from: dateFrom,
+      date_to: dateTo,
     });
     if (filterSectionRef.current) {
       filterSectionRef.current.scrollIntoView({ behavior: 'auto' });
@@ -580,6 +670,65 @@ const CommentSection = ({
             検索
           </Button>
         </div>
+
+        {/* 日付フィルター */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-gray-300 text-xs font-bold whitespace-nowrap">
+            投稿日<span className="text-[10px] text-gray-400 ml-0.5">(午前6時区切り)</span>：
+          </span>
+          <Popover open={isCalendarOpen} onOpenChange={(open) => {
+            setIsCalendarOpen(open);
+            if (!open) {
+              setDateError('');
+              if (!customDateTo) {
+                setSelectedDateFilter('all');
+                setDateFrom(undefined);
+                setDateTo(undefined);
+                setCustomDateFrom(undefined);
+                setCustomDateLabel('');
+              }
+            }
+          }}>
+            <PopoverTrigger asChild onClick={(e) => e.preventDefault()}>
+              <div>
+                <CustomSelect
+                  options={dateSelectOptions}
+                  value={selectedDateFilter}
+                  onChange={handleDateFilterChange}
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-slate-800 border-purple-500/50" align="start" side="bottom">
+              <div className="px-3 pt-3 pb-1 text-sm text-gray-400 text-center">
+                {selectingDateType === 'from' ? '開始日を選択' : '終了日を選択'}
+              </div>
+              {dateError && (
+                <div className="px-3 pb-1 text-xs text-red-400 text-center">
+                  {dateError}
+                </div>
+              )}
+              <Calendar
+                mode="single"
+                selected={selectingDateType === 'from' ? customDateFrom : customDateTo}
+                onSelect={handleCustomDateSelect}
+                disabled={{ after: new Date() }}
+                className="text-white"
+                modifiers={selectingDateType === 'to' && customDateFrom ? { startDate: customDateFrom } : {}}
+                modifiersClassNames={{ startDate: 'ring-2 ring-purple-400 bg-purple-900/60 text-purple-200 rounded-md' }}
+                classNames={{
+                  day_selected: 'bg-purple-600 text-white hover:bg-purple-700 focus:bg-purple-600',
+                  day_today: 'bg-slate-700 text-white',
+                  day: 'h-9 w-9 p-0 font-normal rounded-lg aria-selected:opacity-100 transition-transform duration-100 active:scale-90 active:bg-white/10',
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        {activeDateRangeText && (
+          <div className="mb-4 -mt-2 ml-1 text-xs text-purple-300/80">
+            表示中：{activeDateRangeText}
+          </div>
+        )}
 
         {/* 並び替え */}
         <div className="mb-0 flex items-center gap-2">
