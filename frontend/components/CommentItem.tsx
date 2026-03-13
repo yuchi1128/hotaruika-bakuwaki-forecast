@@ -176,10 +176,10 @@ export default function CommentItem({
     return replies.map((reply) => (
       <div
         key={reply.id}
-        className={`ml-${level * 6} bg-slate-700/30 rounded-lg p-2 md:p-3 border-l-[1.5px] border-blue-500/30 mt-1 md:mt-3`}
+        className={`ml-${level * 6} bg-slate-700/30 rounded-lg p-2 md:p-3 border-l-[1.5px] border-blue-500/30 mt-1 md:mt-3 overflow-hidden`}
       >
         <div className="flex items-start gap-2">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 min-w-0">
               <span className="font-semibold text-blue-200 text-sm sm:text-[15px] truncate min-w-0">
                 {reply.username}
