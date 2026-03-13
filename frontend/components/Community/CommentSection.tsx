@@ -740,6 +740,29 @@ const CommentSection = ({
           />
         </div>
 
+        {/* 検索条件リセット */}
+        {(selectedFilterLabel !== null || searchQuery || selectedDateFilter !== 'all' || sortOrder !== 'newest') && (
+          <div className="mt-3 mb-1">
+            <button
+              onClick={() => {
+                setSelectedFilterLabel(null);
+                setSearchInput('');
+                setSearchQuery('');
+                setSelectedDateFilter('all');
+                setDateFrom(undefined);
+                setDateTo(undefined);
+                setCustomDateFrom(undefined);
+                setCustomDateTo(undefined);
+                setCustomDateLabel('');
+                setSortOrder('newest');
+              }}
+              className="text-xs text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+            >
+              検索条件をリセット
+            </button>
+          </div>
+        )}
+
         {/* ページネーションコントロール（上部） */}
         {totalPages > 1 && (
           <div className="mb-1.5 flex justify-end gap-3">
