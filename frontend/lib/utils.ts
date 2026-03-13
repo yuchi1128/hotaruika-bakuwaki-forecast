@@ -95,6 +95,10 @@ export const predictionLevels: PredictionLevel[] = [
   { level: 5, name: '爆湧き', description: '今季トップクラスの身投げが期待できます！！！', color: 'text-pink-300', bgColor: 'bg-pink-500/[.14] border border-pink-400/20 backdrop-blur-sm' },
 ];
 
+// [爆湧き, 大湧き, 湧き, チョイ湧き, プチ湧き]
+// const WAKI_THRESHOLDS = [1.25, 1.0, 0.75, 0.5, 0.25] as const;
+const WAKI_THRESHOLDS = [1.4, 1.15, 0.9, 0.65, 0.4] as const;
+
 // レベル判定ロジック（共通）
 export const getPredictionLevel = (predicted_amount: number, date: Date): number => {
   const month = date.getMonth();
@@ -104,29 +108,16 @@ export const getPredictionLevel = (predicted_amount: number, date: Date): number
     return -1; // シーズン外
   }
 
-  // // 爆湧き
-  // if (predicted_amount >= 1.25) return 5;
-  // // 大湧き
-  // if (predicted_amount >= 1.0) return 4;
-  // // 湧き
-  // if (predicted_amount >= 0.75) return 3;
-  // // チョイ湧き
-  // if (predicted_amount >= 0.5) return 2;
-  // // プチ湧き
-  // if (predicted_amount >= 0.25) return 1;
-  // // 湧きなし
-  // return 0;
-
   // 爆湧き
-  if (predicted_amount >= 1.4) return 5;
+  if (predicted_amount >= WAKI_THRESHOLDS[0]) return 5;
   // 大湧き
-  if (predicted_amount >= 1.15) return 4;
+  if (predicted_amount >= WAKI_THRESHOLDS[1]) return 4;
   // 湧き
-  if (predicted_amount >= 0.9) return 3;
+  if (predicted_amount >= WAKI_THRESHOLDS[2]) return 3;
   // チョイ湧き
-  if (predicted_amount >= 0.65) return 2;
+  if (predicted_amount >= WAKI_THRESHOLDS[3]) return 2;
   // プチ湧き
-  if (predicted_amount >= 0.4) return 1;
+  if (predicted_amount >= WAKI_THRESHOLDS[4]) return 1;
   // 湧きなし
   return 0;
 };
@@ -134,7 +125,7 @@ export const getPredictionLevel = (predicted_amount: number, date: Date): number
 export const getBakuwakiLevelInfo = (predicted_amount: number, date: Date) => {
   const level = getPredictionLevel(predicted_amount, date);
 
-  const bakuwakiIndex = Math.min(Math.round((predicted_amount / 1.5) * 100), 200); // 200%を上限とする
+  const bakuwakiIndex = Math.min(Math.round((predicted_amount / WAKI_THRESHOLDS[0]) * 100), 200); // 200%を上限とする
 
   if (level === -1) {
     return {

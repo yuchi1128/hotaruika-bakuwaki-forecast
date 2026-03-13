@@ -11,7 +11,7 @@ import {
 import type { DayPrediction, ForecastData } from '@/lib/types';
 
 const MOCK_FORECASTS: ForecastData[] = [
-  { date: "2025-05-26", predicted_amount: 1.4, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 18.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
+  { date: "2025-05-26", predicted_amount: 1.5, moon_age: 18.3, weather_code: 63, temperature_max: 25.8, temperature_min: 18.6, precipitation_probability_max: 78, dominant_wind_direction: 356 },
   { date: "2025-05-27", predicted_amount: 0.1, moon_age: 19.3, weather_code: 80, temperature_max: 27.4, temperature_min: 19.2, precipitation_probability_max: 54, dominant_wind_direction: 287 },
   { date: "2025-05-28", predicted_amount: 0.6, moon_age: 20.3, weather_code: 3, temperature_max: 31.1, temperature_min: 24.2, precipitation_probability_max: 53, dominant_wind_direction: 283 },
   { date: "2025-05-29", predicted_amount: 0.8, moon_age: 21.3, weather_code: 51, temperature_max: 31, temperature_min: 21.9, precipitation_probability_max: 15, dominant_wind_direction: 63 },

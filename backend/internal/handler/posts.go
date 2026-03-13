@@ -274,6 +274,8 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	includeReplies := r.URL.Query().Get("include") == "replies"
 	search := r.URL.Query().Get("search")
 	sort := r.URL.Query().Get("sort")
+	dateFromStr := r.URL.Query().Get("date_from")
+	dateToStr := r.URL.Query().Get("date_to")
 
 	// ページネーションパラメータ
 	pageStr := r.URL.Query().Get("page")
@@ -322,6 +324,20 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			conditions = append(conditions, fmt.Sprintf("(p.username ILIKE $%d OR p.content ILIKE $%d)", argIndex, argIndex))
 			countArgs = append(countArgs, "%"+search+"%")
 			argIndex++
+		}
+		if dateFromStr != "" {
+			if t, err := time.Parse(time.RFC3339, dateFromStr); err == nil {
+				conditions = append(conditions, fmt.Sprintf("p.created_at >= $%d", argIndex))
+				countArgs = append(countArgs, t)
+				argIndex++
+			}
+		}
+		if dateToStr != "" {
+			if t, err := time.Parse(time.RFC3339, dateToStr); err == nil {
+				conditions = append(conditions, fmt.Sprintf("p.created_at < $%d", argIndex))
+				countArgs = append(countArgs, t)
+				argIndex++
+			}
 		}
 
 		whereClause := ""

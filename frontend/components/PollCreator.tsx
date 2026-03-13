@@ -15,7 +15,7 @@ interface PollCreatorProps {
 export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [options, setOptions] = useState<string[]>(['', '']);
-  const [durationHours, setDurationHours] = useState<number>(24);
+  const [durationHours, setDurationHours] = useState<number>(12);
 
   // 親からリセットされた場合
   if (onReset && isEnabled) {
