@@ -701,6 +701,11 @@ const CommentSection = ({
                 <DialogDescription className="sr-only">
                   カレンダーから日付を選択してください
                 </DialogDescription>
+                {selectingDateType === 'to' && customDateFrom && (
+                  <p className="text-[11px] text-gray-500 text-center mt-1">
+                    ※開始日（{formatDate(customDateFrom, 'M/d')}）と同じ日を選ぶと<br />1日分の投稿が表示されます
+                  </p>
+                )}
               </DialogHeader>
               {dateError && (
                 <div className="px-3 pb-1 text-xs text-red-400 text-center">
