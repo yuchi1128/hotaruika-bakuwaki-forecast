@@ -23,7 +23,7 @@ func (h *Handler) adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 	if adminPassword == "" {
-		http.Error(w, "管理者機能が設定されていません", http.StatusInternalServerError)
+		http.Error(w, "管理人機能が設定されていません", http.StatusInternalServerError)
 		return
 	}
 	if req.Password != adminPassword {

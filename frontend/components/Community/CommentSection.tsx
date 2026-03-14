@@ -338,7 +338,7 @@ const CommentSection = ({
                     <h4 className="font-semibold text-slate-200 mb-1">お名前について</h4>
                     <ul className="text-slate-300 space-y-1 leading-relaxed">
                       <li>・なるべく<strong className="text-white">一人につき一つの名前</strong>で投稿してください。</li>
-                      <li>・公式や管理者など、<strong className="text-red-300">特別な立場を連想させる名前</strong>での投稿はご遠慮ください。</li>
+                      <li>・公式や管理人など、<strong className="text-red-300">特別な立場を連想させる名前</strong>での投稿はご遠慮ください。</li>
                     </ul>
                   </div>
                 </div>
@@ -632,11 +632,11 @@ const CommentSection = ({
             その他
           </Button>
           <Button
-            className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '管理者' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
-            onClick={() => setSelectedFilterLabel('管理者')}
-            variant={selectedFilterLabel === '管理者' ? 'default' : 'outline'}
+            className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === '管理人' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
+            onClick={() => setSelectedFilterLabel('管理人')}
+            variant={selectedFilterLabel === '管理人' ? 'default' : 'outline'}
           >
-            管理者
+            管理人
           </Button>
         </div>
 

@@ -3,7 +3,7 @@ CREATE TABLE posts (
     username TEXT NOT NULL,
     content TEXT NOT NULL,
     image_urls TEXT[],
-    label VARCHAR(50) NOT NULL CHECK (label IN ('現地情報', 'その他', '管理者')),
+    label VARCHAR(50) NOT NULL CHECK (label IN ('現地情報', 'その他', '管理人')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
