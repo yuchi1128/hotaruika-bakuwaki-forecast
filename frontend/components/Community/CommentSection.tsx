@@ -31,7 +31,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import CommentItem from '@/components/CommentItem';
 import PollCreator from '@/components/PollCreator';
@@ -674,9 +673,14 @@ const CommentSection = ({
         {/* 日付フィルター */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-gray-300 text-xs font-bold whitespace-nowrap">
-            投稿日<span className="text-[10px] text-gray-400 ml-0.5">(午前6時区切り)</span>：
+            投稿日<span className="text-[10px] text-gray-400 ml-0.5">(午前7時区切り)</span>：
           </span>
-          <Popover open={isCalendarOpen} onOpenChange={(open) => {
+          <CustomSelect
+            options={dateSelectOptions}
+            value={selectedDateFilter}
+            onChange={handleDateFilterChange}
+          />
+          <Dialog open={isCalendarOpen} onOpenChange={(open) => {
             setIsCalendarOpen(open);
             if (!open) {
               setDateError('');
@@ -689,19 +693,15 @@ const CommentSection = ({
               }
             }
           }}>
-            <PopoverTrigger asChild onClick={(e) => e.preventDefault()}>
-              <div>
-                <CustomSelect
-                  options={dateSelectOptions}
-                  value={selectedDateFilter}
-                  onChange={handleDateFilterChange}
-                />
-              </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-slate-800 border-purple-500/50" align="start" side="bottom">
-              <div className="px-3 pt-3 pb-1 text-sm text-gray-400 text-center">
-                {selectingDateType === 'from' ? '開始日を選択' : '終了日を選択'}
-              </div>
+            <DialogContent className="w-[90vw] max-w-xs bg-slate-800/80 border-purple-500/50 text-white shadow-lg backdrop-blur-md rounded-lg p-0">
+              <DialogHeader className="px-3 pt-4 pb-0">
+                <DialogTitle className="text-sm text-gray-400 text-center font-normal">
+                  {selectingDateType === 'from' ? '開始日を選択' : '終了日を選択'}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  カレンダーから日付を選択してください
+                </DialogDescription>
+              </DialogHeader>
               {dateError && (
                 <div className="px-3 pb-1 text-xs text-red-400 text-center">
                   {dateError}
@@ -712,7 +712,7 @@ const CommentSection = ({
                 selected={selectingDateType === 'from' ? customDateFrom : customDateTo}
                 onSelect={handleCustomDateSelect}
                 disabled={{ after: new Date() }}
-                className="text-white"
+                className="text-white flex justify-center"
                 modifiers={selectingDateType === 'to' && customDateFrom ? { startDate: customDateFrom } : {}}
                 modifiersClassNames={{ startDate: 'ring-2 ring-purple-400 bg-purple-900/60 text-purple-200 rounded-md' }}
                 classNames={{
@@ -721,8 +721,8 @@ const CommentSection = ({
                   day: 'h-9 w-9 p-0 font-normal rounded-lg aria-selected:opacity-100 transition-transform duration-100 active:scale-90 active:bg-white/10',
                 }}
               />
-            </PopoverContent>
-          </Popover>
+            </DialogContent>
+          </Dialog>
         </div>
         {activeDateRangeText && (
           <div className="mb-4 -mt-2 ml-1 text-xs text-purple-300/80">
