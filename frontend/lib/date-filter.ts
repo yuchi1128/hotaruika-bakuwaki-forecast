@@ -1,6 +1,6 @@
 import { format, subDays } from 'date-fns';
 
-const BOUNDARY_HOUR = 6;
+const BOUNDARY_HOUR = 7;
 
 /**
  * 現在のJST時刻を取得（ブラウザのタイムゾーンに依存しない）
