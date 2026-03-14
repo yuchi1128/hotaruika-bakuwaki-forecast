@@ -47,7 +47,7 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [posts, setPosts] = useState<PostWithReplies[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostUsername, setNewPostUsername] = useState('管理者');
+  const [newPostUsername, setNewPostUsername] = useState('管理人');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
@@ -194,7 +194,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           username: newPostUsername,
           content: newPostContent,
-          label: '管理者',
+          label: '管理人',
           image_urls: imageBase64s,
           ...(pollData && { poll_request: pollData }),
         }),
@@ -202,7 +202,7 @@ export default function AdminPage() {
       });
       if (!res.ok) {
         if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('管理者投稿の作成に失敗しました。');
+        throw new Error('管理人投稿の作成に失敗しました。');
       }
       setNewPostContent('');
       setSelectedImages([]);
@@ -218,9 +218,9 @@ export default function AdminPage() {
   const handleAdminReply = async (postId: number, content: string, imageBase64s?: string[]) => {
     try {
       const body: Record<string, unknown> = {
-        username: '管理者',
+        username: '管理人',
         content: content,
-        label: '管理者',
+        label: '管理人',
       };
       if (imageBase64s && imageBase64s.length > 0) {
         body.image_urls = imageBase64s;
@@ -233,7 +233,7 @@ export default function AdminPage() {
       });
       if (!res.ok) {
         if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('管理者返信の作成に失敗しました。');
+        throw new Error('管理人返信の作成に失敗しました。');
       }
       fetchAllData();
     } catch (err) {
@@ -244,9 +244,9 @@ export default function AdminPage() {
   const handleAdminReplyToReply = async (replyId: number, content: string, imageBase64s?: string[]) => {
     try {
       const body: Record<string, unknown> = {
-        username: '管理者',
+        username: '管理人',
         content: content,
-        label: '管理者',
+        label: '管理人',
       };
       if (imageBase64s && imageBase64s.length > 0) {
         body.image_urls = imageBase64s;
@@ -259,7 +259,7 @@ export default function AdminPage() {
       });
       if (!res.ok) {
         if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('管理者返信の作成に失敗しました。');
+        throw new Error('管理人返信の作成に失敗しました。');
       }
       fetchAllData();
     } catch (err) {
@@ -303,7 +303,7 @@ export default function AdminPage() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-2xl">管理者ログイン</CardTitle>
+            <CardTitle className="text-2xl">管理人ログイン</CardTitle>
             <CardDescription>管理用パスワードを入力してください。</CardDescription>
           </CardHeader>
           <CardContent>
@@ -332,7 +332,7 @@ export default function AdminPage() {
     <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-900">管理者ダッシュボード</h1>
+          <h1 className="text-3xl font-bold text-gray-900">管理人ダッシュボード</h1>
           <Button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 text-white">ログアウト</Button>
         </header>
 
@@ -342,7 +342,7 @@ export default function AdminPage() {
           <div className="lg:col-span-1">
             <Card className="shadow-sm bg-white border border-gray-800">
               <CardHeader>
-                <CardTitle className="text-gray-900">管理者として投稿</CardTitle>
+                <CardTitle className="text-gray-900">管理人として投稿</CardTitle>
                 <CardDescription className="text-gray-500">お知らせなどを投稿します。</CardDescription>
               </CardHeader>
               <CardContent>
@@ -350,7 +350,7 @@ export default function AdminPage() {
                   <Input
                     value={newPostUsername}
                     onChange={(e) => setNewPostUsername(e.target.value)}
-                    placeholder="ユーザー名 (デフォルト: 管理者)"
+                    placeholder="ユーザー名 (デフォルト: 管理人)"
                     className="bg-white border-gray-800 text-gray-900"
                   />
                   <Textarea
@@ -435,7 +435,7 @@ export default function AdminPage() {
 }
 
 function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string, imageBase64s?: string[]) => Promise<void>, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void> }) {
-  const isAdmin = post.label === '管理者';
+  const isAdmin = post.label === '管理人';
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -549,7 +549,7 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                     >
                       <option value="現地情報">現地情報</option>
                       <option value="その他">その他</option>
-                      <option value="管理者">管理者</option>
+                      <option value="管理人">管理人</option>
                     </select>
                     <button
                       onClick={handleLabelConfirm}
@@ -603,14 +603,14 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
         <div className="mt-4 pt-4 border-t border-gray-200">
           {!isReplying ? (
             <Button onClick={() => setIsReplying(true)} size="sm" className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-100">
-              管理者として返信
+              管理人として返信
             </Button>
           ) : (
             <div className="space-y-3">
               <Textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="管理者として返信..."
+                placeholder="管理人として返信..."
                 rows={3}
                 className="w-full bg-white border-gray-300 text-gray-900"
               />
@@ -751,7 +751,7 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
                 <Textarea
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="管理者として返信..."
+                  placeholder="管理人として返信..."
                   rows={2}
                   className="w-full text-sm bg-white border-gray-300 text-gray-900"
                 />

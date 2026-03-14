@@ -149,7 +149,7 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	}
 
 	if isAdmin {
-		// 管理者は本文1000文字まで
+		// 管理人は本文1000文字まで
 		if len([]rune(post.Content)) > 1000 {
 			http.Error(w, "本文が長すぎます（1000文字以内）", http.StatusBadRequest)
 			return
@@ -163,13 +163,13 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	}
 
 	if isAdmin {
-		if post.Label != "現地情報" && post.Label != "その他" && post.Label != "管理者" {
+		if post.Label != "現地情報" && post.Label != "その他" && post.Label != "管理人" {
 			http.Error(w, "不正なラベルです", http.StatusBadRequest)
 			return
 		}
 	} else {
-		if post.Label == "管理者" {
-			http.Error(w, "管理者ラベルは使用できません", http.StatusForbidden)
+		if post.Label == "管理人" {
+			http.Error(w, "管理人ラベルは使用できません", http.StatusForbidden)
 			return
 		}
 		if post.Label != "現地情報" && post.Label != "その他" {
@@ -596,9 +596,9 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	// 管理者のみ「管理者」ラベルを使用可能
-	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {
-		http.Error(w, "管理者ラベルは使用できません", http.StatusForbidden)
+	// 管理人のみ「管理人」ラベルを使用可能
+	if reply.Label != nil && *reply.Label == "管理人" && !isAdmin {
+		http.Error(w, "管理人ラベルは使用できません", http.StatusForbidden)
 		return
 	}
 
@@ -648,9 +648,9 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		return
 	}
 
-	// 管理者のみ「管理者」ラベルを使用可能
-	if reply.Label != nil && *reply.Label == "管理者" && !isAdmin {
-		http.Error(w, "管理者ラベルは使用できません", http.StatusForbidden)
+	// 管理人のみ「管理人」ラベルを使用可能
+	if reply.Label != nil && *reply.Label == "管理人" && !isAdmin {
+		http.Error(w, "管理人ラベルは使用できません", http.StatusForbidden)
 		return
 	}
 
@@ -826,7 +826,7 @@ func (h *Handler) updatePostLabel(w http.ResponseWriter, r *http.Request, postID
 	}
 
 	// ラベルのバリデーション
-	if req.Label != "現地情報" && req.Label != "その他" && req.Label != "管理者" {
+	if req.Label != "現地情報" && req.Label != "その他" && req.Label != "管理人" {
 		http.Error(w, "不正なラベルです", http.StatusBadRequest)
 		return
 	}

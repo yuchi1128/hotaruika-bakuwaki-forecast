@@ -34,7 +34,7 @@ func main() {
 	// 環境変数の読み込みと検証
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 	if adminPassword == "" {
-		logger.Warn("環境変数ADMIN_PASSWORDが設定されていません。管理者機能は無効になります。")
+		logger.Warn("環境変数ADMIN_PASSWORDが設定されていません。管理人機能は無効になります。")
 	}
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "" {
