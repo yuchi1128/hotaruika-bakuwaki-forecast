@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -19,6 +21,49 @@ import (
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
+
+// ゼロ幅文字・不可視文字を除去する正規表現
+var invisibleCharRegex = regexp.MustCompile(`[\x{200B}-\x{200F}\x{2028}-\x{206F}\x{FEFF}\x{00AD}\x{034F}\x{180E}\x{FE00}-\x{FE0F}]`)
+
+func stripInvisibleChars(s string) string {
+	return invisibleCharRegex.ReplaceAllString(s, "")
+}
+
+// IPベースのレート制限
+var (
+	rateMu       sync.Mutex
+	postRateMap  = make(map[string][]time.Time) // 投稿用
+	reactRateMap = make(map[string][]time.Time) // リアクション用
+)
+
+func getClientIP(r *http.Request) string {
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	return strings.TrimSpace(strings.Split(ip, ",")[0])
+}
+
+func checkRate(store map[string][]time.Time, ip string, maxReqs int, window time.Duration) bool {
+	now := time.Now()
+	rateMu.Lock()
+	defer rateMu.Unlock()
+
+	cutoff := now.Add(-window)
+	times := store[ip]
+	valid := times[:0]
+	for _, t := range times {
+		if t.After(cutoff) {
+			valid = append(valid, t)
+		}
+	}
+	if len(valid) >= maxReqs {
+		store[ip] = valid
+		return false
+	}
+	store[ip] = append(valid, now)
+	return true
+}
 
 func (h *Handler) postsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -127,11 +172,21 @@ func (h *Handler) replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
+	// レート制限: 1分間に5回まで
+	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
+		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	var post model.Post
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
 		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
 		return
 	}
+
+	// 不可視文字を除去
+	post.Username = stripInvisibleChars(post.Username)
+	post.Content = stripInvisibleChars(post.Content)
 
 	// ユーザー名と本文の検証
 	if strings.TrimSpace(post.Username) == "" {
@@ -571,11 +626,21 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 }
 
 func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int, isAdmin bool) {
+	// レート制限: 1分間に5回まで
+	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
+		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	var reply model.Reply
 	if err := json.NewDecoder(r.Body).Decode(&reply); err != nil {
 		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
 		return
 	}
+
+	// 不可視文字を除去
+	reply.Username = stripInvisibleChars(reply.Username)
+	reply.Content = stripInvisibleChars(reply.Content)
 
 	// ユーザー名と本文の検証
 	if strings.TrimSpace(reply.Username) == "" {
@@ -631,11 +696,21 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 }
 
 func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int, isAdmin bool) {
+	// レート制限: 1分間に5回まで
+	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
+		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	var reply model.Reply
 	if err := json.NewDecoder(r.Body).Decode(&reply); err != nil {
 		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
 		return
 	}
+
+	// 不可視文字を除去
+	reply.Username = stripInvisibleChars(reply.Username)
+	reply.Content = stripInvisibleChars(reply.Content)
 
 	// ユーザー名と本文の検証
 	if strings.TrimSpace(reply.Username) == "" {
@@ -701,6 +776,12 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 }
 
 func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, postID int) {
+	// レート制限: 1分間に10回まで
+	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
+		http.Error(w, "リアクションが多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	var reaction model.Reaction
 	json.NewDecoder(r.Body).Decode(&reaction)
 	query := `INSERT INTO reactions (post_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
@@ -717,6 +798,12 @@ func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, pos
 }
 
 func (h *Handler) createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
+	// レート制限: 1分間に10回まで
+	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
+		http.Error(w, "リアクションが多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	var reaction model.Reaction
 	json.NewDecoder(r.Body).Decode(&reaction)
 	query := `INSERT INTO reactions (reply_id, reaction_type) VALUES ($1, $2) RETURNING id, created_at`
