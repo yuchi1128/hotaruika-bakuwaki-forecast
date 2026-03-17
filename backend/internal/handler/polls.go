@@ -33,7 +33,13 @@ func (h *Handler) pollHandler(w http.ResponseWriter, r *http.Request) {
 	h.votePollOption(w, r, optionID)
 }
 
-func (h *Handler) votePollOption(w http.ResponseWriter, _ *http.Request, optionID int) {
+func (h *Handler) votePollOption(w http.ResponseWriter, r *http.Request, optionID int) {
+	// レート制限: 1分間に10回まで
+	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
+		http.Error(w, "投票が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return
+	}
+
 	// 選択肢の存在確認と期限チェック
 	var pollID int
 	var expiresAt time.Time

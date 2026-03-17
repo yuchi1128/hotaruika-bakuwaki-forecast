@@ -78,8 +78,8 @@ export default function AdminPage() {
     }
   }, [isLoggedIn]);
 
-  const fetchAllData = async () => {
-    setIsLoading(true);
+  const fetchAllData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError('');
     try {
       const postsRes = await fetch(`${API_URL}/api/posts?include=replies`, { credentials: 'include' });
@@ -90,7 +90,7 @@ export default function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -133,6 +133,15 @@ export default function AdminPage() {
     if (!window.confirm(`${type === 'post' ? 'この投稿' : 'この返信'}を本当に削除しますか？`)) {
       return;
     }
+    // 即座にUIから削除
+    if (type === 'post') {
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } else {
+      setPosts(prev => prev.map(p => ({
+        ...p,
+        replies: p.replies.filter(r => r.id !== id),
+      })));
+    }
     const endpoint = type === 'post' ? `/api/posts/${id}` : `/api/replies/${id}`;
     try {
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -143,9 +152,10 @@ export default function AdminPage() {
         if (res.status === 401) setIsLoggedIn(false);
         throw new Error(`${type}の削除に失敗しました。`);
       }
-      fetchAllData();
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      // エラー時はデータを再取得して正しい状態に戻す
+      fetchAllData(false);
     }
   };
 
@@ -209,12 +219,12 @@ export default function AdminPage() {
       setPollData(null);
       setPollReset(true);
       setTimeout(() => setPollReset(false), 0);
-      fetchAllData();
+      fetchAllData(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     }
   };
-  
+
   const handleAdminReply = async (postId: number, content: string, imageBase64s?: string[]) => {
     try {
       const body: Record<string, unknown> = {
@@ -235,7 +245,7 @@ export default function AdminPage() {
         if (res.status === 401) setIsLoggedIn(false);
         throw new Error('管理人返信の作成に失敗しました。');
       }
-      fetchAllData();
+      fetchAllData(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     }
@@ -261,13 +271,15 @@ export default function AdminPage() {
         if (res.status === 401) setIsLoggedIn(false);
         throw new Error('管理人返信の作成に失敗しました。');
       }
-      fetchAllData();
+      fetchAllData(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     }
   };
 
   const handleLabelChange = async (postId: number, label: string) => {
+    // 即座にUIを更新
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, label } : p));
     try {
       const res = await fetch(`${API_URL}/api/posts/${postId}/label`, {
         method: 'PATCH',
@@ -279,9 +291,10 @@ export default function AdminPage() {
         if (res.status === 401) setIsLoggedIn(false);
         throw new Error('ラベルの変更に失敗しました。');
       }
-      fetchAllData();
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      // エラー時はデータを再取得して正しい状態に戻す
+      fetchAllData(false);
     }
   };
 
