@@ -34,9 +34,7 @@ func (h *Handler) pollHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) votePollOption(w http.ResponseWriter, r *http.Request, optionID int) {
-	// レート制限: 1分間に10回まで
-	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
-		http.Error(w, "投票が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkReactRateLimit(w, r) {
 		return
 	}
 

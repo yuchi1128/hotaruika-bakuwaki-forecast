@@ -34,14 +34,76 @@ var (
 	rateMu       sync.Mutex
 	postRateMap  = make(map[string][]time.Time) // 投稿用
 	reactRateMap = make(map[string][]time.Time) // リアクション用
+	// グローバルレート制限
+	globalPostTimes  []time.Time
+	globalReactTimes []time.Time
 )
 
-func getClientIP(r *http.Request) string {
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.RemoteAddr
+// グローバルレート制限の上限値
+const (
+	globalPostLimit  = 30  // 全体で1分間に30投稿まで
+	globalReactLimit = 100 // 全体で1分間に100リアクションまで
+)
+
+func init() {
+	// 5分ごとにレートマップの期限切れエントリを削除
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			cleanupRateMaps()
+		}
+	}()
+}
+
+func cleanupRateMaps() {
+	rateMu.Lock()
+	defer rateMu.Unlock()
+	cutoff := time.Now().Add(-time.Minute)
+	for ip, times := range postRateMap {
+		valid := times[:0]
+		for _, t := range times {
+			if t.After(cutoff) {
+				valid = append(valid, t)
+			}
+		}
+		if len(valid) == 0 {
+			delete(postRateMap, ip)
+		} else {
+			postRateMap[ip] = valid
+		}
 	}
-	return strings.TrimSpace(strings.Split(ip, ",")[0])
+	for ip, times := range reactRateMap {
+		valid := times[:0]
+		for _, t := range times {
+			if t.After(cutoff) {
+				valid = append(valid, t)
+			}
+		}
+		if len(valid) == 0 {
+			delete(reactRateMap, ip)
+		} else {
+			reactRateMap[ip] = valid
+		}
+	}
+}
+
+// Cloud Run環境で正しいクライアントIPを取得
+// Cloud RunのX-Forwarded-For形式: <偽装値>, <本物のクライアントIP>, <Google LB IP>
+// 末尾から2番目のIPがGoogle LBが付与した本物のクライアントIP
+func getClientIP(r *http.Request) string {
+	xff := r.Header.Get("X-Forwarded-For")
+	if xff == "" {
+		return strings.TrimSpace(strings.Split(r.RemoteAddr, ":")[0])
+	}
+	parts := strings.Split(xff, ",")
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	// Cloud Run: 末尾から2番目が本物のクライアントIP
+	if len(parts) >= 2 {
+		return parts[len(parts)-2]
+	}
+	return parts[0]
 }
 
 func checkRate(store map[string][]time.Time, ip string, maxReqs int, window time.Duration) bool {
@@ -62,6 +124,54 @@ func checkRate(store map[string][]time.Time, ip string, maxReqs int, window time
 		return false
 	}
 	store[ip] = append(valid, now)
+	return true
+}
+
+// checkGlobalRate はグローバルレート制限をチェックする
+func checkGlobalRate(times *[]time.Time, maxReqs int, window time.Duration) bool {
+	now := time.Now()
+	rateMu.Lock()
+	defer rateMu.Unlock()
+
+	cutoff := now.Add(-window)
+	valid := (*times)[:0]
+	for _, t := range *times {
+		if t.After(cutoff) {
+			valid = append(valid, t)
+		}
+	}
+	if len(valid) >= maxReqs {
+		*times = valid
+		return false
+	}
+	*times = append(valid, now)
+	return true
+}
+
+// グローバル制限+IPベース制限を一括チェックする（投稿用）
+// 制限に引っかかった場合はエラーレスポンスを返してfalseを返す
+func checkPostRateLimit(w http.ResponseWriter, r *http.Request) bool {
+	if !checkGlobalRate(&globalPostTimes, globalPostLimit, time.Minute) {
+		http.Error(w, "現在投稿が集中しています。しばらく待ってください", http.StatusTooManyRequests)
+		return false
+	}
+	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
+		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return false
+	}
+	return true
+}
+
+// グローバル制限+IPベース制限を一括チェックする（リアクション/投票用）
+func checkReactRateLimit(w http.ResponseWriter, r *http.Request) bool {
+	if !checkGlobalRate(&globalReactTimes, globalReactLimit, time.Minute) {
+		http.Error(w, "現在リアクションが集中しています。しばらく待ってください", http.StatusTooManyRequests)
+		return false
+	}
+	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
+		http.Error(w, "リアクションが多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+		return false
+	}
 	return true
 }
 
@@ -172,9 +282,7 @@ func (h *Handler) replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
-	// レート制限: 1分間に5回まで
-	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
-		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkPostRateLimit(w, r) {
 		return
 	}
 
@@ -626,9 +734,7 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 }
 
 func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int, isAdmin bool) {
-	// レート制限: 1分間に5回まで
-	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
-		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkPostRateLimit(w, r) {
 		return
 	}
 
@@ -696,9 +802,7 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 }
 
 func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int, isAdmin bool) {
-	// レート制限: 1分間に5回まで
-	if !checkRate(postRateMap, getClientIP(r), 5, time.Minute) {
-		http.Error(w, "投稿が多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkPostRateLimit(w, r) {
 		return
 	}
 
@@ -776,9 +880,7 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 }
 
 func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, postID int) {
-	// レート制限: 1分間に10回まで
-	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
-		http.Error(w, "リアクションが多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkReactRateLimit(w, r) {
 		return
 	}
 
@@ -798,9 +900,7 @@ func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, pos
 }
 
 func (h *Handler) createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
-	// レート制限: 1分間に10回まで
-	if !checkRate(reactRateMap, getClientIP(r), 10, time.Minute) {
-		http.Error(w, "リアクションが多すぎます。しばらく待ってください", http.StatusTooManyRequests)
+	if !checkReactRateLimit(w, r) {
 		return
 	}
 
