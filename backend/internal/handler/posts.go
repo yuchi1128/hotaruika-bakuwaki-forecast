@@ -51,6 +51,14 @@ var (
 	globalReactTimes []time.Time
 )
 
+// デバイスIDベースの投稿クールダウン（5分に1投稿）
+var (
+	deviceCooldownMu  sync.Mutex
+	deviceLastPostMap = make(map[string]time.Time)
+)
+
+const devicePostCooldown = 5 * time.Minute
+
 // グローバルレート制限の上限値
 const (
 	globalPostLimit  = 30  // 全体で1分間に30投稿まで
@@ -69,7 +77,6 @@ func init() {
 
 func cleanupRateMaps() {
 	rateMu.Lock()
-	defer rateMu.Unlock()
 	cutoff := time.Now().Add(-time.Minute)
 	for ip, times := range postRateMap {
 		valid := times[:0]
@@ -95,6 +102,17 @@ func cleanupRateMaps() {
 			delete(reactRateMap, ip)
 		} else {
 			reactRateMap[ip] = valid
+		}
+	}
+	rateMu.Unlock()
+
+	// デバイスクールダウンマップのクリーンアップ
+	deviceCooldownMu.Lock()
+	defer deviceCooldownMu.Unlock()
+	cooldownCutoff := time.Now().Add(-devicePostCooldown)
+	for deviceID, lastPost := range deviceLastPostMap {
+		if lastPost.Before(cooldownCutoff) {
+			delete(deviceLastPostMap, deviceID)
 		}
 	}
 }
@@ -157,6 +175,28 @@ func checkGlobalRate(times *[]time.Time, maxReqs int, window time.Duration) bool
 		return false
 	}
 	*times = append(valid, now)
+	return true
+}
+
+// checkDeviceCooldown はデバイスIDベースの投稿クールダウンをチェックする
+// 投稿が許可される場合はtrueを返し、最終投稿時刻を記録する
+func checkDeviceCooldown(w http.ResponseWriter, r *http.Request) bool {
+	deviceID := r.Header.Get("X-Device-ID")
+	if deviceID == "" {
+		return true // デバイスIDなしはIPレート制限に任せる
+	}
+
+	now := time.Now()
+	deviceCooldownMu.Lock()
+	defer deviceCooldownMu.Unlock()
+
+	if lastPost, exists := deviceLastPostMap[deviceID]; exists {
+		if now.Sub(lastPost) < devicePostCooldown {
+			http.Error(w, "連続投稿はできません。しばらく時間をおいてください", http.StatusTooManyRequests)
+			return false
+		}
+	}
+	deviceLastPostMap[deviceID] = now
 	return true
 }
 
@@ -298,6 +338,9 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 		return
 	}
 	if !checkPostRateLimit(w, r) {
+		return
+	}
+	if !isAdmin && !checkDeviceCooldown(w, r) {
 		return
 	}
 
@@ -793,6 +836,9 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 	if !checkPostRateLimit(w, r) {
 		return
 	}
+	if !isAdmin && !checkDeviceCooldown(w, r) {
+		return
+	}
 
 	var reply model.Reply
 	if err := json.NewDecoder(r.Body).Decode(&reply); err != nil {
@@ -863,6 +909,9 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		return
 	}
 	if !checkPostRateLimit(w, r) {
+		return
+	}
+	if !isAdmin && !checkDeviceCooldown(w, r) {
 		return
 	}
 
