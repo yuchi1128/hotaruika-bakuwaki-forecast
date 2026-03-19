@@ -243,7 +243,7 @@ export default function CommentItem({
                 返信
               </Button>
               {reply.display_id && reply.label !== '管理人' && (
-                <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-xs text-gray-400">{reply.display_id}</span></span>
+                <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-[11px] text-gray-500">{reply.display_id}</span></span>
               )}
             </div>
             {replyingTo === reply.id && (
@@ -538,7 +538,7 @@ export default function CommentItem({
                   返信
                 </Button>
                 {comment.display_id && comment.label !== '管理人' && (
-                  <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-xs text-gray-400">{comment.display_id}</span></span>
+                  <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-[11px] text-gray-500">{comment.display_id}</span></span>
                 )}
               </div>
               {comment.replies.length > 0 && (
