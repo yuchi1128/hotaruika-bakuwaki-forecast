@@ -2,8 +2,10 @@
 package handler
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,6 +23,16 @@ import (
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
+
+// generateDisplayID はdevice_idからSHA-256ハッシュで6文字の表示用IDを生成する
+func generateDisplayID(deviceID string) string {
+	if deviceID == "" {
+		return ""
+	}
+	salt := os.Getenv("DISPLAY_ID_SALT")
+	hash := sha256.Sum256([]byte(deviceID + salt))
+	return hex.EncodeToString(hash[:])[:6]
+}
 
 // ゼロ幅文字・不可視文字を除去する正規表現
 var invisibleCharRegex = regexp.MustCompile(`[\x{200B}-\x{200F}\x{2028}-\x{206F}\x{FEFF}\x{00AD}\x{034F}\x{180E}\x{FE00}-\x{FE0F}]`)
@@ -534,10 +546,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		selectCols := `p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count`
-		if includeDeviceID {
-			selectCols += `, p.device_id`
-		}
+		selectCols := `p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, p.device_id`
 		baseQuery := `SELECT ` + selectCols + ` FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
 
 		args := make([]interface{}, len(countArgs))
@@ -560,13 +569,17 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		posts = []model.Post{}
 		for rows.Next() {
 			var post model.Post
-			scanArgs := []interface{}{&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount}
-			if includeDeviceID {
-				scanArgs = append(scanArgs, &post.DeviceID)
-			}
-			if err := rows.Scan(scanArgs...); err != nil {
+			var deviceID sql.NullString
+			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount, &deviceID); err != nil {
 				h.logger.Error("投稿行のスキャンエラー", "error", err)
 				continue
+			}
+			if deviceID.Valid && deviceID.String != "" {
+				did := generateDisplayID(deviceID.String)
+				post.DisplayID = &did
+				if includeDeviceID {
+					post.DeviceID = &deviceID.String
+				}
 			}
 			posts = append(posts, post)
 		}
@@ -668,10 +681,7 @@ func (h *Handler) getAllRepliesForPosts(postIDs []int, includeDeviceID bool) (ma
 
 	selectCols := `r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at,
 		COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count,
-		COALESCE(pr.username, p.username) as parent_username`
-	if includeDeviceID {
-		selectCols += `, r.device_id`
-	}
+		COALESCE(pr.username, p.username) as parent_username, r.device_id`
 
 	query := `SELECT ` + selectCols + `
 		FROM replies r
@@ -693,11 +703,8 @@ func (h *Handler) getAllRepliesForPosts(postIDs []int, includeDeviceID bool) (ma
 		var parentReplyID sql.NullInt64
 		var parentUsername sql.NullString
 		var label sql.NullString
-		scanArgs := []interface{}{&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername}
-		if includeDeviceID {
-			scanArgs = append(scanArgs, &reply.DeviceID)
-		}
-		if err := rows.Scan(scanArgs...); err != nil {
+		var deviceID sql.NullString
+		if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername, &deviceID); err != nil {
 			h.logger.Error("返信行のスキャンエラー", "error", err)
 			continue
 		}
@@ -711,6 +718,13 @@ func (h *Handler) getAllRepliesForPosts(postIDs []int, includeDeviceID bool) (ma
 		if label.Valid {
 			reply.Label = &label.String
 		}
+		if deviceID.Valid && deviceID.String != "" {
+			did := generateDisplayID(deviceID.String)
+			reply.DisplayID = &did
+			if includeDeviceID {
+				reply.DeviceID = &deviceID.String
+			}
+		}
 		repliesMap[reply.PostID] = append(repliesMap[reply.PostID], reply)
 	}
 
@@ -721,7 +735,7 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 	var replies []model.Reply
 
 	operation := func() error {
-		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
+		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username, r.device_id FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
 
 		rows, err := h.db.Query(query, postID)
 		if err != nil {
@@ -736,7 +750,8 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			var parentReplyID sql.NullInt64
 			var parentUsername sql.NullString
 			var label sql.NullString
-			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+			var deviceID sql.NullString
+			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername, &deviceID); err != nil {
 				h.logger.Error("返信行のスキャンエラー", "error", err)
 				continue
 			}
@@ -749,6 +764,10 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			}
 			if label.Valid {
 				reply.Label = &label.String
+			}
+			if deviceID.Valid && deviceID.String != "" {
+				did := generateDisplayID(deviceID.String)
+				reply.DisplayID = &did
 			}
 			replies = append(replies, reply)
 		}

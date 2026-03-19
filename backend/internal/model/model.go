@@ -15,6 +15,7 @@ type Post struct {
 	ImageURLs   []string           `json:"image_urls"`
 	Label       string             `json:"label"`
 	DeviceID    *string            `json:"device_id,omitempty"`
+	DisplayID   *string            `json:"display_id,omitempty"`
 	CreatedAt   time.Time          `json:"created_at"`
 	GoodCount   int                `json:"good_count"`
 	BadCount    int                `json:"bad_count"`
@@ -57,6 +58,7 @@ type Reply struct {
 	ImageURLs      []string  `json:"image_urls"`
 	Label          *string   `json:"label,omitempty"`
 	DeviceID       *string   `json:"device_id,omitempty"`
+	DisplayID      *string   `json:"display_id,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	GoodCount      int       `json:"good_count"`
 	BadCount       int       `json:"bad_count"`
