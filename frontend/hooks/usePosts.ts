@@ -61,6 +61,7 @@ export function usePosts() {
       await fetchPosts({ ...lastFetchParamsRef.current, page: 1 });
     } catch (error) {
       console.error('Failed to create post:', error);
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
@@ -78,6 +79,7 @@ export function usePosts() {
       await fetchPosts(lastFetchParamsRef.current);
     } catch (error) {
       console.error('Failed to create reply:', error);
+      throw error;
     }
   }, [fetchPosts]);
 

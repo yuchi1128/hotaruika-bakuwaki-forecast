@@ -167,6 +167,8 @@ export default function CommentItem({
       setReplyingTo(null);
     } catch (error) {
       console.error('Reply submission failed:', error);
+      const message = error instanceof Error ? error.message : '返信に失敗しました';
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -240,6 +242,9 @@ export default function CommentItem({
                 <MessageCircle className="w-4 h-4 mr-1" />
                 返信
               </Button>
+              {reply.display_id && reply.label !== '管理人' && (
+                <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-xs text-gray-400">{reply.display_id}</span></span>
+              )}
             </div>
             {replyingTo === reply.id && (
               <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-blue-500/20">
@@ -532,6 +537,9 @@ export default function CommentItem({
                   <MessageCircle className="w-4 h-4 mr-1" />
                   返信
                 </Button>
+                {comment.display_id && comment.label !== '管理人' && (
+                  <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-xs text-gray-400">{comment.display_id}</span></span>
+                )}
               </div>
               {comment.replies.length > 0 && (
                 <Button

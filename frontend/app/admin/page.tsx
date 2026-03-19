@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown, Ban, ShieldOff } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import PollCreator from '@/components/PollCreator';
 import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH } from '@/lib/constants';
@@ -19,6 +19,7 @@ interface Post {
   content:string;
   image_urls: string[];
   label: string;
+  device_id?: string;
   created_at: string;
   good_count: number;
   bad_count: number;
@@ -31,10 +32,18 @@ interface Reply {
   content: string;
   image_urls?: string[];
   label?: string;
+  device_id?: string;
   created_at: string;
   parent_username?: string;
   good_count: number;
   bad_count: number;
+}
+
+interface BannedDevice {
+  id: number;
+  device_id: string;
+  reason?: string;
+  banned_at: string;
 }
 
 // 投稿と返信をまとめた型
@@ -52,6 +61,7 @@ export default function AdminPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
+  const [bannedDevices, setBannedDevices] = useState<BannedDevice[]>([]);
 
   useEffect(() => {
     checkLoginStatus();
@@ -82,11 +92,18 @@ export default function AdminPage() {
     if (showLoading) setIsLoading(true);
     setError('');
     try {
-      const postsRes = await fetch(`${API_URL}/api/posts?include=replies`, { credentials: 'include' });
+      const [postsRes, bannedRes] = await Promise.all([
+        fetch(`${API_URL}/api/posts?include=replies&admin_device=true`, { credentials: 'include' }),
+        fetch(`${API_URL}/api/admin/banned-devices`, { credentials: 'include' }),
+      ]);
       if (!postsRes.ok) throw new Error('取得に失敗しました');
       const postsWithReplies: (Post & { replies: Reply[] })[] = await postsRes.json();
-
       setPosts(postsWithReplies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
+      if (bannedRes.ok) {
+        const banned: BannedDevice[] = await bannedRes.json();
+        setBannedDevices(banned);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
@@ -130,9 +147,6 @@ export default function AdminPage() {
   };
   
   const handleDelete = async (type: 'post' | 'reply', id: number) => {
-    if (!window.confirm(`${type === 'post' ? 'この投稿' : 'この返信'}を本当に削除しますか？`)) {
-      return;
-    }
     // 即座にUIから削除
     if (type === 'post') {
       setPosts(prev => prev.filter(p => p.id !== id));
@@ -298,6 +312,61 @@ export default function AdminPage() {
     }
   };
 
+  const handleBanDevice = async (deviceId: string, reason?: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId, reason }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('BANに失敗しました。');
+      }
+      fetchAllData(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
+  const handleUnbanDevice = async (deviceId: string) => {
+    if (!window.confirm(`${deviceId} のBANを解除しますか？`)) return;
+    try {
+      const res = await fetch(`${API_URL}/api/admin/ban/${encodeURIComponent(deviceId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('BAN解除に失敗しました。');
+      }
+      fetchAllData(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
+  const handleDeleteWithBan = (type: 'post' | 'reply', id: number, deviceId?: string) => {
+    const label = type === 'post' ? 'この投稿' : 'この返信';
+
+    // まず削除確認
+    if (!window.confirm(`${label}を本当に削除しますか？`)) {
+      return;
+    }
+
+    // デバイスIDがある場合はBANも確認
+    const banAlso = deviceId ? window.confirm(`この端末（${deviceId}）もBANしますか？\n\n「OK」→ 削除+BAN\n「キャンセル」→ 削除のみ`) : false;
+
+    // 削除実行
+    handleDelete(type, id);
+
+    // BANも実行
+    if (banAlso && deviceId) {
+      handleBanDevice(deviceId, `${label}削除に伴うBAN`);
+    }
+  };
+
   const filteredPosts = posts.filter(post =>
     post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.username.toLowerCase().includes(searchTerm.toLowerCase())
@@ -351,6 +420,38 @@ export default function AdminPage() {
 
         {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-6">Error: {error}</p>}
         
+        {/* BANリスト管理 */}
+        <Card className="shadow-sm bg-white border border-gray-200 mb-8">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
+              <Ban className="h-5 w-5 text-red-500" />
+              BANリスト管理
+            </CardTitle>
+            <CardDescription className="text-gray-500">BANされた端末の一覧です。</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bannedDevices.length === 0 ? (
+              <p className="text-gray-500 text-sm">BANされた端末はありません。</p>
+            ) : (
+              <div className="space-y-2">
+                {bannedDevices.map(ban => (
+                  <div key={ban.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-gray-50">
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-sm text-gray-800">{ban.device_id}</span>
+                      {ban.reason && <span className="text-xs text-gray-500">理由: {ban.reason}</span>}
+                      <span className="text-xs text-gray-400">{new Date(ban.banned_at).toLocaleString('ja-JP')}</span>
+                    </div>
+                    <Button onClick={() => handleUnbanDevice(ban.device_id)} size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <ShieldOff className="h-3.5 w-3.5 mr-1" />
+                      解除
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-1">
             <Card className="shadow-sm bg-white border border-gray-800">
@@ -433,7 +534,7 @@ export default function AdminPage() {
                   <div className="space-y-4">
                       {filteredPosts.length > 0 ? (
                       filteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} onDelete={handleDelete} onReply={handleAdminReply} onReplyToReply={handleAdminReplyToReply} onLabelChange={handleLabelChange} />
+                          <PostCard key={post.id} post={post} onDelete={handleDeleteWithBan} onReply={handleAdminReply} onReplyToReply={handleAdminReplyToReply} onLabelChange={handleLabelChange} onBanDevice={handleBanDevice} bannedDevices={bannedDevices} />
                       ))
                       ) : (
                       <p className="text-gray-500 text-center py-8">該当する投稿はありません。</p>
@@ -447,7 +548,7 @@ export default function AdminPage() {
   );
 }
 
-function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number) => void, onReply: (postId: number, content: string, imageBase64s?: string[]) => Promise<void>, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void> }) {
+function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange, onBanDevice, bannedDevices }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number, deviceId?: string) => void, onReply: (postId: number, content: string, imageBase64s?: string[]) => Promise<void>, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void>, onBanDevice: (deviceId: string, reason?: string) => Promise<void>, bannedDevices: BannedDevice[] }) {
   const isAdmin = post.label === '管理人';
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
@@ -584,7 +685,7 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
                 )}
             </div>
             <Button
-              onClick={() => onDelete('post', post.id)}
+              onClick={() => onDelete('post', post.id, post.device_id)}
               variant="ghost"
               size="icon"
               className="text-gray-400 hover:text-red-500 hover:bg-red-50"
@@ -603,6 +704,26 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
             {post.bad_count}
           </span>
         </div>
+        {post.device_id && (
+          <div className="flex items-center gap-1 pt-1 text-xs text-gray-400">
+            端末: <span className="font-mono break-all">{post.device_id}</span>
+            {bannedDevices.some(b => b.device_id === post.device_id) ? (
+              <span className="text-red-500 font-semibold ml-1">BAN済</span>
+            ) : (
+              <button
+                onClick={() => {
+                  if (window.confirm(`${post.device_id!} をBANしますか？`)) {
+                    onBanDevice(post.device_id!);
+                  }
+                }}
+                className="text-red-400 hover:text-red-600 ml-1"
+                title="この端末をBANする"
+              >
+                <Ban className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-4 bg-white">
@@ -671,7 +792,7 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
           <h4 className="font-semibold text-sm mb-3 text-gray-600">返信 ({post.replies.length}件)</h4>
           <div className="space-y-3 w-full">
             {post.replies.map((reply) => (
-              <ReplyItem key={reply.id} reply={reply} onDelete={onDelete} onReplyToReply={onReplyToReply} />
+              <ReplyItem key={reply.id} reply={reply} onDelete={onDelete} onReplyToReply={onReplyToReply} onBanDevice={onBanDevice} bannedDevices={bannedDevices} />
             ))}
           </div>
         </CardFooter>
@@ -680,7 +801,7 @@ function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange }: { 
   );
 }
 
-function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number) => void, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void> }) {
+function ReplyItem({ reply, onDelete, onReplyToReply, onBanDevice, bannedDevices }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number, deviceId?: string) => void, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onBanDevice: (deviceId: string, reason?: string) => Promise<void>, bannedDevices: BannedDevice[] }) {
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -736,7 +857,7 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-0.5 mb-1.5">
+          <div className="flex items-center gap-3 mt-0.5">
             <p className="text-xs text-gray-500">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
             <span className="flex items-center gap-1 text-xs text-green-600">
               <ThumbsUp className="w-3 h-3" />
@@ -747,6 +868,26 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
               {reply.bad_count}
             </span>
           </div>
+          {reply.device_id && (
+            <div className="flex items-center gap-1 mb-1.5 text-xs text-gray-400">
+              端末: <span className="font-mono break-all">{reply.device_id}</span>
+              {bannedDevices.some(b => b.device_id === reply.device_id) ? (
+                <span className="text-red-500 font-semibold ml-1">BAN済</span>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`${reply.device_id!} をBANしますか？`)) {
+                      onBanDevice(reply.device_id!);
+                    }
+                  }}
+                  className="text-red-400 hover:text-red-600 ml-1"
+                  title="この端末をBANする"
+                >
+                  <Ban className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
           <p className="whitespace-pre-wrap text-sm text-gray-700">{reply.content}</p>
           {reply.image_urls && reply.image_urls.length > 0 && (
             <div className="mt-2">
@@ -806,7 +947,7 @@ function ReplyItem({ reply, onDelete, onReplyToReply }: { reply: Reply, onDelete
             )}
           </div>
         </div>
-        <Button onClick={() => onDelete('reply', reply.id)} variant="ghost" size="icon" className="text-gray-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
+        <Button onClick={() => onDelete('reply', reply.id, reply.device_id)} variant="ghost" size="icon" className="text-gray-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>

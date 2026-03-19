@@ -14,6 +14,8 @@ type Post struct {
 	Content     string             `json:"content"`
 	ImageURLs   []string           `json:"image_urls"`
 	Label       string             `json:"label"`
+	DeviceID    *string            `json:"device_id,omitempty"`
+	DisplayID   *string            `json:"display_id,omitempty"`
 	CreatedAt   time.Time          `json:"created_at"`
 	GoodCount   int                `json:"good_count"`
 	BadCount    int                `json:"bad_count"`
@@ -55,6 +57,8 @@ type Reply struct {
 	Content        string    `json:"content"`
 	ImageURLs      []string  `json:"image_urls"`
 	Label          *string   `json:"label,omitempty"`
+	DeviceID       *string   `json:"device_id,omitempty"`
+	DisplayID      *string   `json:"display_id,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	GoodCount      int       `json:"good_count"`
 	BadCount       int       `json:"bad_count"`
@@ -79,6 +83,14 @@ type Claims struct {
 // LoginRequestはログインリクエストのボディ
 type LoginRequest struct {
 	Password string `json:"password"`
+}
+
+// BannedDeviceはBANされたデバイス
+type BannedDevice struct {
+	ID       int       `json:"id"`
+	DeviceID string    `json:"device_id"`
+	Reason   *string   `json:"reason,omitempty"`
+	BannedAt time.Time `json:"banned_at"`
 }
 
 // PostWithRepliesは返信を含む投稿

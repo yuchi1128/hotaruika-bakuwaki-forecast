@@ -59,6 +59,7 @@ export interface Post {
   created_at: string;
   good_count: number;
   bad_count: number;
+  display_id?: string;
   poll?: Poll;
 }
 
@@ -74,6 +75,7 @@ export interface Reply {
   created_at: string;
   good_count: number;
   bad_count: number;
+  display_id?: string;
   myReaction: 'good' | 'bad' | null;
   parent_username?: string;
 }

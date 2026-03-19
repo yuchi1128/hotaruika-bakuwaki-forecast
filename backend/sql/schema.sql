@@ -4,6 +4,7 @@ CREATE TABLE posts (
     content TEXT NOT NULL,
     image_urls TEXT[],
     label VARCHAR(50) NOT NULL CHECK (label IN ('現地情報', 'その他', '管理人')),
+    device_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -15,6 +16,7 @@ CREATE TABLE replies (
     content TEXT NOT NULL,
     image_urls TEXT[],
     label VARCHAR(20) DEFAULT NULL,
+    device_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -41,4 +43,11 @@ CREATE TABLE poll_options (
     option_text TEXT NOT NULL,
     vote_count INTEGER NOT NULL DEFAULT 0,
     display_order SMALLINT NOT NULL
+);
+
+CREATE TABLE banned_devices (
+    id SERIAL PRIMARY KEY,
+    device_id TEXT NOT NULL UNIQUE,
+    reason TEXT,
+    banned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

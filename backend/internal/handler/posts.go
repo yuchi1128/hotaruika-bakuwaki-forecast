@@ -2,8 +2,10 @@
 package handler
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,6 +23,16 @@ import (
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/model"
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
+
+// generateDisplayID はdevice_idからSHA-256ハッシュで6文字の表示用IDを生成する
+func generateDisplayID(deviceID string) string {
+	if deviceID == "" {
+		return ""
+	}
+	salt := os.Getenv("DISPLAY_ID_SALT")
+	hash := sha256.Sum256([]byte(deviceID + salt))
+	return hex.EncodeToString(hash[:])[:6]
+}
 
 // ゼロ幅文字・不可視文字を除去する正規表現
 var invisibleCharRegex = regexp.MustCompile(`[\x{200B}-\x{200F}\x{2028}-\x{206F}\x{FEFF}\x{00AD}\x{034F}\x{180E}\x{FE00}-\x{FE0F}]`)
@@ -282,6 +294,9 @@ func (h *Handler) replyDetailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin bool) {
+	if !isAdmin && !checkBanStatus(w, r) {
+		return
+	}
 	if !checkPostRateLimit(w, r) {
 		return
 	}
@@ -379,8 +394,9 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	}
 	defer tx.Rollback()
 
-	query := `INSERT INTO posts (username, content, image_urls, label) VALUES ($1, $2, $3, $4) RETURNING id, created_at`
-	if err := tx.QueryRow(query, post.Username, post.Content, pq.Array(imageURLs), post.Label).Scan(&post.ID, &post.CreatedAt); err != nil {
+	deviceID := r.Header.Get("X-Device-ID")
+	query := `INSERT INTO posts (username, content, image_urls, label, device_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
+	if err := tx.QueryRow(query, post.Username, post.Content, pq.Array(imageURLs), post.Label, deviceID).Scan(&post.ID, &post.CreatedAt); err != nil {
 		h.logger.Error("投稿の挿入エラー", "error", err)
 		http.Error(w, "投稿の作成に失敗しました", http.StatusInternalServerError)
 		return
@@ -436,6 +452,19 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	label := r.URL.Query().Get("label")
 	includeReplies := r.URL.Query().Get("include") == "replies"
 	search := r.URL.Query().Get("search")
+
+	// 管理者かつadmin_device=trueの場合のみデバイスIDを含める
+	includeDeviceID := false
+	if r.URL.Query().Get("admin_device") == "true" {
+		cookie, err := r.Cookie("admin_token")
+		if err == nil {
+			claims := &model.Claims{}
+			token, err := jwt.ParseWithClaims(cookie.Value, claims, func(token *jwt.Token) (interface{}, error) { return h.jwtKey, nil })
+			if err == nil && token.Valid && claims.Role == "admin" {
+				includeDeviceID = true
+			}
+		}
+	}
 	sort := r.URL.Query().Get("sort")
 	dateFromStr := r.URL.Query().Get("date_from")
 	dateToStr := r.URL.Query().Get("date_to")
@@ -517,7 +546,8 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		baseQuery := `SELECT p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
+		selectCols := `p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, p.device_id`
+		baseQuery := `SELECT ` + selectCols + ` FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
 
 		args := make([]interface{}, len(countArgs))
 		copy(args, countArgs)
@@ -539,9 +569,17 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		posts = []model.Post{}
 		for rows.Next() {
 			var post model.Post
-			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount); err != nil {
+			var deviceID sql.NullString
+			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount, &deviceID); err != nil {
 				h.logger.Error("投稿行のスキャンエラー", "error", err)
 				continue
+			}
+			if deviceID.Valid && deviceID.String != "" {
+				did := generateDisplayID(deviceID.String)
+				post.DisplayID = &did
+				if includeDeviceID {
+					post.DeviceID = &deviceID.String
+				}
 			}
 			posts = append(posts, post)
 		}
@@ -585,7 +623,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 				postIDs[i] = p.ID
 			}
 
-			repliesMap, err := h.getAllRepliesForPosts(postIDs)
+			repliesMap, err := h.getAllRepliesForPosts(postIDs, includeDeviceID)
 			if err != nil {
 				h.logger.Error("返信の一括取得に失敗しました", "error", err)
 				http.Error(w, "返信の取得に失敗しました", http.StatusInternalServerError)
@@ -634,16 +672,18 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 // getAllRepliesForPosts は複数の投稿IDに対する返信を一括取得する
-func (h *Handler) getAllRepliesForPosts(postIDs []int) (map[int][]model.Reply, error) {
+func (h *Handler) getAllRepliesForPosts(postIDs []int, includeDeviceID bool) (map[int][]model.Reply, error) {
 	repliesMap := make(map[int][]model.Reply)
 
 	if len(postIDs) == 0 {
 		return repliesMap, nil
 	}
 
-	query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at,
+	selectCols := `r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at,
 		COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count,
-		COALESCE(pr.username, p.username) as parent_username
+		COALESCE(pr.username, p.username) as parent_username, r.device_id`
+
+	query := `SELECT ` + selectCols + `
 		FROM replies r
 		LEFT JOIN posts p ON r.post_id = p.id
 		LEFT JOIN replies pr ON r.parent_reply_id = pr.id
@@ -663,7 +703,8 @@ func (h *Handler) getAllRepliesForPosts(postIDs []int) (map[int][]model.Reply, e
 		var parentReplyID sql.NullInt64
 		var parentUsername sql.NullString
 		var label sql.NullString
-		if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+		var deviceID sql.NullString
+		if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername, &deviceID); err != nil {
 			h.logger.Error("返信行のスキャンエラー", "error", err)
 			continue
 		}
@@ -677,6 +718,13 @@ func (h *Handler) getAllRepliesForPosts(postIDs []int) (map[int][]model.Reply, e
 		if label.Valid {
 			reply.Label = &label.String
 		}
+		if deviceID.Valid && deviceID.String != "" {
+			did := generateDisplayID(deviceID.String)
+			reply.DisplayID = &did
+			if includeDeviceID {
+				reply.DeviceID = &deviceID.String
+			}
+		}
 		repliesMap[reply.PostID] = append(repliesMap[reply.PostID], reply)
 	}
 
@@ -687,7 +735,7 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 	var replies []model.Reply
 
 	operation := func() error {
-		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
+		query := `SELECT r.id, r.post_id, r.parent_reply_id, r.username, r.content, r.image_urls, r.label, r.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, COALESCE(pr.username, p.username) as parent_username, r.device_id FROM replies r LEFT JOIN posts p ON r.post_id = p.id LEFT JOIN replies pr ON r.parent_reply_id = pr.id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY reply_id) r_good ON r.id = r_good.reply_id LEFT JOIN (SELECT reply_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY reply_id) r_bad ON r.id = r_bad.reply_id WHERE r.post_id = $1 ORDER BY r.created_at ASC`
 
 		rows, err := h.db.Query(query, postID)
 		if err != nil {
@@ -702,7 +750,8 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			var parentReplyID sql.NullInt64
 			var parentUsername sql.NullString
 			var label sql.NullString
-			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername); err != nil {
+			var deviceID sql.NullString
+			if err := rows.Scan(&reply.ID, &reply.PostID, &parentReplyID, &reply.Username, &reply.Content, pq.Array(&reply.ImageURLs), &label, &reply.CreatedAt, &reply.GoodCount, &reply.BadCount, &parentUsername, &deviceID); err != nil {
 				h.logger.Error("返信行のスキャンエラー", "error", err)
 				continue
 			}
@@ -715,6 +764,10 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 			}
 			if label.Valid {
 				reply.Label = &label.String
+			}
+			if deviceID.Valid && deviceID.String != "" {
+				did := generateDisplayID(deviceID.String)
+				reply.DisplayID = &did
 			}
 			replies = append(replies, reply)
 		}
@@ -734,6 +787,9 @@ func (h *Handler) getRepliesForPost(w http.ResponseWriter, _ *http.Request, post
 }
 
 func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, postID int, isAdmin bool) {
+	if !isAdmin && !checkBanStatus(w, r) {
+		return
+	}
 	if !checkPostRateLimit(w, r) {
 		return
 	}
@@ -787,8 +843,9 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 		return
 	}
 
-	query := `INSERT INTO replies (post_id, username, content, label, image_urls) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`
-	err = h.db.QueryRow(query, postID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs)).Scan(&reply.ID, &reply.CreatedAt)
+	deviceID := r.Header.Get("X-Device-ID")
+	query := `INSERT INTO replies (post_id, username, content, label, image_urls, device_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`
+	err = h.db.QueryRow(query, postID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs), deviceID).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		h.logger.Error("投稿への返信エラー", "error", err)
 		http.Error(w, "返信できませんでした", http.StatusInternalServerError)
@@ -802,6 +859,9 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 }
 
 func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, parentReplyID int, isAdmin bool) {
+	if !isAdmin && !checkBanStatus(w, r) {
+		return
+	}
 	if !checkPostRateLimit(w, r) {
 		return
 	}
@@ -864,8 +924,9 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 		return
 	}
 
-	query := `INSERT INTO replies (post_id, parent_reply_id, username, content, label, image_urls) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`
-	err = h.db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs)).Scan(&reply.ID, &reply.CreatedAt)
+	deviceID := r.Header.Get("X-Device-ID")
+	query := `INSERT INTO replies (post_id, parent_reply_id, username, content, label, image_urls, device_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`
+	err = h.db.QueryRow(query, postID, parentReplyID, reply.Username, reply.Content, reply.Label, pq.Array(imageURLs), deviceID).Scan(&reply.ID, &reply.CreatedAt)
 	if err != nil {
 		h.logger.Error("返信への返信エラー", "error", err)
 		http.Error(w, "返信できませんでした", http.StatusInternalServerError)
@@ -880,6 +941,9 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 }
 
 func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, postID int) {
+	if !checkBanStatus(w, r) {
+		return
+	}
 	if !checkReactRateLimit(w, r) {
 		return
 	}
@@ -900,6 +964,9 @@ func (h *Handler) createPostReaction(w http.ResponseWriter, r *http.Request, pos
 }
 
 func (h *Handler) createReplyReaction(w http.ResponseWriter, r *http.Request, replyID int) {
+	if !checkBanStatus(w, r) {
+		return
+	}
 	if !checkReactRateLimit(w, r) {
 		return
 	}
