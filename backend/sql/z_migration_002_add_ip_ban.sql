@@ -1,0 +1,11 @@
+-- IP BAN機能: IPアドレス記録とBANテーブル追加
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS ip_address TEXT;
+ALTER TABLE replies ADD COLUMN IF NOT EXISTS ip_address TEXT;
+
+CREATE TABLE IF NOT EXISTS banned_ips (
+    id SERIAL PRIMARY KEY,
+    ip_address TEXT NOT NULL UNIQUE,
+    reason TEXT,
+    banned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

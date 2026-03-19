@@ -39,7 +39,15 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/login", h.adminLoginHandler)
 	mux.HandleFunc("/api/admin/logout", h.adminLogoutHandler)
 	mux.HandleFunc("/api/admin/check", h.authMiddleware(h.adminCheckHandler))
+	mux.HandleFunc("/api/admin/banned-devices", h.authMiddleware(h.listBannedDevicesHandler))
+	mux.HandleFunc("/api/admin/ban", h.authMiddleware(h.banDeviceHandler))
+	mux.HandleFunc("/api/admin/ban/", h.authMiddleware(h.unbanDeviceHandler))
 	mux.HandleFunc("/api/tasks/refresh-cache", h.refreshCacheHandler)
+
+	// 起動時にBANリストをキャッシュに読み込む
+	if err := loadBannedDevices(h.db); err != nil {
+		h.logger.Error("BANリスト初期読み込みエラー", "error", err)
+	}
 }
 
 // splitPath はURLパスを'/'で分割

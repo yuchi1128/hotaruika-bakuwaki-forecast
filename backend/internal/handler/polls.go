@@ -34,6 +34,9 @@ func (h *Handler) pollHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) votePollOption(w http.ResponseWriter, r *http.Request, optionID int) {
+	if !checkBanStatus(w, r) {
+		return
+	}
 	if !checkReactRateLimit(w, r) {
 		return
 	}

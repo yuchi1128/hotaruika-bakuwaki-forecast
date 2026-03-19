@@ -167,6 +167,8 @@ export default function CommentItem({
       setReplyingTo(null);
     } catch (error) {
       console.error('Reply submission failed:', error);
+      const message = error instanceof Error ? error.message : '返信に失敗しました';
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }

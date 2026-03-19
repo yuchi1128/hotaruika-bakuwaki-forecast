@@ -246,6 +246,8 @@ const CommentSection = ({
       setTimeout(() => setPollReset(false), 0);
     } catch (error) {
       console.error('Failed to submit comment:', error);
+      const message = error instanceof Error ? error.message : '投稿に失敗しました';
+      alert(message);
     } finally {
       setIsSubmittingComment(false);
     }
