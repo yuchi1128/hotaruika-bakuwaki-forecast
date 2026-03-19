@@ -24,14 +24,14 @@ import (
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
 
-// generateDisplayID はdevice_idからSHA-256ハッシュで8文字の表示用IDを生成する
+// generateDisplayID はdevice_idからSHA-256ハッシュで7文字の表示用IDを生成する
 func generateDisplayID(deviceID string) string {
 	if deviceID == "" {
 		return ""
 	}
 	salt := os.Getenv("DISPLAY_ID_SALT")
 	hash := sha256.Sum256([]byte(deviceID + salt))
-	return hex.EncodeToString(hash[:])[:8]
+	return hex.EncodeToString(hash[:])[:7]
 }
 
 // ゼロ幅文字・不可視文字を除去する正規表現
