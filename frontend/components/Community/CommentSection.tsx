@@ -396,10 +396,10 @@ const CommentSection = ({
             </div>
           </div>
           <Textarea
-            placeholder="ホタルイカについてご自由にお書きください！"
+            placeholder={"ホタルイカに関する釣果報告などをお書きください。\nなお、虚偽の現地報告やいたずら等の悪質な書き込みをされた方はアクセス禁止となります。また、それらの行為は偽計業務妨害罪（刑法233条）に該当する可能性があります。"}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            className={`mb-1 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400 ${
+            className={`mb-1 text-sx bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400 min-h-[10rem] md:min-h-[8rem] ${
               newComment.length > MAX_CONTENT_LENGTH ? 'border-red-500' : ''
             }`}
             rows={5}
