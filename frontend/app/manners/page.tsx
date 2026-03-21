@@ -24,7 +24,7 @@ const MannersPage = () => {
             ホタルイカ掬いのマナー
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8 text-base leading-relaxed text-foreground/90">
+        <CardContent className="space-y-8 text-base md:text-lg leading-relaxed text-foreground">
           <p>
             ホタルイカ掬いは富山湾の春の風物詩です。この素晴らしい体験をこれからも皆さまが気持ちよく楽しめるよう、マナーへのご理解・ご協力をお願いいたします。
           </p>
