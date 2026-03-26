@@ -30,6 +30,8 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import CommentItem from '@/components/CommentItem';
@@ -52,7 +54,7 @@ interface CommentSectionProps {
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
   createPost: (username: string, content: string, label: string, imageBase64s: string[], pollRequest?: CreatePollParams) => Promise<void>;
-  fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string; date_from?: string; date_to?: string }) => void;
+  fetchPosts: (params: { label?: string | null; page?: number; limit?: number; search?: string; sort?: string; date_from?: string; date_to?: string; device_id?: string }) => void;
 }
 
 const CommentSection = ({
@@ -75,6 +77,8 @@ const CommentSection = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [searchInput, setSearchInput] = useState<string>(''); // 入力用
   const [searchQuery, setSearchQuery] = useState<string>(''); // 検索実行用
+  const [deviceIdInput, setDeviceIdInput] = useState<string>(''); // ID入力用
+  const [deviceIdQuery, setDeviceIdQuery] = useState<string>(''); // ID検索実行用
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'good'>('newest');
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
@@ -92,6 +96,7 @@ const CommentSection = ({
   const filterSectionRef = useRef<HTMLDivElement>(null);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const sortOptions = [
     { value: 'newest', label: '新しい順' },
@@ -182,18 +187,22 @@ const CommentSection = ({
       sort: sortOrder,
       date_from: dateFrom,
       date_to: dateTo,
+      device_id: deviceIdQuery || undefined,
     });
-  }, [selectedFilterLabel, searchQuery, sortOrder, dateFrom, dateTo]);
+  }, [selectedFilterLabel, searchQuery, deviceIdQuery, sortOrder, dateFrom, dateTo]);
 
   // 検索実行
   const handleSearch = () => {
     setSearchQuery(searchInput);
+    setDeviceIdQuery(deviceIdInput);
   };
 
   // 検索クリア
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
+    setDeviceIdInput('');
+    setDeviceIdQuery('');
   };
 
   // Enterキーで検索
@@ -377,7 +386,7 @@ const CommentSection = ({
       </CardHeader>
       <CardContent>
         {/* コメント投稿フォーム */}
-        <div className="mb-9 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
+        <div className="mb-4 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <Input
@@ -609,6 +618,19 @@ const CommentSection = ({
           </DialogContent>
         </Dialog>
 
+        {/* 検索・フィルター開閉ボタン */}
+        <div className={isFilterOpen ? 'mt-4 mb-4' : 'mt-4 mb-0'}>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="flex items-center gap-1.5 text-sm text-gray-300 active:text-white"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="font-semibold">検索・並び替え</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {isFilterOpen && (<>
         {/* ラベルフィルター */}
         <div ref={filterSectionRef} style={{ scrollMarginTop: '80px' }} className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-gray-300 text-xs font-bold">ラベル：</span>
@@ -651,7 +673,7 @@ const CommentSection = ({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="名前・投稿内容で検索"
+              placeholder="名前・内容で検索"
               className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
             />
             {searchInput && (
@@ -666,6 +688,36 @@ const CommentSection = ({
           </div>
           <Button
             onClick={handleSearch}
+            className="h-8 sm:h-9 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+          >
+            検索
+          </Button>
+        </div>
+
+        {/* ID検索 */}
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-gray-300 text-xs font-bold whitespace-nowrap">ID：</span>
+          <div className="relative flex-1 md:w-2/3 md:flex-none">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={deviceIdInput}
+              onChange={(e) => setDeviceIdInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="ユーザーIDで検索"
+              className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
+            />
+            {deviceIdInput && (
+              <button
+                aria-label="ID検索をクリア"
+                onClick={() => { setDeviceIdInput(''); setDeviceIdQuery(''); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-300 hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <Button
+            onClick={() => setDeviceIdQuery(deviceIdInput)}
             className="h-8 sm:h-9 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
           >
             検索
@@ -748,13 +800,15 @@ const CommentSection = ({
         </div>
 
         {/* 検索条件リセット */}
-        {(selectedFilterLabel !== null || searchQuery || selectedDateFilter !== 'all' || sortOrder !== 'newest') && (
+        {(selectedFilterLabel !== null || searchQuery || deviceIdQuery || selectedDateFilter !== 'all' || sortOrder !== 'newest') && (
           <div className="mt-3 mb-1">
             <button
               onClick={() => {
                 setSelectedFilterLabel(null);
                 setSearchInput('');
                 setSearchQuery('');
+                setDeviceIdInput('');
+                setDeviceIdQuery('');
                 setSelectedDateFilter('all');
                 setDateFrom(undefined);
                 setDateTo(undefined);
@@ -770,9 +824,11 @@ const CommentSection = ({
           </div>
         )}
 
+        </>)}
+
         {/* ページネーションコントロール（上部） */}
         {totalPages > 1 && (
-          <div className="mb-1.5 flex justify-end gap-3">
+          <div className="mb-1 flex justify-end gap-3">
             <button
               onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
@@ -791,7 +847,7 @@ const CommentSection = ({
         )}
 
         {/* 件数表示 */}
-        <div className="mb-3 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件`}</div>
+        <div className="mb-2 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件`}</div>
 
         {/* コメント一覧 */}
         <div className="space-y-4">

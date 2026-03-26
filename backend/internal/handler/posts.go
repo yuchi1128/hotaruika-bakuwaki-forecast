@@ -495,6 +495,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 	label := r.URL.Query().Get("label")
 	includeReplies := r.URL.Query().Get("include") == "replies"
 	search := r.URL.Query().Get("search")
+	deviceIDFilter := r.URL.Query().Get("device_id")
 
 	// 管理者かつadmin_device=trueの場合のみデバイスIDを含める
 	includeDeviceID := false
@@ -556,8 +557,17 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			argIndex++
 		}
 		if search != "" {
-			conditions = append(conditions, fmt.Sprintf("(p.username ILIKE $%d OR p.content ILIKE $%d)", argIndex, argIndex))
-			countArgs = append(countArgs, "%"+search+"%")
+			// 空白区切りで複数キーワードAND検索（ユーザー名・投稿内容を対象）
+			keywords := strings.Fields(search)
+			for _, kw := range keywords {
+				conditions = append(conditions, fmt.Sprintf("(p.username ILIKE $%d OR p.content ILIKE $%d)", argIndex, argIndex))
+				countArgs = append(countArgs, "%"+kw+"%")
+				argIndex++
+			}
+		}
+		if deviceIDFilter != "" {
+			conditions = append(conditions, fmt.Sprintf("p.device_id ILIKE $%d", argIndex))
+			countArgs = append(countArgs, "%"+deviceIDFilter+"%")
 			argIndex++
 		}
 		if dateFromStr != "" {
