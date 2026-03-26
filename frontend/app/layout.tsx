@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   // Twitter(X)カード設定
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: SITE_NAME,
     description: '富山湾のホタルイカ身投げをAIで予測。掲示板で現地の最新情報をリアルタイムに交換できます。',
   },
