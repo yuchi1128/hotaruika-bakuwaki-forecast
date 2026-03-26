@@ -24,6 +24,29 @@ import (
 	"github.com/yuchi1128/hotaruika-bakuwaki-forecast/backend/internal/storage"
 )
 
+// findDeviceIDsByDisplayID はdisplay_idに部分一致するdevice_idをDBから検索する
+func (h *Handler) findDeviceIDsByDisplayID(displayIDFilter string) ([]string, error) {
+	rows, err := h.db.Query("SELECT DISTINCT device_id FROM posts WHERE device_id != '' UNION SELECT DISTINCT device_id FROM replies WHERE device_id != ''")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matched []string
+	filterLower := strings.ToLower(displayIDFilter)
+	for rows.Next() {
+		var deviceID string
+		if err := rows.Scan(&deviceID); err != nil {
+			continue
+		}
+		did := generateDisplayID(deviceID)
+		if strings.Contains(strings.ToLower(did), filterLower) {
+			matched = append(matched, deviceID)
+		}
+	}
+	return matched, nil
+}
+
 // generateDisplayID はdevice_idからSHA-256ハッシュで7文字の表示用IDを生成する
 func generateDisplayID(deviceID string) string {
 	if deviceID == "" {
@@ -566,9 +589,23 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if deviceIDFilter != "" {
-			conditions = append(conditions, fmt.Sprintf("p.device_id ILIKE $%d", argIndex))
-			countArgs = append(countArgs, "%"+deviceIDFilter+"%")
-			argIndex++
+			// display_id（ハッシュ値）からdevice_idを逆引きして検索
+			matchedDeviceIDs, err := h.findDeviceIDsByDisplayID(deviceIDFilter)
+			if err != nil {
+				h.logger.Error("display_idからdevice_idの検索エラー", "error", err)
+			}
+			if len(matchedDeviceIDs) == 0 {
+				// 一致するdevice_idがない場合、結果を空にする
+				conditions = append(conditions, "FALSE")
+			} else {
+				placeholders := make([]string, len(matchedDeviceIDs))
+				for i, did := range matchedDeviceIDs {
+					placeholders[i] = fmt.Sprintf("$%d", argIndex)
+					countArgs = append(countArgs, did)
+					argIndex++
+				}
+				conditions = append(conditions, fmt.Sprintf("p.device_id IN (%s)", strings.Join(placeholders, ",")))
+			}
 		}
 		if dateFromStr != "" {
 			if t, err := time.Parse(time.RFC3339, dateFromStr); err == nil {
