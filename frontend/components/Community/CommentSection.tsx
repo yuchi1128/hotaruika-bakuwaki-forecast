@@ -622,10 +622,10 @@ const CommentSection = ({
         <div className={isFilterOpen ? 'mt-4 mb-4' : 'mt-4 mb-0'}>
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-sm text-gray-300 active:text-white"
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span className="font-bold">検索・並び替え</span>
+            <span className="font-semibold">検索・並び替え</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -673,7 +673,7 @@ const CommentSection = ({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="名前・内容で検索（空白でAND検索）"
+              placeholder="名前・内容で検索"
               className="pl-9 pr-9 h-8 sm:h-9 w-full bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
             />
             {searchInput && (
