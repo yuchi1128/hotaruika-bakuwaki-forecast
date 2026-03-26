@@ -274,7 +274,19 @@ const CommentSection = ({
       date_to: dateTo,
     });
     if (filterSectionRef.current) {
-      filterSectionRef.current.scrollIntoView({ behavior: 'auto' });
+      const targetY = filterSectionRef.current.getBoundingClientRect().top + window.scrollY - 80;
+      const startY = window.scrollY;
+      const distance = targetY - startY;
+      const duration = 350;
+      let startTime: number | null = null;
+      const step = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        window.scrollTo(0, startY + distance * ease);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
     }
   };
 
@@ -619,7 +631,7 @@ const CommentSection = ({
         </Dialog>
 
         {/* 検索・フィルター開閉ボタン */}
-        <div className={isFilterOpen ? 'mt-4 mb-4' : 'mt-4 mb-0'}>
+        <div ref={filterSectionRef} style={{ scrollMarginTop: '80px' }} className={isFilterOpen ? 'mt-4 mb-4' : 'mt-4 mb-0'}>
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className="flex items-center gap-1.5 text-sm text-gray-300 active:text-white"
@@ -632,7 +644,7 @@ const CommentSection = ({
 
         {isFilterOpen && (<>
         {/* ラベルフィルター */}
-        <div ref={filterSectionRef} style={{ scrollMarginTop: '80px' }} className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-gray-300 text-xs font-bold">ラベル：</span>
           <Button
             className={`h-7 rounded-md px-2 text-xs md:h-9 md:px-3 md:text-sm font-bold text-white/90 antialiased ${selectedFilterLabel === null ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-500 text-blue-300 hover:bg-blue-900/20'}`}
@@ -847,7 +859,7 @@ const CommentSection = ({
         )}
 
         {/* 件数表示 */}
-        <div className="mb-2 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件`}</div>
+        <div className="mb-3 text-[13px] font-medium text-gray-400 text-right">{totalComments === 0 ? '0件' : `${startIndex}〜${endIndex} 件目 / 全 ${totalComments} 件`}</div>
 
         {/* コメント一覧 */}
         <div className="space-y-4">
