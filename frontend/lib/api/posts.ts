@@ -10,10 +10,11 @@ export interface FetchPostsParams {
   sort?: string;
   date_from?: string;
   date_to?: string;
+  device_id?: string;
 }
 
 export async function fetchPosts(params: FetchPostsParams = {}): Promise<PaginatedPostsResponse> {
-  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest', date_from, date_to } = params;
+  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest', date_from, date_to, device_id } = params;
   let url = `/api/posts?include=replies&page=${page}&limit=${limit}&sort=${sort}`;
   if (label) {
     url += `&label=${encodeURIComponent(label)}`;
@@ -26,6 +27,9 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<Paginat
   }
   if (date_to) {
     url += `&date_to=${encodeURIComponent(date_to)}`;
+  }
+  if (device_id) {
+    url += `&device_id=${encodeURIComponent(device_id)}`;
   }
   return apiFetch<PaginatedPostsResponse>(url);
 }

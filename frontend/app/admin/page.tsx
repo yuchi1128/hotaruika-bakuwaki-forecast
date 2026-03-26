@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown, Ban, ShieldOff } from 'lucide-react';
+import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown, Ban, ShieldOff, ChevronDown } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import PollCreator from '@/components/PollCreator';
 import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH } from '@/lib/constants';
@@ -62,6 +62,7 @@ export default function AdminPage() {
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
   const [bannedDevices, setBannedDevices] = useState<BannedDevice[]>([]);
+  const [isBanListOpen, setIsBanListOpen] = useState(false);
 
   useEffect(() => {
     checkLoginStatus();
@@ -422,34 +423,40 @@ export default function AdminPage() {
         
         {/* BANリスト管理 */}
         <Card className="shadow-sm bg-white border border-gray-200 mb-8">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 cursor-pointer" onClick={() => setIsBanListOpen(!isBanListOpen)}>
             <CardTitle className="text-gray-900 flex items-center gap-2">
               <Ban className="h-5 w-5 text-red-500" />
               BANリスト管理
+              {bannedDevices.length > 0 && (
+                <span className="text-sm font-normal text-gray-500">({bannedDevices.length}件)</span>
+              )}
+              <ChevronDown className={`h-4 w-4 ml-auto text-gray-400 transition-transform ${isBanListOpen ? 'rotate-180' : ''}`} />
             </CardTitle>
-            <CardDescription className="text-gray-500">BANされた端末の一覧です。</CardDescription>
+            <CardDescription className="text-gray-500">クリックして展開</CardDescription>
           </CardHeader>
-          <CardContent>
-            {bannedDevices.length === 0 ? (
-              <p className="text-gray-500 text-sm">BANされた端末はありません。</p>
-            ) : (
-              <div className="space-y-2">
-                {bannedDevices.map(ban => (
-                  <div key={ban.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-gray-50">
-                    <div className="flex items-center gap-4">
-                      <span className="font-mono text-sm text-gray-800">{ban.device_id}</span>
-                      {ban.reason && <span className="text-xs text-gray-500">理由: {ban.reason}</span>}
-                      <span className="text-xs text-gray-400">{new Date(ban.banned_at).toLocaleString('ja-JP')}</span>
+          {isBanListOpen && (
+            <CardContent>
+              {bannedDevices.length === 0 ? (
+                <p className="text-gray-500 text-sm">BANされた端末はありません。</p>
+              ) : (
+                <div className="space-y-2">
+                  {bannedDevices.map(ban => (
+                    <div key={ban.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-gray-50">
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono text-sm text-gray-800">{ban.device_id}</span>
+                        {ban.reason && <span className="text-xs text-gray-500">理由: {ban.reason}</span>}
+                        <span className="text-xs text-gray-400">{new Date(ban.banned_at).toLocaleString('ja-JP')}</span>
+                      </div>
+                      <Button onClick={() => handleUnbanDevice(ban.device_id)} size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <ShieldOff className="h-3.5 w-3.5 mr-1" />
+                        解除
+                      </Button>
                     </div>
-                    <Button onClick={() => handleUnbanDevice(ban.device_id)} size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <ShieldOff className="h-3.5 w-3.5 mr-1" />
-                      解除
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
