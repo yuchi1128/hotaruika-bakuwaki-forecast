@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   description: '富山湾のホタルイカ身投げをAIで予測。ホタルイカ掬いのタイミングが分かる週間予報に加え、掲示板で現地の最新情報をリアルタイムに交換できます。',
   icons: {
     icon: '/hotaruika_aikon_3.png',
+    apple: '/apple-touch-icon.png',
   },
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   // OGP設定（SNSや検索エンジンへの明示）
@@ -31,6 +32,12 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: 'ja_JP',
     type: 'website',
+  },
+  // Twitter(X)カード設定
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: '富山湾のホタルイカ身投げをAIで予測。掲示板で現地の最新情報をリアルタイムに交換できます。',
   },
   verification: {
     google: 'DUbWjtDoIJaM6FOqA7i3KI34R7GrC_Og6xCWjjsfjBw',
