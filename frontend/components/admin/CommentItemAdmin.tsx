@@ -297,7 +297,8 @@ export default function CommentItemAdmin({
                   style={{ marginTop: '1px' }}
                   disabled={reply.myReaction !== null}
                 >
-                  <ThumbsDown className={`w-4 h-4 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                  <ThumbsDown className={`w-4 h-4 mr-1 ${reply.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                  {reply.bad_count}
                 </Button>
                 <Button
                   variant="ghost"
@@ -643,7 +644,8 @@ export default function CommentItemAdmin({
                   style={{ marginTop: '1px' }}
                   disabled={comment.myReaction !== null}
                 >
-                  <ThumbsDown className={`w-4 h-4 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                  <ThumbsDown className={`w-4 h-4 mr-1 ${comment.myReaction === 'bad' ? 'fill-current' : ''}`} />
+                  {comment.badCount}
                 </Button>
                 <Button
                   variant="ghost"
