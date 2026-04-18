@@ -11,13 +11,18 @@ import {
 import { getReaction } from '@/lib/client-utils';
 import type { Comment } from '@/lib/types';
 
-export function usePosts() {
+interface UsePostsOptions {
+  skipInitialFetch?: boolean;
+}
+
+export function usePosts(options?: UsePostsOptions) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [totalComments, setTotalComments] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const lastFetchParamsRef = useRef<FetchPostsParams>({});
+  const skipInitialFetch = options?.skipInitialFetch ?? false;
 
   const fetchPosts = useCallback(async (params: FetchPostsParams = {}) => {
     lastFetchParamsRef.current = params;
@@ -45,8 +50,10 @@ export function usePosts() {
   }, []);
 
   useEffect(() => {
-    fetchPosts({});
-  }, [fetchPosts]);
+    if (!skipInitialFetch) {
+      fetchPosts({});
+    }
+  }, [fetchPosts, skipInitialFetch]);
 
   const createPost = useCallback(async (
     username: string,
