@@ -156,7 +156,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleBanDevice = async (deviceId: string, reason?: string) => {
+  const handleBanDevice = async (deviceId: string, reason?: string): Promise<boolean> => {
     try {
       const res = await fetch(`${API_URL}/api/admin/ban`, {
         method: 'POST',
@@ -165,12 +165,17 @@ export default function AdminPage() {
         credentials: 'include',
       });
       if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
+        if (res.status === 401) {
+          setIsLoggedIn(false);
+          throw new Error('セッションが切れました。再ログインしてください。');
+        }
         throw new Error('BANに失敗しました。');
       }
       await fetchBannedDevices();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      return false;
     }
   };
 
@@ -182,7 +187,10 @@ export default function AdminPage() {
         credentials: 'include',
       });
       if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
+        if (res.status === 401) {
+          setIsLoggedIn(false);
+          throw new Error('セッションが切れました。再ログインしてください。');
+        }
         throw new Error('BAN解除に失敗しました。');
       }
       await fetchBannedDevices();
@@ -192,14 +200,26 @@ export default function AdminPage() {
   };
 
   // 削除+BAN の2段階 confirm フロー
-  const handleDeleteWithBan = (type: 'post' | 'reply', id: number, deviceId?: string) => {
+  // BAN先行→成功時のみ削除の順序で実行し、「削除後にBANが失敗してデバイスIDが失われる」ことを防ぐ
+  const handleDeleteWithBan = async (type: 'post' | 'reply', id: number, deviceId?: string) => {
     const label = type === 'post' ? 'この投稿' : 'この返信';
     if (!window.confirm(`${label}を本当に削除しますか？`)) return;
-    const banAlso = deviceId ? window.confirm(`この端末（${deviceId}）もBANしますか？\n\n「OK」→ 削除+BAN\n「キャンセル」→ 削除のみ`) : false;
-    handleDelete(type, id);
+    const banAlso = deviceId
+      ? window.confirm(`この端末（${deviceId}）もBANしますか？\n\n「OK」→ BANしてから削除\n「キャンセル」→ 削除のみ`)
+      : false;
+
     if (banAlso && deviceId) {
-      handleBanDevice(deviceId, `${label}削除に伴うBAN`);
+      const banSuccess = await handleBanDevice(deviceId, `${label}削除に伴うBAN`);
+      if (!banSuccess) {
+        // BAN失敗 → 削除もキャンセルし、デバイスIDをユーザーに伝える
+        window.alert(
+          `BANに失敗したため、削除もキャンセルしました。\n\nデバイスID: ${deviceId}\n\n` +
+          `この ID をコピーして、セッション再ログイン後に BANリスト管理から手動でBANしてください。`
+        );
+        return;
+      }
     }
+    await handleDelete(type, id);
   };
 
   // ラベル変更 (楽観的UI更新 + 成功後の再取得)

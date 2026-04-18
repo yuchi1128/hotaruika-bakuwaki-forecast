@@ -43,7 +43,7 @@ interface CommentSectionAdminProps {
   onDeletePost: (postId: number, deviceId?: string) => void;
   onDeleteReply: (replyId: number, deviceId?: string) => void;
   onLabelChange: (postId: number, label: string) => Promise<void>;
-  onBanDevice: (deviceId: string, reason?: string) => Promise<void>;
+  onBanDevice: (deviceId: string, reason?: string) => Promise<boolean>;
   bannedDevices: BannedDevice[];
 }
 
