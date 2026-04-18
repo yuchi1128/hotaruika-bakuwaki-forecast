@@ -35,7 +35,10 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<Paginat
   if (admin_device) {
     url += `&admin_device=true`;
   }
-  return apiFetch<PaginatedPostsResponse>(url);
+  // admin_device=true の場合のみ admin_token Cookie を送信する
+  // (一般投稿・一般閲覧では Cookie を送らないことで、管理者ログイン中でも
+  //  BANされた端末なら投稿不可という正しい挙動を維持)
+  return apiFetch<PaginatedPostsResponse>(url, admin_device ? { credentials: 'include' } : undefined);
 }
 
 export interface CreatePollParams {

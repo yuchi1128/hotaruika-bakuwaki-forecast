@@ -30,7 +30,7 @@ func (h *Handler) adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "パスワードが不正です", http.StatusUnauthorized)
 		return
 	}
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 	claims := &model.Claims{
 		Role: "admin",
 		RegisteredClaims: jwt.RegisteredClaims{
