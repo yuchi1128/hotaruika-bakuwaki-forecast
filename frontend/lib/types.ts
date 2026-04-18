@@ -60,6 +60,7 @@ export interface Post {
   good_count: number;
   bad_count: number;
   display_id?: string;
+  device_id?: string;
   poll?: Poll;
 }
 
@@ -76,6 +77,7 @@ export interface Reply {
   good_count: number;
   bad_count: number;
   display_id?: string;
+  device_id?: string;
   myReaction: 'good' | 'bad' | null;
   parent_username?: string;
 }
@@ -95,4 +97,12 @@ export interface PaginatedPostsResponse {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+// BANされた端末
+export interface BannedDevice {
+  id: number;
+  device_id: string;
+  reason?: string;
+  banned_at: string;
 }

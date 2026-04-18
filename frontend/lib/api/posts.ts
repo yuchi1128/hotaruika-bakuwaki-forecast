@@ -11,10 +11,11 @@ export interface FetchPostsParams {
   date_from?: string;
   date_to?: string;
   device_id?: string;
+  admin_device?: boolean;
 }
 
 export async function fetchPosts(params: FetchPostsParams = {}): Promise<PaginatedPostsResponse> {
-  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest', date_from, date_to, device_id } = params;
+  const { label, page = 1, limit = COMMENTS_PER_PAGE, search, sort = 'newest', date_from, date_to, device_id, admin_device } = params;
   let url = `/api/posts?include=replies&page=${page}&limit=${limit}&sort=${sort}`;
   if (label) {
     url += `&label=${encodeURIComponent(label)}`;
@@ -30,6 +31,9 @@ export async function fetchPosts(params: FetchPostsParams = {}): Promise<Paginat
   }
   if (device_id) {
     url += `&device_id=${encodeURIComponent(device_id)}`;
+  }
+  if (admin_device) {
+    url += `&admin_device=true`;
   }
   return apiFetch<PaginatedPostsResponse>(url);
 }
@@ -80,6 +84,30 @@ export async function createReply(
     ? `/api/posts/${targetId}/replies`
     : `/api/replies/${targetId}/replies`;
   const body: Record<string, unknown> = { username, content };
+  if (imageBase64s && imageBase64s.length > 0) {
+    body.image_urls = imageBase64s;
+  }
+  await apiFetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createAdminReply(
+  targetId: number,
+  type: 'post' | 'reply',
+  content: string,
+  imageBase64s?: string[],
+): Promise<void> {
+  const endpoint = type === 'post'
+    ? `/api/posts/${targetId}/replies`
+    : `/api/replies/${targetId}/replies`;
+  const body: Record<string, unknown> = {
+    username: '管理人',
+    content,
+    label: '管理人',
+  };
   if (imageBase64s && imageBase64s.length > 0) {
     body.image_urls = imageBase64s;
   }

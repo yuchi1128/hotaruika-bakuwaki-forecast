@@ -1,68 +1,51 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ImageIcon, X, Pencil, Check, ThumbsUp, ThumbsDown, Ban, ShieldOff, ChevronDown } from 'lucide-react';
-import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
+import { Loader2, ImageIcon, X, Ban, ShieldOff, ChevronDown } from 'lucide-react';
 import PollCreator from '@/components/PollCreator';
-import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH } from '@/lib/constants';
+import CommentSectionAdmin from '@/components/admin/CommentSectionAdmin';
+import { usePosts } from '@/hooks/usePosts';
+import { useReactions } from '@/hooks/useReactions';
+import { usePollVote } from '@/hooks/usePollVote';
+import { createAdminReply } from '@/lib/api/posts';
+import { formatTime } from '@/lib/utils';
+import { API_URL, MAX_ADMIN_CONTENT_LENGTH, MAX_POLL_OPTION_LENGTH, COMMENTS_PER_PAGE } from '@/lib/constants';
 import type { CreatePollParams } from '@/lib/api/posts';
-
-// 型定義
-interface Post {
-  id: number;
-  username: string;
-  content:string;
-  image_urls: string[];
-  label: string;
-  device_id?: string;
-  created_at: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface Reply {
-  id: number;
-  post_id: number;
-  username: string;
-  content: string;
-  image_urls?: string[];
-  label?: string;
-  device_id?: string;
-  created_at: string;
-  parent_username?: string;
-  good_count: number;
-  bad_count: number;
-}
-
-interface BannedDevice {
-  id: number;
-  device_id: string;
-  reason?: string;
-  banned_at: string;
-}
-
-// 投稿と返信をまとめた型
-type PostWithReplies = Post & { replies: Reply[] };
+import type { BannedDevice, Comment } from '@/lib/types';
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [posts, setPosts] = useState<PostWithReplies[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostUsername, setNewPostUsername] = useState('管理人');
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [pollData, setPollData] = useState<CreatePollParams | null>(null);
   const [pollReset, setPollReset] = useState(false);
   const [bannedDevices, setBannedDevices] = useState<BannedDevice[]>([]);
   const [isBanListOpen, setIsBanListOpen] = useState(false);
+  const [isPostingAdmin, setIsPostingAdmin] = useState(false);
+
+  const {
+    comments,
+    setComments,
+    totalComments,
+    totalPages,
+    currentPage,
+    fetchPosts,
+  } = usePosts({ skipInitialFetch: true });
+
+  const { handleReaction } = useReactions(setComments, fetchPosts);
+  const { handlePollVote } = usePollVote(setComments, fetchPosts);
+
+  // 最新の fetch パラメータを保持 (再取得用)
+  const lastFetchParamsRef = useRef<{ page: number }>({ page: 1 });
+  lastFetchParamsRef.current = { page: currentPage };
 
   useEffect(() => {
     checkLoginStatus();
@@ -71,46 +54,31 @@ export default function AdminPage() {
   const checkLoginStatus = async () => {
     try {
       const res = await fetch(`${API_URL}/api/admin/check`, { credentials: 'include' });
-      if (res.ok) {
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-      }
-    } catch (err) {
+      setIsLoggedIn(res.ok);
+    } catch {
       setIsLoggedIn(false);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchAllData();
-    }
-  }, [isLoggedIn]);
 
-  const fetchAllData = async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
-    setError('');
+  const fetchBannedDevices = async () => {
     try {
-      const [postsRes, bannedRes] = await Promise.all([
-        fetch(`${API_URL}/api/posts?include=replies&admin_device=true`, { credentials: 'include' }),
-        fetch(`${API_URL}/api/admin/banned-devices`, { credentials: 'include' }),
-      ]);
-      if (!postsRes.ok) throw new Error('取得に失敗しました');
-      const postsWithReplies: (Post & { replies: Reply[] })[] = await postsRes.json();
-      setPosts(postsWithReplies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-
-      if (bannedRes.ok) {
-        const banned: BannedDevice[] = await bannedRes.json();
+      const res = await fetch(`${API_URL}/api/admin/banned-devices`, { credentials: 'include' });
+      if (res.ok) {
+        const banned: BannedDevice[] = await res.json();
         setBannedDevices(banned);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    } finally {
-      if (showLoading) setIsLoading(false);
+      console.error('BANリスト取得エラー:', err);
     }
   };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchBannedDevices();
+    }
+  }, [isLoggedIn]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -129,6 +97,7 @@ export default function AdminPage() {
       setIsLoggedIn(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -140,22 +109,34 @@ export default function AdminPage() {
         credentials: 'include',
       });
     } catch (err) {
-      console.error("Logout request failed:", err);
+      console.error('Logout request failed:', err);
     } finally {
       setIsLoggedIn(false);
       setPassword('');
     }
   };
-  
+
+  // 現在のページを再取得 (admin_device=true)
+  const refreshCurrentPage = () => {
+    fetchPosts({
+      page: lastFetchParamsRef.current.page,
+      limit: COMMENTS_PER_PAGE,
+      admin_device: true,
+    });
+  };
+
+  // 投稿または返信の削除 (楽観的UI更新 + 成功後の再取得で確実に同期)
   const handleDelete = async (type: 'post' | 'reply', id: number) => {
-    // 即座にUIから削除
+    // 楽観的UI更新
     if (type === 'post') {
-      setPosts(prev => prev.filter(p => p.id !== id));
+      setComments((prev: Comment[]) => prev.filter((c) => c.id !== id));
     } else {
-      setPosts(prev => prev.map(p => ({
-        ...p,
-        replies: p.replies.filter(r => r.id !== id),
-      })));
+      setComments((prev: Comment[]) =>
+        prev.map((c) => ({
+          ...c,
+          replies: c.replies.filter((r) => r.id !== id),
+        }))
+      );
     }
     const endpoint = type === 'post' ? `/api/posts/${id}` : `/api/replies/${id}`;
     try {
@@ -167,10 +148,94 @@ export default function AdminPage() {
         if (res.status === 401) setIsLoggedIn(false);
         throw new Error(`${type}の削除に失敗しました。`);
       }
+      // 成功後もサーバーと同期 (楽観更新が上書きされる問題を防ぐ)
+      refreshCurrentPage();
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-      // エラー時はデータを再取得して正しい状態に戻す
-      fetchAllData(false);
+      refreshCurrentPage();
+    }
+  };
+
+  const handleBanDevice = async (deviceId: string, reason?: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId, reason }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('BANに失敗しました。');
+      }
+      await fetchBannedDevices();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
+  const handleUnbanDevice = async (deviceId: string) => {
+    if (!window.confirm(`${deviceId} のBANを解除しますか？`)) return;
+    try {
+      const res = await fetch(`${API_URL}/api/admin/ban/${encodeURIComponent(deviceId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('BAN解除に失敗しました。');
+      }
+      await fetchBannedDevices();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    }
+  };
+
+  // 削除+BAN の2段階 confirm フロー
+  const handleDeleteWithBan = (type: 'post' | 'reply', id: number, deviceId?: string) => {
+    const label = type === 'post' ? 'この投稿' : 'この返信';
+    if (!window.confirm(`${label}を本当に削除しますか？`)) return;
+    const banAlso = deviceId ? window.confirm(`この端末（${deviceId}）もBANしますか？\n\n「OK」→ 削除+BAN\n「キャンセル」→ 削除のみ`) : false;
+    handleDelete(type, id);
+    if (banAlso && deviceId) {
+      handleBanDevice(deviceId, `${label}削除に伴うBAN`);
+    }
+  };
+
+  // ラベル変更 (楽観的UI更新 + 成功後の再取得)
+  const handleLabelChange = async (postId: number, label: string) => {
+    setComments((prev: Comment[]) => prev.map((c) => (c.id === postId ? { ...c, label } : c)));
+    try {
+      const res = await fetch(`${API_URL}/api/posts/${postId}/label`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('ラベルの変更に失敗しました。');
+      }
+      refreshCurrentPage();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      refreshCurrentPage();
+    }
+  };
+
+  // 管理人返信 (CommentSectionAdmin → CommentItemAdmin から呼ばれる)
+  const handleAdminReply = async (
+    targetId: number,
+    type: 'post' | 'reply',
+    content: string,
+    imageBase64s?: string[],
+  ) => {
+    try {
+      await createAdminReply(targetId, type, content, imageBase64s);
+      refreshCurrentPage();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '返信に失敗しました');
+      throw err;
     }
   };
 
@@ -181,34 +246,38 @@ export default function AdminPage() {
         alert('写真は最大4枚までです。');
         const remainingSlots = 4 - selectedImages.length;
         if (remainingSlots > 0) {
-          setSelectedImages(prev => [...prev, ...files.slice(0, remainingSlots)]);
+          setSelectedImages((prev) => [...prev, ...files.slice(0, remainingSlots)]);
         }
       } else {
-        setSelectedImages(prev => [...prev, ...files]);
+        setSelectedImages((prev) => [...prev, ...files]);
       }
       event.target.value = '';
     }
   };
 
   const handleRemoveImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAdminPost = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newPostContent) return;
+    if (!newPostContent.trim() || isPostingAdmin) return;
+
+    setIsPostingAdmin(true);
+    setError('');
 
     let imageBase64s: string[] = [];
     if (selectedImages.length > 0) {
       imageBase64s = await Promise.all(
-        selectedImages.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-          });
-        })
+        selectedImages.map(
+          (file) =>
+            new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = (err) => reject(err);
+            })
+        )
       );
     }
 
@@ -234,160 +303,30 @@ export default function AdminPage() {
       setPollData(null);
       setPollReset(true);
       setTimeout(() => setPollReset(false), 0);
-      fetchAllData(false);
+      // 1ページ目 (新着) に戻す
+      fetchPosts({ page: 1, limit: COMMENTS_PER_PAGE, admin_device: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    } finally {
+      setIsPostingAdmin(false);
     }
   };
-
-  const handleAdminReply = async (postId: number, content: string, imageBase64s?: string[]) => {
-    try {
-      const body: Record<string, unknown> = {
-        username: '管理人',
-        content: content,
-        label: '管理人',
-      };
-      if (imageBase64s && imageBase64s.length > 0) {
-        body.image_urls = imageBase64s;
-      }
-      const res = await fetch(`${API_URL}/api/posts/${postId}/replies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('管理人返信の作成に失敗しました。');
-      }
-      fetchAllData(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    }
-  };
-
-  const handleAdminReplyToReply = async (replyId: number, content: string, imageBase64s?: string[]) => {
-    try {
-      const body: Record<string, unknown> = {
-        username: '管理人',
-        content: content,
-        label: '管理人',
-      };
-      if (imageBase64s && imageBase64s.length > 0) {
-        body.image_urls = imageBase64s;
-      }
-      const res = await fetch(`${API_URL}/api/replies/${replyId}/replies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('管理人返信の作成に失敗しました。');
-      }
-      fetchAllData(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    }
-  };
-
-  const handleLabelChange = async (postId: number, label: string) => {
-    // 即座にUIを更新
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, label } : p));
-    try {
-      const res = await fetch(`${API_URL}/api/posts/${postId}/label`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label }),
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('ラベルの変更に失敗しました。');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-      // エラー時はデータを再取得して正しい状態に戻す
-      fetchAllData(false);
-    }
-  };
-
-  const handleBanDevice = async (deviceId: string, reason?: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/admin/ban`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_id: deviceId, reason }),
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('BANに失敗しました。');
-      }
-      fetchAllData(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    }
-  };
-
-  const handleUnbanDevice = async (deviceId: string) => {
-    if (!window.confirm(`${deviceId} のBANを解除しますか？`)) return;
-    try {
-      const res = await fetch(`${API_URL}/api/admin/ban/${encodeURIComponent(deviceId)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        if (res.status === 401) setIsLoggedIn(false);
-        throw new Error('BAN解除に失敗しました。');
-      }
-      fetchAllData(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-    }
-  };
-
-  const handleDeleteWithBan = (type: 'post' | 'reply', id: number, deviceId?: string) => {
-    const label = type === 'post' ? 'この投稿' : 'この返信';
-
-    // まず削除確認
-    if (!window.confirm(`${label}を本当に削除しますか？`)) {
-      return;
-    }
-
-    // デバイスIDがある場合はBANも確認
-    const banAlso = deviceId ? window.confirm(`この端末（${deviceId}）もBANしますか？\n\n「OK」→ 削除+BAN\n「キャンセル」→ 削除のみ`) : false;
-
-    // 削除実行
-    handleDelete(type, id);
-
-    // BANも実行
-    if (banAlso && deviceId) {
-      handleBanDevice(deviceId, `${label}削除に伴うBAN`);
-    }
-  };
-
-  const filteredPosts = posts.filter(post =>
-    post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    post.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (isLoading && !isLoggedIn) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      );
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-300" />
+      </div>
+    );
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Card className="w-full max-w-sm">
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-sm bg-gradient-to-br from-slate-900/60 to-purple-900/60 border-purple-500/30 backdrop-blur-md">
           <CardHeader>
-            <CardTitle className="text-2xl">管理人ログイン</CardTitle>
-            <CardDescription>管理用パスワードを入力してください。</CardDescription>
+            <CardTitle className="text-2xl text-purple-200">管理人ログイン</CardTitle>
+            <CardDescription className="text-purple-300/70">管理用パスワードを入力してください。</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin}>
@@ -398,11 +337,12 @@ export default function AdminPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                 />
-                <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'ログイン'}
                 </Button>
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-300 text-sm text-center">{error}</p>}
               </div>
             </form>
           </CardContent>
@@ -412,42 +352,44 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <header className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-900">管理人ダッシュボード</h1>
-          <Button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 text-white">ログアウト</Button>
+        <header className="flex justify-between items-center mb-6 pb-4 border-b border-purple-500/30">
+          <h1 className="text-3xl font-bold text-purple-200">管理人ダッシュボード</h1>
+          <Button onClick={handleLogout} className="bg-blue-600 hover:bg-blue-700 text-white">ログアウト</Button>
         </header>
 
-        {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-6">Error: {error}</p>}
-        
+        {error && (
+          <p className="bg-red-900/40 text-red-300 border border-red-500/30 p-3 rounded-md mb-6">Error: {error}</p>
+        )}
+
         {/* BANリスト管理 */}
-        <Card className="shadow-sm bg-white border border-gray-200 mb-8">
+        <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20 mb-8">
           <CardHeader className="pb-3 cursor-pointer" onClick={() => setIsBanListOpen(!isBanListOpen)}>
-            <CardTitle className="text-gray-900 flex items-center gap-2">
-              <Ban className="h-5 w-5 text-red-500" />
+            <CardTitle className="text-purple-200 flex items-center gap-2">
+              <Ban className="h-5 w-5 text-red-400" />
               BANリスト管理
               {bannedDevices.length > 0 && (
-                <span className="text-sm font-normal text-gray-500">({bannedDevices.length}件)</span>
+                <span className="text-sm font-normal text-gray-400">({bannedDevices.length}件)</span>
               )}
               <ChevronDown className={`h-4 w-4 ml-auto text-gray-400 transition-transform ${isBanListOpen ? 'rotate-180' : ''}`} />
             </CardTitle>
-            <CardDescription className="text-gray-500">クリックして展開</CardDescription>
+            <CardDescription className="text-purple-300/70">クリックして展開</CardDescription>
           </CardHeader>
           {isBanListOpen && (
             <CardContent>
               {bannedDevices.length === 0 ? (
-                <p className="text-gray-500 text-sm">BANされた端末はありません。</p>
+                <p className="text-gray-400 text-sm">BANされた端末はありません。</p>
               ) : (
                 <div className="space-y-2">
-                  {bannedDevices.map(ban => (
-                    <div key={ban.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-gray-50">
+                  {bannedDevices.map((ban) => (
+                    <div key={ban.id} className="flex justify-between items-center p-3 border border-purple-500/20 rounded-md bg-slate-800/50">
                       <div className="flex items-center gap-4">
-                        <span className="font-mono text-sm text-gray-800">{ban.device_id}</span>
-                        {ban.reason && <span className="text-xs text-gray-500">理由: {ban.reason}</span>}
-                        <span className="text-xs text-gray-400">{new Date(ban.banned_at).toLocaleString('ja-JP')}</span>
+                        <span className="font-mono text-sm text-gray-200">{ban.device_id}</span>
+                        {ban.reason && <span className="text-xs text-gray-400">理由: {ban.reason}</span>}
+                        <span className="text-xs text-gray-500">{new Date(ban.banned_at).toLocaleString('ja-JP')}</span>
                       </div>
-                      <Button onClick={() => handleUnbanDevice(ban.device_id)} size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <Button onClick={() => handleUnbanDevice(ban.device_id)} size="sm" variant="outline" className="text-red-300 border-red-400/40 hover:bg-red-900/30 hover:text-red-200">
                         <ShieldOff className="h-3.5 w-3.5 mr-1" />
                         解除
                       </Button>
@@ -460,11 +402,12 @@ export default function AdminPage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* 管理人として投稿 */}
           <div className="lg:col-span-1">
-            <Card className="shadow-sm bg-white border border-gray-800">
+            <Card className="bg-gradient-to-br from-slate-900/40 to-purple-900/40 border-purple-500/20">
               <CardHeader>
-                <CardTitle className="text-gray-900">管理人として投稿</CardTitle>
-                <CardDescription className="text-gray-500">お知らせなどを投稿します。</CardDescription>
+                <CardTitle className="text-purple-200">管理人として投稿</CardTitle>
+                <CardDescription className="text-purple-300/70">お知らせなどを投稿します。</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleAdminPost} className="space-y-4">
@@ -472,7 +415,7 @@ export default function AdminPage() {
                     value={newPostUsername}
                     onChange={(e) => setNewPostUsername(e.target.value)}
                     placeholder="ユーザー名 (デフォルト: 管理人)"
-                    className="bg-white border-gray-800 text-gray-900"
+                    className="bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400"
                   />
                   <Textarea
                     value={newPostContent}
@@ -480,28 +423,40 @@ export default function AdminPage() {
                     placeholder="新しいお知らせや情報を入力..."
                     required
                     rows={4}
-                    className={`bg-white border-gray-800 text-gray-900 ${
+                    className={`bg-slate-700/50 border-purple-500/30 text-white placeholder-gray-400 ${
                       newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ? 'border-red-500' : ''
                     }`}
                   />
                   {newPostContent.length > MAX_ADMIN_CONTENT_LENGTH && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-red-400">
                       ※{MAX_ADMIN_CONTENT_LENGTH}文字以内で入力してください（現在{newPostContent.length}文字）
                     </p>
                   )}
                   <PollCreator onChange={setPollData} onReset={pollReset} />
                   <div className="space-y-2">
-                    <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-gray-600 hover:text-gray-800">
+                    <label htmlFor="image-upload" className="cursor-pointer flex items-center text-sm text-gray-300 hover:text-white">
                       <ImageIcon className="w-5 h-5 mr-2" />
                       <span>画像を選択 ({selectedImages.length}/4)</span>
                     </label>
-                    <Input id="image-upload" type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" disabled={selectedImages.length >= 4} />
+                    <Input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="hidden"
+                      disabled={selectedImages.length >= 4}
+                    />
                     {selectedImages.length > 0 && (
                       <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {selectedImages.map((image, index) => (
                           <div key={index} className="relative">
                             <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-24 object-cover rounded-md" />
-                            <button onClick={() => handleRemoveImage(index)} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(index)}
+                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"
+                            >
                               <X className="w-3 h-3" />
                             </button>
                           </div>
@@ -509,454 +464,45 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
-                  <Button type="submit" className="w-full bg-gray-700 hover:bg-gray-600 text-white" disabled={
-                    newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ||
-                    (pollData !== null && (
-                      pollData.options.filter((o) => o.trim() !== '').length < 2 ||
-                      pollData.options.some((o) => o.length > MAX_POLL_OPTION_LENGTH)
-                    ))
-                  }>投稿する</Button>
+                  <Button
+                    type="submit"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={
+                      isPostingAdmin ||
+                      newPostContent.length > MAX_ADMIN_CONTENT_LENGTH ||
+                      (pollData !== null && (
+                        pollData.options.filter((o) => o.trim() !== '').length < 2 ||
+                        pollData.options.some((o) => o.length > MAX_POLL_OPTION_LENGTH)
+                      ))
+                    }
+                  >
+                    {isPostingAdmin ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : '投稿する'}
+                  </Button>
                 </form>
               </CardContent>
             </Card>
           </div>
 
+          {/* 掲示板管理 (CommentSectionAdmin) */}
           <div className="lg:col-span-2">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">掲示板管理</h2>
-              <div className="mb-4">
-                  <Input
-                  type="text"
-                  placeholder="名前または内容で検索..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full max-w-md bg-white"
-                  />
-              </div>
-
-              {isLoading ? (
-                  <div className="flex justify-center items-center p-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                  </div>
-              ) : (
-                  <div className="space-y-4">
-                      {filteredPosts.length > 0 ? (
-                      filteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} onDelete={handleDeleteWithBan} onReply={handleAdminReply} onReplyToReply={handleAdminReplyToReply} onLabelChange={handleLabelChange} onBanDevice={handleBanDevice} bannedDevices={bannedDevices} />
-                      ))
-                      ) : (
-                      <p className="text-gray-500 text-center py-8">該当する投稿はありません。</p>
-                      )}
-                  </div>
-              )}
+            <CommentSectionAdmin
+              comments={comments}
+              totalComments={totalComments}
+              totalPages={totalPages}
+              currentPage={currentPage}
+              handleReaction={handleReaction}
+              handlePollVote={handlePollVote}
+              formatTime={formatTime}
+              createAdminReply={handleAdminReply}
+              fetchPosts={fetchPosts}
+              onDeletePost={(id, did) => handleDeleteWithBan('post', id, did)}
+              onDeleteReply={(id, did) => handleDeleteWithBan('reply', id, did)}
+              onLabelChange={handleLabelChange}
+              onBanDevice={handleBanDevice}
+              bannedDevices={bannedDevices}
+            />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function PostCard({ post, onDelete, onReply, onReplyToReply, onLabelChange, onBanDevice, bannedDevices }: { post: PostWithReplies, onDelete: (type: 'post' | 'reply', id: number, deviceId?: string) => void, onReply: (postId: number, content: string, imageBase64s?: string[]) => Promise<void>, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onLabelChange: (postId: number, label: string) => Promise<void>, onBanDevice: (deviceId: string, reason?: string) => Promise<void>, bannedDevices: BannedDevice[] }) {
-  const isAdmin = post.label === '管理人';
-  const [replyContent, setReplyContent] = useState('');
-  const [isReplying, setIsReplying] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [replyImages, setReplyImages] = useState<File[]>([]);
-  const [isChangingLabel, setIsChangingLabel] = useState(false);
-  const [isEditingLabel, setIsEditingLabel] = useState(false);
-  const [showPencil, setShowPencil] = useState(true);
-  const [selectedLabel, setSelectedLabel] = useState(post.label);
-
-  const handleReplyImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      if (replyImages.length + files.length > 4) {
-        alert('写真は最大4枚までです。');
-        const remaining = 4 - replyImages.length;
-        if (remaining > 0) setReplyImages(prev => [...prev, ...files.slice(0, remaining)]);
-      } else {
-        setReplyImages(prev => [...prev, ...files]);
-      }
-      event.target.value = '';
-    }
-  };
-
-  const handleSubmitReply = async () => {
-    if (!replyContent.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      let imageBase64s: string[] = [];
-      if (replyImages.length > 0) {
-        imageBase64s = await Promise.all(
-          replyImages.map(file => new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-          }))
-        );
-      }
-      await onReply(post.id, replyContent, imageBase64s.length > 0 ? imageBase64s : undefined);
-      setReplyContent('');
-      setReplyImages([]);
-      setIsReplying(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleLabelConfirm = async () => {
-    if (selectedLabel === post.label) {
-      setIsEditingLabel(false);
-      setShowPencil(false);
-      setTimeout(() => setShowPencil(true), 150);
-      return;
-    }
-    setIsChangingLabel(true);
-    try {
-      await onLabelChange(post.id, selectedLabel);
-      setIsEditingLabel(false);
-      setShowPencil(false);
-      setTimeout(() => setShowPencil(true), 150);
-    } finally {
-      setIsChangingLabel(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setSelectedLabel(post.label);
-    setIsEditingLabel(false);
-    setShowPencil(false);
-    setTimeout(() => setShowPencil(true), 150);
-  };
-
-  return (
-    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="bg-gray-50 p-4 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-                <p className="font-bold text-lg text-gray-800">{post.username}</p>
-                {!isEditingLabel ? (
-                  <div className="flex items-center gap-1">
-                    <Badge className={isAdmin ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-700 border-gray-200'}>
-                      {post.label}
-                    </Badge>
-                    {showPencil && (
-                      <button
-                        onClick={() => setIsEditingLabel(true)}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="ラベルを変更"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={selectedLabel}
-                      onChange={(e) => {
-                        setSelectedLabel(e.target.value);
-                      }}
-                      onBlur={() => {
-                        if (!isChangingLabel) {
-                          setTimeout(() => {
-                            handleCancelEdit();
-                          }, 150);
-                        }
-                      }}
-                      disabled={isChangingLabel}
-                      className="text-sm font-medium px-2 py-1 rounded-md border bg-white text-gray-700 border-gray-300"
-                      autoFocus
-                    >
-                      <option value="現地情報">現地情報</option>
-                      <option value="その他">その他</option>
-                      <option value="管理人">管理人</option>
-                    </select>
-                    <button
-                      onClick={handleLabelConfirm}
-                      disabled={isChangingLabel}
-                      className="p-1 rounded hover:bg-green-100 text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
-                      title="確定"
-                    >
-                      {isChangingLabel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={isChangingLabel}
-                      className="p-1 rounded hover:bg-red-100 text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                      title="キャンセル"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-            </div>
-            <Button
-              onClick={() => onDelete('post', post.id, post.device_id)}
-              variant="ghost"
-              size="icon"
-              className="text-gray-400 hover:text-red-500 hover:bg-red-50"
-            >
-                <Trash2 className="h-4 w-4"/>
-            </Button>
-        </div>
-        <div className="flex items-center gap-3 pt-1">
-          <p className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString('ja-JP')}</p>
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <ThumbsUp className="w-3.5 h-3.5" />
-            {post.good_count}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-red-500">
-            <ThumbsDown className="w-3.5 h-3.5" />
-            {post.bad_count}
-          </span>
-        </div>
-        {post.device_id && (
-          <div className="flex items-center gap-1 pt-1 text-xs text-gray-400">
-            端末: <span className="font-mono break-all">{post.device_id}</span>
-            {bannedDevices.some(b => b.device_id === post.device_id) ? (
-              <span className="text-red-500 font-semibold ml-1">BAN済</span>
-            ) : (
-              <button
-                onClick={() => {
-                  if (window.confirm(`${post.device_id!} をBANしますか？`)) {
-                    onBanDevice(post.device_id!);
-                  }
-                }}
-                className="text-red-400 hover:text-red-600 ml-1"
-                title="この端末をBANする"
-              >
-                <Ban className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-      </CardHeader>
-
-      <CardContent className="p-4 bg-white">
-        <p className="whitespace-pre-wrap text-gray-800">{post.content}</p>
-        {post.image_urls && post.image_urls.length > 0 && (
-          <div className="mt-4">
-            <TwitterLikeMediaGrid images={post.image_urls.map(url => `${url}`)} />
-          </div>
-        )}
-
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          {!isReplying ? (
-            <Button onClick={() => setIsReplying(true)} size="sm" className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-100">
-              管理人として返信
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <Textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder="管理人として返信..."
-                rows={3}
-                className="w-full bg-white border-gray-300 text-gray-900"
-              />
-              <label htmlFor={`admin-reply-post-${post.id}`} className="cursor-pointer flex items-center text-sm text-gray-500 hover:text-gray-700">
-                <ImageIcon className="w-4 h-4 mr-1" />
-                <span>画像を選択 ({replyImages.length}/4)</span>
-              </label>
-              <input
-                id={`admin-reply-post-${post.id}`}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleReplyImageChange}
-                className="hidden"
-                disabled={replyImages.length >= 4}
-              />
-              {replyImages.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {replyImages.map((image, index) => (
-                    <div key={index} className="relative">
-                      <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
-                      <button onClick={() => setReplyImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button onClick={handleSubmitReply} size="sm" className="bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                  返信する
-                </Button>
-                <Button onClick={() => { setIsReplying(false); setReplyContent(''); setReplyImages([]); }} variant="ghost" size="sm">
-                  キャンセル
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
-
-      {post.replies && post.replies.length > 0 && (
-        <CardFooter className="p-4 bg-gray-50 border-t border-gray-200 flex-col items-start">
-          <h4 className="font-semibold text-sm mb-3 text-gray-600">返信 ({post.replies.length}件)</h4>
-          <div className="space-y-3 w-full">
-            {post.replies.map((reply) => (
-              <ReplyItem key={reply.id} reply={reply} onDelete={onDelete} onReplyToReply={onReplyToReply} onBanDevice={onBanDevice} bannedDevices={bannedDevices} />
-            ))}
-          </div>
-        </CardFooter>
-      )}
-    </Card>
-  );
-}
-
-function ReplyItem({ reply, onDelete, onReplyToReply, onBanDevice, bannedDevices }: { reply: Reply, onDelete: (type: 'post' | 'reply', id: number, deviceId?: string) => void, onReplyToReply: (replyId: number, content: string, imageBase64s?: string[]) => Promise<void>, onBanDevice: (deviceId: string, reason?: string) => Promise<void>, bannedDevices: BannedDevice[] }) {
-  const [replyContent, setReplyContent] = useState('');
-  const [isReplying, setIsReplying] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [replyImages, setReplyImages] = useState<File[]>([]);
-
-  const handleReplyImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      if (replyImages.length + files.length > 4) {
-        alert('写真は最大4枚までです。');
-        const remaining = 4 - replyImages.length;
-        if (remaining > 0) setReplyImages(prev => [...prev, ...files.slice(0, remaining)]);
-      } else {
-        setReplyImages(prev => [...prev, ...files]);
-      }
-      event.target.value = '';
-    }
-  };
-
-  const handleSubmitReply = async () => {
-    if (!replyContent.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      let imageBase64s: string[] = [];
-      if (replyImages.length > 0) {
-        imageBase64s = await Promise.all(
-          replyImages.map(file => new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-          }))
-        );
-      }
-      await onReplyToReply(reply.id, replyContent, imageBase64s.length > 0 ? imageBase64s : undefined);
-      setReplyContent('');
-      setReplyImages([]);
-      setIsReplying(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="p-3 rounded-md bg-white border border-gray-200">
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-sm text-gray-800">{reply.username}</p>
-            {reply.label && (
-              <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs">
-                {reply.label}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-0.5">
-            <p className="text-xs text-gray-500">{new Date(reply.created_at).toLocaleString('ja-JP')}</p>
-            <span className="flex items-center gap-1 text-xs text-green-600">
-              <ThumbsUp className="w-3 h-3" />
-              {reply.good_count}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-red-500">
-              <ThumbsDown className="w-3 h-3" />
-              {reply.bad_count}
-            </span>
-          </div>
-          {reply.device_id && (
-            <div className="flex items-center gap-1 mb-1.5 text-xs text-gray-400">
-              端末: <span className="font-mono break-all">{reply.device_id}</span>
-              {bannedDevices.some(b => b.device_id === reply.device_id) ? (
-                <span className="text-red-500 font-semibold ml-1">BAN済</span>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (window.confirm(`${reply.device_id!} をBANしますか？`)) {
-                      onBanDevice(reply.device_id!);
-                    }
-                  }}
-                  className="text-red-400 hover:text-red-600 ml-1"
-                  title="この端末をBANする"
-                >
-                  <Ban className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          )}
-          <p className="whitespace-pre-wrap text-sm text-gray-700">{reply.content}</p>
-          {reply.image_urls && reply.image_urls.length > 0 && (
-            <div className="mt-2">
-              <TwitterLikeMediaGrid images={reply.image_urls.map(url => `${url}`)} />
-            </div>
-          )}
-
-          <div className="mt-2">
-            {!isReplying ? (
-              <Button onClick={() => setIsReplying(true)} variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 h-7 text-xs">
-                返信する
-              </Button>
-            ) : (
-              <div className="space-y-2 mt-2">
-                <Textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="管理人として返信..."
-                  rows={2}
-                  className="w-full text-sm bg-white border-gray-300 text-gray-900"
-                />
-                <label htmlFor={`admin-reply-reply-${reply.id}`} className="cursor-pointer flex items-center text-sm text-gray-500 hover:text-gray-700">
-                  <ImageIcon className="w-4 h-4 mr-1" />
-                  <span>画像を選択 ({replyImages.length}/4)</span>
-                </label>
-                <input
-                  id={`admin-reply-reply-${reply.id}`}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleReplyImageChange}
-                  className="hidden"
-                  disabled={replyImages.length >= 4}
-                />
-                {replyImages.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {replyImages.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img src={URL.createObjectURL(image)} alt={`preview ${index}`} className="w-full h-20 object-cover rounded-md" />
-                        <button onClick={() => setReplyImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button onClick={handleSubmitReply} size="sm" className="h-7 text-xs bg-gray-700 hover:bg-gray-600 text-white" disabled={!replyContent.trim() || isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    返信
-                  </Button>
-                  <Button onClick={() => { setIsReplying(false); setReplyContent(''); setReplyImages([]); }} variant="ghost" size="sm" className="h-7 text-xs">
-                    キャンセル
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <Button onClick={() => onDelete('reply', reply.id, reply.device_id)} variant="ghost" size="icon" className="text-gray-500 hover:bg-red-100 hover:text-red-600 h-8 w-8">
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
