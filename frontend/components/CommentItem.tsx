@@ -248,11 +248,11 @@ export default function CommentItem({
                 <button
                   type="button"
                   onClick={() => onSearchUserById?.(reply.display_id!)}
-                  className="font-mono ml-auto cursor-pointer transition-colors group"
+                  className="font-mono ml-auto cursor-pointer"
                   aria-label={`ユーザーID ${reply.display_id} で検索`}
                 >
-                  <span className="text-[10px] text-gray-500 group-hover:text-purple-400">ユーザーID:</span>
-                  <span className="text-[11px] text-gray-300 underline decoration-gray-400 underline-offset-2 group-hover:text-purple-300 group-hover:decoration-purple-300">{reply.display_id}</span>
+                  <span className="text-[10px] text-gray-600">ユーザーID:</span>
+                  <span className="text-[11px] text-gray-500 underline decoration-gray-600 underline-offset-2">{reply.display_id}</span>
                 </button>
               )}
             </div>
@@ -551,11 +551,11 @@ export default function CommentItem({
                   <button
                     type="button"
                     onClick={() => onSearchUserById?.(comment.display_id!)}
-                    className="font-mono ml-auto cursor-pointer transition-colors group"
+                    className="font-mono ml-auto cursor-pointer"
                     aria-label={`ユーザーID ${comment.display_id} で検索`}
                   >
-                    <span className="text-[10px] text-gray-500 group-hover:text-purple-400">ユーザーID:</span>
-                    <span className="text-[11px] text-gray-300 underline decoration-gray-400 underline-offset-2 group-hover:text-purple-300 group-hover:decoration-purple-300">{comment.display_id}</span>
+                    <span className="text-[10px] text-gray-600">ユーザーID:</span>
+                    <span className="text-[11px] text-gray-500 underline decoration-gray-600 underline-offset-2">{comment.display_id}</span>
                   </button>
                 )}
               </div>
