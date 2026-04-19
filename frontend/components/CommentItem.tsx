@@ -20,6 +20,7 @@ interface CommentItemProps {
   handlePollVote: (pollId: number, optionId: number) => void;
   formatTime: (date: Date) => string;
   createReply: (targetId: number, type: 'post' | 'reply', username: string, content: string, imageBase64s?: string[]) => Promise<void>;
+  onSearchUserById?: (deviceId: string) => void;
 }
 
 const linkify = (text: string) => {
@@ -89,6 +90,7 @@ export default function CommentItem({
   handlePollVote,
   formatTime,
   createReply,
+  onSearchUserById,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
@@ -243,7 +245,15 @@ export default function CommentItem({
                 返信
               </Button>
               {reply.display_id && reply.label !== '管理人' && (
-                <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-[11px] text-gray-500">{reply.display_id}</span></span>
+                <button
+                  type="button"
+                  onClick={() => onSearchUserById?.(reply.display_id!)}
+                  className="font-mono ml-auto cursor-pointer transition-colors group"
+                  aria-label={`ユーザーID ${reply.display_id} で検索`}
+                >
+                  <span className="text-[10px] text-gray-500 group-hover:text-purple-400">ユーザーID:</span>
+                  <span className="text-[11px] text-gray-300 underline decoration-gray-400 underline-offset-2 group-hover:text-purple-300 group-hover:decoration-purple-300">{reply.display_id}</span>
+                </button>
               )}
             </div>
             {replyingTo === reply.id && (
@@ -538,7 +548,15 @@ export default function CommentItem({
                   返信
                 </Button>
                 {comment.display_id && comment.label !== '管理人' && (
-                  <span className="font-mono ml-auto"><span className="text-[10px] text-gray-600">ユーザーID:</span><span className="text-[11px] text-gray-500">{comment.display_id}</span></span>
+                  <button
+                    type="button"
+                    onClick={() => onSearchUserById?.(comment.display_id!)}
+                    className="font-mono ml-auto cursor-pointer transition-colors group"
+                    aria-label={`ユーザーID ${comment.display_id} で検索`}
+                  >
+                    <span className="text-[10px] text-gray-500 group-hover:text-purple-400">ユーザーID:</span>
+                    <span className="text-[11px] text-gray-300 underline decoration-gray-400 underline-offset-2 group-hover:text-purple-300 group-hover:decoration-purple-300">{comment.display_id}</span>
+                  </button>
                 )}
               </div>
               {comment.replies.length > 0 && (
