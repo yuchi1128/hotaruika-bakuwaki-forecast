@@ -60,7 +60,10 @@ export async function createPost(
     image_urls: imageBase64s,
   };
   if (pollRequest) {
-    body.poll_request = pollRequest;
+    body.poll_request = {
+      ...pollRequest,
+      options: [...pollRequest.options, '閲覧用'],
+    };
   }
   await apiFetch('/api/posts', {
     method: 'POST',

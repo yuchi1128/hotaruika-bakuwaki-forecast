@@ -431,8 +431,8 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	// アンケートのバリデーション（DB操作前に実施）
 	if post.PollRequest != nil {
 		pollReq := post.PollRequest
-		if len(pollReq.Options) < 2 || len(pollReq.Options) > 4 {
-			http.Error(w, "選択肢は2〜4個で入力してください", http.StatusBadRequest)
+		if len(pollReq.Options) < 2 || len(pollReq.Options) > 5 {
+			http.Error(w, "選択肢は2〜5個で入力してください", http.StatusBadRequest)
 			return
 		}
 		if pollReq.DurationHours != 6 && pollReq.DurationHours != 12 && pollReq.DurationHours != 24 && pollReq.DurationHours != 72 {

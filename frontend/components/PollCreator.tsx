@@ -124,6 +124,10 @@ export default function PollCreator({ onChange, onReset }: PollCreatorProps) {
             )}
           </div>
 
+          <p className="text-xs text-gray-400">
+            ※投稿時に自動で「閲覧用」の選択肢が末尾に追加されます
+          </p>
+
           {/* 選択肢追加ボタン */}
           {options.length < MAX_POLL_OPTIONS && (
             <button
