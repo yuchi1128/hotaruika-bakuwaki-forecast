@@ -262,6 +262,24 @@ const CommentSection = ({
     }
   };
 
+  // フィルター/検索セクションまでのスムーズスクロール
+  const scrollToFilterSection = () => {
+    if (!filterSectionRef.current) return;
+    const targetY = filterSectionRef.current.getBoundingClientRect().top + window.scrollY - 80;
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    const duration = 350;
+    let startTime: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      window.scrollTo(0, startY + distance * ease);
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
   // ページ変更
   const handlePageChange = (newPage: number) => {
     fetchPosts({
@@ -273,21 +291,16 @@ const CommentSection = ({
       date_from: dateFrom,
       date_to: dateTo,
     });
-    if (filterSectionRef.current) {
-      const targetY = filterSectionRef.current.getBoundingClientRect().top + window.scrollY - 80;
-      const startY = window.scrollY;
-      const distance = targetY - startY;
-      const duration = 350;
-      let startTime: number | null = null;
-      const step = (timestamp: number) => {
-        if (!startTime) startTime = timestamp;
-        const progress = Math.min((timestamp - startTime) / duration, 1);
-        const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-        window.scrollTo(0, startY + distance * ease);
-        if (progress < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    }
+    scrollToFilterSection();
+  };
+
+  // ユーザーIDタップ時: 自動でID検索を実行してフィルターまでスクロール
+  const handleSearchByUserId = (id: string) => {
+    if (!id) return;
+    setDeviceIdInput(id);
+    setDeviceIdQuery(id);
+    setIsFilterOpen(true);
+    scrollToFilterSection();
   };
 
   // 表示用の計算
@@ -867,7 +880,7 @@ const CommentSection = ({
             <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する投稿はありません' : '投稿はまだありません'}</div>
           ) : (
             comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} handlePollVote={handlePollVote} formatTime={formatTime} createReply={createReply} />
+              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} handlePollVote={handlePollVote} formatTime={formatTime} createReply={createReply} onSearchUserById={handleSearchByUserId} />
             ))
           )}
         </div>
