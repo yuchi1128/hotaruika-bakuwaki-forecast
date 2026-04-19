@@ -310,7 +310,12 @@ export default function AdminPage() {
           content: newPostContent,
           label: '管理人',
           image_urls: imageBase64s,
-          ...(pollData && { poll_request: pollData }),
+          ...(pollData && {
+            poll_request: {
+              ...pollData,
+              options: [...pollData.options, '閲覧用'],
+            },
+          }),
         }),
         credentials: 'include',
       });
