@@ -23,10 +23,6 @@ const AppFooter = () => {
           </p>
         </div>
 
-        <p className="text-xs text-gray-500">
-          本サイトの各種SNSでのご紹介は事前連絡不要で大歓迎です。
-        </p>
-
         <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
           <span>各種ご連絡はこちらまで</span>
           <Link

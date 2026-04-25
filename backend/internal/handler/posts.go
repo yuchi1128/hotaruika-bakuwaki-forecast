@@ -580,16 +580,19 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			argIndex++
 		}
 		if search != "" {
-			// 空白区切りで複数キーワードAND検索（ユーザー名・投稿内容を対象）
+			// 空白区切りで複数キーワードAND検索（投稿のユーザー名・内容に加え、返信のユーザー名・内容も対象）
 			keywords := strings.Fields(search)
 			for _, kw := range keywords {
-				conditions = append(conditions, fmt.Sprintf("(p.username ILIKE $%d OR p.content ILIKE $%d)", argIndex, argIndex))
+				conditions = append(conditions, fmt.Sprintf(
+					"(p.username ILIKE $%d OR p.content ILIKE $%d OR EXISTS (SELECT 1 FROM replies r WHERE r.post_id = p.id AND (r.username ILIKE $%d OR r.content ILIKE $%d)))",
+					argIndex, argIndex, argIndex, argIndex,
+				))
 				countArgs = append(countArgs, "%"+kw+"%")
 				argIndex++
 			}
 		}
 		if deviceIDFilter != "" {
-			// display_id（ハッシュ値）からdevice_idを逆引きして検索
+			// display_id（ハッシュ値）からdevice_idを逆引きして検索（投稿・返信両方を対象）
 			matchedDeviceIDs, err := h.findDeviceIDsByDisplayID(deviceIDFilter)
 			if err != nil {
 				h.logger.Error("display_idからdevice_idの検索エラー", "error", err)
@@ -604,7 +607,11 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 					countArgs = append(countArgs, did)
 					argIndex++
 				}
-				conditions = append(conditions, fmt.Sprintf("p.device_id IN (%s)", strings.Join(placeholders, ",")))
+				ph := strings.Join(placeholders, ",")
+				conditions = append(conditions, fmt.Sprintf(
+					"(p.device_id IN (%s) OR EXISTS (SELECT 1 FROM replies r WHERE r.post_id = p.id AND r.device_id IN (%s)))",
+					ph, ph,
+				))
 			}
 		}
 		if dateFromStr != "" {

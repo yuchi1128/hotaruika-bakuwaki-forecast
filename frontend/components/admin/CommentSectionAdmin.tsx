@@ -505,6 +505,8 @@ const CommentSectionAdmin = ({
                 onLabelChange={onLabelChange}
                 onBanDevice={onBanDevice}
                 bannedDevices={bannedDevices}
+                searchQuery={searchQuery}
+                deviceIdQuery={deviceIdQuery}
               />
             ))
           )}
