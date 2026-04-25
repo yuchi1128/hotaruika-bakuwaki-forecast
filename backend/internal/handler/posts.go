@@ -360,7 +360,7 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request, isAdmin boo
 	if !isAdmin && !checkBanStatus(w, r) {
 		return
 	}
-	if !checkPostRateLimit(w, r) {
+	if !isAdmin && !checkPostRateLimit(w, r) {
 		return
 	}
 	if !isAdmin && !checkDeviceCooldown(w, r) {
@@ -880,7 +880,7 @@ func (h *Handler) createReplyToPost(w http.ResponseWriter, r *http.Request, post
 	if !isAdmin && !checkBanStatus(w, r) {
 		return
 	}
-	if !checkPostRateLimit(w, r) {
+	if !isAdmin && !checkPostRateLimit(w, r) {
 		return
 	}
 	if !isAdmin && !checkDeviceCooldown(w, r) {
@@ -955,7 +955,7 @@ func (h *Handler) createReplyToReply(w http.ResponseWriter, r *http.Request, par
 	if !isAdmin && !checkBanStatus(w, r) {
 		return
 	}
-	if !checkPostRateLimit(w, r) {
+	if !isAdmin && !checkPostRateLimit(w, r) {
 		return
 	}
 	if !isAdmin && !checkDeviceCooldown(w, r) {
