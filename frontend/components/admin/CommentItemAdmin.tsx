@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,12 @@ import type { Comment, Reply, BannedDevice } from '@/lib/types';
 import { API_URL } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-compression';
 import { getPollVote } from '@/lib/client-utils';
+import {
+  renderContent,
+  renderHighlighted,
+  renderSubstringHighlighted,
+  splitSearchKeywords,
+} from '@/lib/highlight';
 
 interface CommentItemAdminProps {
   comment: Comment;
@@ -24,27 +30,9 @@ interface CommentItemAdminProps {
   onLabelChange: (postId: number, label: string) => Promise<void>;
   onBanDevice: (deviceId: string, reason?: string) => Promise<boolean>;
   bannedDevices: BannedDevice[];
+  searchQuery?: string;
+  deviceIdQuery?: string;
 }
-
-const linkify = (text: string) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.split(urlRegex).map((part, i) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:underline"
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-};
 
 const ExpandableText = ({ children, maxLines, className }: {
   children: React.ReactNode;
@@ -98,8 +86,37 @@ export default function CommentItemAdmin({
   onLabelChange,
   onBanDevice,
   bannedDevices,
+  searchQuery,
+  deviceIdQuery,
 }: CommentItemAdminProps) {
+  // 検索キーワードを memo 化（ハイライトと判定で共有）
+  const keywords = useMemo(() => splitSearchKeywords(searchQuery), [searchQuery]);
+
+  // 検索キーワードがいずれかの返信にヒットするか判定（ユーザー名・本文を対象、大小文字無視）
+  const replyMatchesSearch = useMemo(() => {
+    if (keywords.length === 0) return false;
+    const lowered = keywords.map((k) => k.toLowerCase());
+    return comment.replies.some((reply) => {
+      const text = `${reply.username} ${reply.content}`.toLowerCase();
+      return lowered.some((kw) => text.includes(kw));
+    });
+  }, [keywords, comment.replies]);
+
+  // ユーザーID検索がいずれかの返信のdisplay_idにヒットするか判定
+  const replyMatchesDeviceId = useMemo(() => {
+    const q = deviceIdQuery?.trim().toLowerCase();
+    if (!q) return false;
+    return comment.replies.some((reply) =>
+      reply.display_id?.toLowerCase().includes(q) ?? false
+    );
+  }, [deviceIdQuery, comment.replies]);
+
   const [showReplies, setShowReplies] = useState(true);
+
+  // 検索結果が更新され、返信にヒットしたら自動で展開する
+  useEffect(() => {
+    if (replyMatchesSearch || replyMatchesDeviceId) setShowReplies(true);
+  }, [replyMatchesSearch, replyMatchesDeviceId]);
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -224,7 +241,7 @@ export default function CommentItemAdmin({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 min-w-0">
                 <span className="font-semibold text-blue-200 text-sm sm:text-[15px] truncate min-w-0">
-                  {reply.username}
+                  {renderHighlighted(reply.username, keywords)}
                 </span>
                 <span className="text-[13px] sm:text-[13px] text-gray-400 shrink-0">
                   {formatTime(new Date(reply.created_at))}
@@ -264,7 +281,7 @@ export default function CommentItemAdmin({
               )}
               <ExpandableText maxLines={6} className="text-gray-200 text-[13px] mb-2 whitespace-pre-wrap leading-relaxed">
                 {reply.parent_username && <div className="text-blue-300 mb-0.5">@{reply.parent_username}</div>}
-                <div>{linkify(reply.content)}</div>
+                <div>{renderContent(reply.content, keywords)}</div>
               </ExpandableText>
               {reply.image_urls && reply.image_urls.length > 0 && (
                 <div className="mb-2">
@@ -473,7 +490,7 @@ export default function CommentItemAdmin({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <span className="font-semibold text-purple-200 text-sm sm:text-[15px] truncate min-w-0 shrink">
-                {comment.username}
+                {renderHighlighted(comment.username, keywords)}
               </span>
               <span className="text-[14px] text-gray-400 shrink-0 whitespace-nowrap">
                 {formatTime(new Date(comment.created_at))}
@@ -555,7 +572,7 @@ export default function CommentItemAdmin({
             )}
 
             <ExpandableText maxLines={6} className="text-gray-200 mb-3 whitespace-pre-wrap text-[13px] leading-relaxed">
-              {linkify(comment.content)}
+              {renderContent(comment.content, keywords)}
             </ExpandableText>
 
             {comment.poll && (

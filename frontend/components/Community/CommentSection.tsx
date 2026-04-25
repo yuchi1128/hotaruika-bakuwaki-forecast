@@ -880,7 +880,7 @@ const CommentSection = ({
             <div className="text-center text-sm text-gray-400 py-8">{searchQuery ? '該当する投稿はありません' : '投稿はまだありません'}</div>
           ) : (
             comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} handlePollVote={handlePollVote} formatTime={formatTime} createReply={createReply} onSearchUserById={handleSearchByUserId} />
+              <CommentItem key={comment.id} comment={comment} handleReaction={handleReaction} handlePollVote={handlePollVote} formatTime={formatTime} createReply={createReply} onSearchUserById={handleSearchByUserId} searchQuery={searchQuery} deviceIdQuery={deviceIdQuery} />
             ))
           )}
         </div>
