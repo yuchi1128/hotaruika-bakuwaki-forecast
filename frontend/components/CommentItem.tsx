@@ -19,6 +19,7 @@ import {
   renderSubstringHighlighted,
   splitSearchKeywords,
 } from '@/lib/highlight';
+import TruncatableUsername from '@/components/common/TruncatableUsername';
 
 interface CommentItemProps {
   comment: Comment;
@@ -122,6 +123,18 @@ export default function CommentItem({
   const [isReplyConfirmOpen, setIsReplyConfirmOpen] = useState(false);
   const [pendingReplyTarget, setPendingReplyTarget] = useState<{ targetId: number; type: 'post' | 'reply' } | null>(null);
 
+  // ユーザー名の全文表示トグル
+  const [isPostUsernameExpanded, setIsPostUsernameExpanded] = useState(false);
+  const [expandedReplyUsernames, setExpandedReplyUsernames] = useState<Set<number>>(new Set());
+  const toggleReplyUsername = (replyId: number) => {
+    setExpandedReplyUsernames((prev) => {
+      const next = new Set(prev);
+      if (next.has(replyId)) next.delete(replyId);
+      else next.add(replyId);
+      return next;
+    });
+  };
+
   const handleImageClick = (index: number, images: string[]) => {
     setModalImages(images);
     setCurrentImageIndex(index);
@@ -202,9 +215,13 @@ export default function CommentItem({
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 min-w-0">
-              <span className="font-semibold text-blue-200 text-sm sm:text-[15px] truncate min-w-0">
+              <TruncatableUsername
+                isExpanded={expandedReplyUsernames.has(reply.id)}
+                onToggle={() => toggleReplyUsername(reply.id)}
+                textClassName="font-semibold text-blue-200 text-sm sm:text-[15px]"
+              >
                 {renderHighlighted(reply.username, keywords)}
-              </span>
+              </TruncatableUsername>
               <span className="text-[13px] sm:text-[13px] text-gray-400 shrink-0">
                 {formatTime(new Date(reply.created_at))}
               </span>
@@ -451,9 +468,13 @@ export default function CommentItem({
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 mb-2 min-w-0">
-              <span className="font-semibold text-purple-200 text-sm sm:text-[15px] truncate min-w-0 shrink">
+              <TruncatableUsername
+                isExpanded={isPostUsernameExpanded}
+                onToggle={() => setIsPostUsernameExpanded((v) => !v)}
+                textClassName="font-semibold text-purple-200 text-sm sm:text-[15px]"
+              >
                 {renderHighlighted(comment.username, keywords)}
-              </span>
+              </TruncatableUsername>
               <span className="text-[14px] text-gray-400 shrink-0 whitespace-nowrap">
                 {formatTime(new Date(comment.created_at))}
               </span>
