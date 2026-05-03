@@ -97,7 +97,8 @@ export const predictionLevels: PredictionLevel[] = [
 
 // [爆湧き, 大湧き, 湧き, チョイ湧き, プチ湧き]
 // const WAKI_THRESHOLDS = [1.25, 1.0, 0.75, 0.5, 0.25] as const;
-const WAKI_THRESHOLDS = [1.4, 1.15, 0.9, 0.65, 0.4] as const;
+// const WAKI_THRESHOLDS = [1.4, 1.15, 0.9, 0.65, 0.4] as const;
+const WAKI_THRESHOLDS = [1.6, 1.35, 1.1, 0.85, 0.6] as const;
 
 // レベル判定ロジック（共通）
 export const getPredictionLevel = (predicted_amount: number, date: Date): number => {
