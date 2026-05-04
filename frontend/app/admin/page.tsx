@@ -222,6 +222,27 @@ export default function AdminPage() {
     await handleDelete(type, id);
   };
 
+  // 固定/解除 (楽観的UI更新 + 成功後の再取得)
+  const handlePinChange = async (postId: number, isPinned: boolean) => {
+    setComments((prev: Comment[]) => prev.map((c) => (c.id === postId ? { ...c, is_pinned: isPinned } : c)));
+    try {
+      const res = await fetch(`${API_URL}/api/posts/${postId}/pin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_pinned: isPinned }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        if (res.status === 401) setIsLoggedIn(false);
+        throw new Error('固定状態の変更に失敗しました。');
+      }
+      refreshCurrentPage();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      refreshCurrentPage();
+    }
+  };
+
   // ラベル変更 (楽観的UI更新 + 成功後の再取得)
   const handleLabelChange = async (postId: number, label: string) => {
     setComments((prev: Comment[]) => prev.map((c) => (c.id === postId ? { ...c, label } : c)));
@@ -523,6 +544,7 @@ export default function AdminPage() {
               onDeletePost={(id, did) => handleDeleteWithBan('post', id, did)}
               onDeleteReply={(id, did) => handleDeleteWithBan('reply', id, did)}
               onLabelChange={handleLabelChange}
+              onPinChange={handlePinChange}
               onBanDevice={handleBanDevice}
               bannedDevices={bannedDevices}
             />

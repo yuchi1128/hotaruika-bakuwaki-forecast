@@ -125,6 +125,15 @@ export async function createAdminReply(
   });
 }
 
+export async function updatePostPin(postId: number, isPinned: boolean): Promise<void> {
+  await apiFetch(`/api/posts/${postId}/pin`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_pinned: isPinned }),
+    credentials: 'include',
+  });
+}
+
 export async function createReaction(
   targetId: number,
   type: 'post' | 'reply',

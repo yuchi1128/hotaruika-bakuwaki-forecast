@@ -43,6 +43,7 @@ interface CommentSectionAdminProps {
   onDeletePost: (postId: number, deviceId?: string) => void;
   onDeleteReply: (replyId: number, deviceId?: string) => void;
   onLabelChange: (postId: number, label: string) => Promise<void>;
+  onPinChange: (postId: number, isPinned: boolean) => Promise<void>;
   onBanDevice: (deviceId: string, reason?: string) => Promise<boolean>;
   bannedDevices: BannedDevice[];
 }
@@ -60,6 +61,7 @@ const CommentSectionAdmin = ({
   onDeletePost,
   onDeleteReply,
   onLabelChange,
+  onPinChange,
   onBanDevice,
   bannedDevices,
 }: CommentSectionAdminProps) => {
@@ -503,6 +505,7 @@ const CommentSectionAdmin = ({
                 onDeletePost={onDeletePost}
                 onDeleteReply={onDeleteReply}
                 onLabelChange={onLabelChange}
+                onPinChange={onPinChange}
                 onBanDevice={onBanDevice}
                 bannedDevices={bannedDevices}
                 searchQuery={searchQuery}

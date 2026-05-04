@@ -294,6 +294,12 @@ func (h *Handler) postDetailHandler(w http.ResponseWriter, r *http.Request) {
 		}).ServeHTTP(w, r)
 		return
 	}
+	if r.Method == http.MethodPatch && len(pathSegments) == 4 && pathSegments[3] == "pin" {
+		h.authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			h.updatePostPin(w, r, postID)
+		}).ServeHTTP(w, r)
+		return
+	}
 	if len(pathSegments) == 4 && pathSegments[3] == "replies" {
 		switch r.Method {
 		case http.MethodGet:
@@ -557,15 +563,15 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		offset = (page - 1) * limit
 	}
 
-	// ソート順の決定
-	orderBy := "p.created_at DESC"
+	// ソート順の決定（固定投稿は常に先頭）
+	orderBy := "p.is_pinned DESC, p.created_at DESC"
 	switch sort {
 	case "oldest":
-		orderBy = "p.created_at ASC"
+		orderBy = "p.is_pinned DESC, p.created_at ASC"
 	case "good":
-		orderBy = "good_count DESC, p.created_at DESC"
+		orderBy = "p.is_pinned DESC, good_count DESC, p.created_at DESC"
 	case "bad":
-		orderBy = "bad_count DESC, p.created_at DESC"
+		orderBy = "p.is_pinned DESC, bad_count DESC, p.created_at DESC"
 	}
 
 	operation := func() error {
@@ -643,7 +649,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		selectCols := `p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, p.device_id`
+		selectCols := `p.id, p.username, p.content, p.image_urls, p.label, p.created_at, COALESCE(r_good.count, 0) as good_count, COALESCE(r_bad.count, 0) as bad_count, p.device_id, p.is_pinned`
 		baseQuery := `SELECT ` + selectCols + ` FROM posts p LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'good' GROUP BY post_id) r_good ON p.id = r_good.post_id LEFT JOIN (SELECT post_id, COUNT(*) as count FROM reactions WHERE reaction_type = 'bad' GROUP BY post_id) r_bad ON p.id = r_bad.post_id`
 
 		args := make([]interface{}, len(countArgs))
@@ -667,7 +673,7 @@ func (h *Handler) getPosts(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var post model.Post
 			var deviceID sql.NullString
-			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount, &deviceID); err != nil {
+			if err := rows.Scan(&post.ID, &post.Username, &post.Content, pq.Array(&post.ImageURLs), &post.Label, &post.CreatedAt, &post.GoodCount, &post.BadCount, &deviceID, &post.IsPinned); err != nil {
 				h.logger.Error("投稿行のスキャンエラー", "error", err)
 				continue
 			}
@@ -1225,4 +1231,36 @@ func (h *Handler) updatePostLabel(w http.ResponseWriter, r *http.Request, postID
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"label": req.Label})
+}
+
+func (h *Handler) updatePostPin(w http.ResponseWriter, r *http.Request, postID int) {
+	var req struct {
+		IsPinned bool `json:"is_pinned"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "不正なリクエストです", http.StatusBadRequest)
+		return
+	}
+
+	query := `UPDATE posts SET is_pinned = $1 WHERE id = $2`
+	result, err := h.db.Exec(query, req.IsPinned, postID)
+	if err != nil {
+		h.logger.Error("固定状態の更新エラー", "error", err)
+		http.Error(w, "固定状態の更新に失敗しました", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		h.logger.Error("RowsAffectedの取得エラー", "error", err)
+		http.Error(w, "内部サーバーエラー", http.StatusInternalServerError)
+		return
+	}
+	if rowsAffected == 0 {
+		http.Error(w, "投稿が見つかりません", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"is_pinned": req.IsPinned})
 }
