@@ -5,6 +5,7 @@ CREATE TABLE posts (
     image_urls TEXT[],
     label VARCHAR(50) NOT NULL CHECK (label IN ('現地情報', 'その他', '管理人')),
     device_id TEXT,
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

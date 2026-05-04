@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon } from 'lucide-react';
+import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon, Pin } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import PollDisplay from '@/components/PollDisplay';
 import type { Comment, Reply } from '@/lib/types';
@@ -467,6 +467,12 @@ export default function CommentItem({
       <div key={comment.id} className="pb-2 border-b border-purple-500/30">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
+            {comment.is_pinned && (
+              <div className="flex items-center gap-1 mb-1 text-[11px] text-gray-400">
+                <Pin className="w-3 h-3" />
+                固定
+              </div>
+            )}
             <div className="flex items-baseline gap-2 mb-2 min-w-0">
               <TruncatableUsername
                 isExpanded={isPostUsernameExpanded}

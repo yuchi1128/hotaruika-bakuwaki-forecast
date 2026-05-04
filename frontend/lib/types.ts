@@ -59,6 +59,7 @@ export interface Post {
   created_at: string;
   good_count: number;
   bad_count: number;
+  is_pinned?: boolean;
   display_id?: string;
   device_id?: string;
   poll?: Poll;

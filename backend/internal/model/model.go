@@ -19,6 +19,7 @@ type Post struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	GoodCount   int                `json:"good_count"`
 	BadCount    int                `json:"bad_count"`
+	IsPinned    bool               `json:"is_pinned"`
 	Poll        *Poll              `json:"poll,omitempty"`
 	PollRequest *CreatePollRequest `json:"poll_request,omitempty"`
 }

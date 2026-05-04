@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon, Trash2, Pencil, Check, Ban } from 'lucide-react';
+import { MessageCircle, ThumbsUp, ThumbsDown, Loader2, X, ImageIcon, Trash2, Pencil, Check, Ban, Pin, PinOff } from 'lucide-react';
 import TwitterLikeMediaGrid from '@/components/TwitterLikeMediaGrid';
 import PollDisplay from '@/components/PollDisplay';
 import type { Comment, Reply, BannedDevice } from '@/lib/types';
@@ -29,6 +29,7 @@ interface CommentItemAdminProps {
   onDeletePost: (postId: number, deviceId?: string) => void;
   onDeleteReply: (replyId: number, deviceId?: string) => void;
   onLabelChange: (postId: number, label: string) => Promise<void>;
+  onPinChange: (postId: number, isPinned: boolean) => Promise<void>;
   onBanDevice: (deviceId: string, reason?: string) => Promise<boolean>;
   bannedDevices: BannedDevice[];
   searchQuery?: string;
@@ -85,6 +86,7 @@ export default function CommentItemAdmin({
   onDeletePost,
   onDeleteReply,
   onLabelChange,
+  onPinChange,
   onBanDevice,
   bannedDevices,
   searchQuery,
@@ -505,6 +507,12 @@ export default function CommentItemAdmin({
       <div key={comment.id} className="pb-2 border-b border-purple-500/30">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
+            {comment.is_pinned && (
+              <div className="flex items-center gap-1 mb-1 text-[11px] text-gray-400">
+                <Pin className="w-3 h-3" />
+                固定
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <TruncatableUsername
                 isExpanded={isPostUsernameExpanded}
@@ -563,8 +571,19 @@ export default function CommentItemAdmin({
                 </div>
               )}
               <button
+                onClick={() => onPinChange(comment.id, !comment.is_pinned)}
+                className={`ml-auto p-1 rounded transition-colors ${
+                  comment.is_pinned
+                    ? 'text-amber-300 hover:text-amber-200 hover:bg-amber-900/30'
+                    : 'text-gray-400 hover:text-amber-300 hover:bg-amber-900/30'
+                }`}
+                title={comment.is_pinned ? '固定を解除' : '投稿を固定'}
+              >
+                {comment.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              </button>
+              <button
                 onClick={() => onDeletePost(comment.id, comment.device_id)}
-                className="ml-auto p-1 rounded text-gray-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
+                className="p-1 rounded text-gray-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
                 title="投稿を削除"
               >
                 <Trash2 className="h-4 w-4" />
