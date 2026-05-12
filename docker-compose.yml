@@ -22,14 +22,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     volumes:
       - ./backend/uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgres://user:password@db:5432/hotaruika_db?sslmode=disable"
+      DATABASE_URL: "${DATABASE_URL:-postgres://user:password@db:5432/hotaruika_db?sslmode=disable}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,https://bakuwaki-yoho.com}"
       TZ: Asia/Tokyo
     env_file:
       - ./backend/.env
@@ -42,7 +43,7 @@ services:
       POSTGRES_DB: hotaruika_db
       TZ: Asia/Tokyo
     ports:
-      - "5433:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/sql:/docker-entrypoint-initdb.d

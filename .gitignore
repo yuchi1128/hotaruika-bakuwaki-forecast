@@ -2,3 +2,7 @@
 
 CLAUDE.md
 .claude/
+
+# Local environment files (per-worktree dev setup)
+.env
+frontend/.env.local
