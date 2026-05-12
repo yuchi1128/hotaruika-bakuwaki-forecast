@@ -18,6 +18,7 @@ import LoadingScreen from '@/components/common/LoadingScreen';
 import AppHeader from '@/components/common/AppHeader';
 import AppFooter from '@/components/common/AppFooter';
 import MannersBanner from '@/components/common/MannersBanner';
+import SukuiBanner from '@/components/common/SukuiBanner';
 import TodayForecast from '@/components/Forecast/TodayForecast';
 import WeeklyForecast from '@/components/Forecast/WeeklyForecast';
 import CommentSection from '@/components/Community/CommentSection';
@@ -114,6 +115,7 @@ export default function HomeView({ mode }: HomeViewProps) {
           handleCardClick={handleCardClick}
         />
 
+        <SukuiBanner />
         <MannersBanner />
 
         <CommentSection
