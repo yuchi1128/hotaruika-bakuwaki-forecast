@@ -8,7 +8,7 @@ const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const PAGE_TITLE = 'ホタルイカ掬いとは？｜初心者向け完全ガイド';
 const PAGE_DESCRIPTION =
   '富山湾の春の風物詩「ホタルイカ掬い」を初心者向けに徹底解説。ホタルイカの生態と発光のしくみ、シーズン・時間帯、月別の傾向、主要スポットの特徴比較、必要な道具、護岸・立ち込みの掬い方、持ち帰り後の処理から食べ方まで、現地での楽しみ方をすべてまとめました。';
-const PAGE_PATH = '/sukui';
+const PAGE_PATH = '/hotaruika-sukui-guide';
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -86,11 +86,7 @@ const SukuiPage = () => {
               ホタルイカ掬いとは、春の富山湾で産卵のため岸近くまで押し寄せたホタルイカを、タモ網で掬い上げる体験のことです。普段は水深200〜600mの深海に暮らす生き物を、岸辺から手の届く距離で観察・採取できるのは世界的にも珍しく、富山湾ならではの春の風物詩として親しまれています。
             </p>
             <p className="mt-4">
-              青白く発光しながら波打ち際に押し寄せる光景は幻想的で、毎年シーズンになると県内外から多くの人が訪れます。なぜホタルイカが岸まで来るのかという「身投げ」の仕組みについては、
-              <Link href="/about" className="text-blue-400 hover:underline">
-                このサイトについて
-              </Link>
-              のページでも触れています。
+              青白く発光しながら波打ち際に押し寄せる光景は幻想的で、毎年シーズンになると県内外から多くの人が訪れます。
             </p>
           </section>
 
@@ -231,10 +227,10 @@ const SukuiPage = () => {
             <ul className="list-disc list-inside mt-4 space-y-3 bg-muted/50 p-6 rounded-lg border border-blue-400/10">
               <li><span className="font-semibold text-purple-300">月齢：</span>新月の前後数日、月明かりの少ない暗い夜。明るい満月の夜は警戒して浮上しないとされる。</li>
               <li><span className="font-semibold text-purple-300">潮：</span>満潮の前後（特に満潮から1〜2時間前後）。潮位が高いほうが岸まで届きやすい。</li>
-              <li><span className="font-semibold text-purple-300">風：</span>南風（陸から海へ向かわない風）で波が穏やかな夜。北風が強い夜は期待薄。</li>
+              <li><span className="font-semibold text-purple-300">風：</span>とにかく <span className="font-semibold text-blue-200/90">風が弱い夜</span> が最重要。風向きは南寄りが好まれるが、強風だと風向きに関係なく波立って湧きにくい。</li>
               <li><span className="font-semibold text-purple-300">天候：</span>晴れて気温が下がりすぎていない夜。前日に大雨で海が濁っている夜は湧きにくい。</li>
               <li><span className="font-semibold text-purple-300">波高：</span>1m未満が目安。波が高いと安全面でも掬い的にも厳しい。</li>
-              <li><span className="font-semibold text-purple-300">水温：</span>10〜13℃前後の上昇期。極端に冷えた直後は湧きにくい。</li>
+              <li><span className="font-semibold text-purple-300">気温：</span>暖かい日のほうが湧きやすい。</li>
             </ul>
             <p className="mt-4 text-sm text-foreground/70">
               当サイトでは、これらの条件をAIが学習し、日ごとの期待度を「湧き指数」として算出しています。出かける前の参考にご活用ください。
@@ -359,7 +355,6 @@ const SukuiPage = () => {
                 <li>漁港内・漁船付近・テトラポッド上・防波堤の柵の外側は <span className="font-semibold">立ち入り禁止</span></li>
                 <li>「侵入禁止」「立入禁止」「駐車禁止」の看板を必ず確認</li>
                 <li>毎年マナー違反による苦情が出ており、規制強化につながりかねない状況</li>
-                <li>当日のリアルタイム情報は <Link href="/" className="text-blue-400 hover:underline">トップページの掲示板</Link> で交換されています</li>
               </ul>
             </div>
           </section>
@@ -544,34 +539,6 @@ const SukuiPage = () => {
                 <Link href="/manners" className="text-blue-400 hover:underline">マナーページ</Link>
                 もご確認ください。
               </p>
-            </div>
-
-            <h3 className="text-lg font-semibold text-purple-300 mt-6 mb-2">代表的な調理法</h3>
-            <div className="space-y-3">
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">塩茹で（ボイル）</h4>
-                <p className="text-sm text-foreground/80">3%程度の塩水（海水に近い濃さ）を沸騰させ、30秒〜1分茹でる。氷水でしめると食感が良い。酢味噌・わさび醤油で食べる定番。</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">沖漬け</h4>
-                <p className="text-sm text-foreground/80">醤油・酒・みりん（2:1:1）に生きたまま漬け込むのが伝統的だが、家庭では一度ボイルしたものを漬けるのが安全。冷蔵で1〜2日、冷凍保存も可。</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">しゃぶしゃぶ</h4>
-                <p className="text-sm text-foreground/80">出汁にさっとくぐらせ、十分加熱してから食べる。ポン酢が合う。寄生虫対策のため「半生」は避けて確実に火を通すこと。</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">パスタ・アヒージョ</h4>
-                <p className="text-sm text-foreground/80">オリーブオイル・にんにくと相性抜群。ボイル後に和える形でパスタへ。アヒージョはそのまま油で煮込む。冷凍ストックの消費にも便利。</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">天ぷら・唐揚げ</h4>
-                <p className="text-sm text-foreground/80">下処理してそのまま揚げる。中までしっかり加熱されるので寄生虫対策としても安心。ビールの肴に最高。</p>
-              </div>
-              <div className="bg-muted/40 p-4 rounded-lg border border-blue-400/10">
-                <h4 className="font-semibold text-blue-200/90 mb-1">干物（素干し）</h4>
-                <p className="text-sm text-foreground/80">下処理後、塩水に短時間漬けて干物ネットで2〜3日天日干し。日持ちし、炙ると香ばしい。</p>
-              </div>
             </div>
           </section>
 
