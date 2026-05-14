@@ -20,17 +20,17 @@ const MannersPage = () => {
       </div>
       <Card className="max-w-4xl mx-auto bg-card/80 backdrop-blur-sm border-blue-400/20">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent py-2">
+          <CardTitle className="text-xl md:text-2xl font-bold text-center bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent py-2">
             ホタルイカ掬いのマナー
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8 text-base md:text-lg leading-relaxed text-foreground">
+        <CardContent className="space-y-8 text-sm md:text-lg leading-7 md:leading-relaxed text-foreground">
           <p>
             ホタルイカ掬いは富山湾の春の風物詩です。この素晴らしい体験をこれからも皆さまが気持ちよく楽しめるよう、マナーへのご理解・ご協力をお願いいたします。
           </p>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">近隣住民への配慮</h2>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">近隣住民への配慮</h2>
             <ul className="list-disc list-inside space-y-3">
               <li><span className="font-semibold text-blue-200/90">深夜の騒音に注意：</span>車のドアの開閉音、エンジンのかけっぱなし、大声での会話はお控えください。</li>
               <li><span className="font-semibold text-blue-200/90">迷惑駐車の禁止：</span>漁港関係者や近隣住民の迷惑になる場所、私有地、路上への違法駐車は厳禁です。決められた駐車スペースをご利用ください。自分のいる場所に「侵入禁止」「立ち入り禁止」「駐車禁止」等の看板が無いか、今一度周囲をよく確認してから駐車しましょう。</li>
@@ -41,7 +41,7 @@ const MannersPage = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">環境と資源の保護</h2>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">環境と資源の保護</h2>
             <ul className="list-disc list-inside space-y-3">
               <li><span className="font-semibold text-blue-200/90">ゴミの持ち帰り：</span>飲食のゴミ、壊れた網や仕掛けなどは必ず各自で持ち帰ってください。</li>
               <li><span className="font-semibold text-blue-200/90">公衆トイレや手洗い場の私物化禁止：</span>公共のトイレや洗い場は、あくまで「共有の施設」です。大量のホタルイカを洗う、クーラーボックスや網などの道具を広げるなど、長時間にわたって場所を占領する行為は絶対におやめください。他の利用者や地元の方、施設の管理者が困るような使い方はおやめください。</li>
@@ -51,7 +51,7 @@ const MannersPage = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">周囲の掬う人への配慮</h2>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">周囲の掬う人への配慮</h2>
             <ul className="list-disc list-inside space-y-3">
               <li><span className="font-semibold text-blue-200/90">ライトの照らし方：</span>釣りをしている方がいる場所で強力なライトで無闇に海面を照らし続けると釣り人の迷惑になります。また、人の顔に向けてライトを照らさないようご注意ください。</li>
               <li><span className="font-semibold text-blue-200/90">場所の譲り合い：</span>限られたスペースをお互いに譲り合って楽しみましょう。割り込みや、過度な場所取りは禁止です。</li>
@@ -60,7 +60,7 @@ const MannersPage = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">安全・衛生対策</h2>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">安全・衛生対策</h2>
             <ul className="list-disc list-inside space-y-3">
               <li><span className="font-semibold text-blue-200/90">危険な場所への立ち入り禁止：</span>漁業関係者専用の敷地や、立ち入りが制限されている防波堤への侵入は「不法侵入」となります。警察に通報される事案も発生しています。危険なテトラポッドの上なども含め、指定された安全なエリア以外での活動は絶対に行わないでください。「侵入禁止」「立ち入り禁止」等の看板が無いか、行動する前に必ず周囲をご確認ください。</li>
               <li><span className="font-semibold text-blue-200/90">寄生虫（旋尾線虫・アニサキス）の警告：</span>ホタルイカの生食は大変危険です。必ず加熱（ボイル）するか、規定の温度・期間で適切に冷凍処理を行ってください。</li>
