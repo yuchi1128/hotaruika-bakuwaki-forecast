@@ -20,7 +20,7 @@ const AboutPage = () => {
             このサイトについて
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8 text-sm md:text-lg leading-7 md:leading-relaxed text-foreground/90">
+        <CardContent className="space-y-8 text-sm md:text-lg leading-[1.8] text-foreground/90">
           <section>
             <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">「ホタルイカ爆湧き予報」へようこそ</h2>
             <p>
