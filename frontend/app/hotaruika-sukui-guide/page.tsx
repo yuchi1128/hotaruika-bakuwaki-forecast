@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-const PAGE_TITLE = 'ホタルイカ掬いとは？｜初心者向け完全ガイド';
+const PAGE_TITLE = 'ホタルイカ掬い完全ガイド｜時期・場所・道具・コツ・食べ方まで解説';
 const PAGE_DESCRIPTION =
   '富山湾の春の風物詩「ホタルイカ掬い」を初心者向けに徹底解説。ホタルイカの生態と発光のしくみ、シーズン・時間帯、月別の傾向、主要スポットの特徴比較、必要な道具、護岸・立ち込みの掬い方、持ち帰り後の処理から食べ方まで、現地での楽しみ方をすべてまとめました。';
 const PAGE_PATH = '/hotaruika-sukui-guide';
@@ -47,7 +47,7 @@ const SukuiPage = () => {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: 'ホタルイカ掬いとは？初心者向け完全ガイド',
+    headline: 'ホタルイカ掬い完全ガイド',
     description: PAGE_DESCRIPTION,
     inLanguage: 'ja',
     mainEntityOfPage: {
@@ -77,7 +77,7 @@ const SukuiPage = () => {
       <Card className="max-w-4xl mx-auto bg-card/80 backdrop-blur-sm border-blue-400/20">
         <CardHeader>
           <h1 className="text-xl md:text-3xl font-bold text-center bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent py-2 leading-tight tracking-tight">
-            ホタルイカ掬いとは？
+            ホタルイカ掬い完全ガイド
           </h1>
         </CardHeader>
         <CardContent className="space-y-12 text-sm md:text-lg leading-7 md:leading-relaxed text-foreground/90">
