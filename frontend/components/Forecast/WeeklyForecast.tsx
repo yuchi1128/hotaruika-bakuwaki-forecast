@@ -53,7 +53,7 @@ const WeeklyForecast = ({
   }, []);
 
   return (
-    <Card className="mb-16 bg-transparent border-none shadow-none">
+    <Card className="mb-10 bg-transparent border-none shadow-none">
       <CardHeader className="px-0">
         <CardTitle className="text-xl md:text-2xl font-bold text白 flex items-center gap-3">
           <Calendar className="w-7 h-7 text-blue-300" />
