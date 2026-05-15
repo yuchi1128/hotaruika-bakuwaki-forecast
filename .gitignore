@@ -2,6 +2,8 @@
 
 CLAUDE.md
 .claude/
+.zed/
+docs/
 
 # Local environment files (per-worktree dev setup)
 .env
