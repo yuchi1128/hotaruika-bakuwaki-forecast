@@ -35,6 +35,12 @@ const AppFooter = () => {
             <span className="underline underline-offset-2">@bakuwaki_jp</span>
           </Link>
         </div>
+
+        <div className="text-xs text-gray-400">
+          <Link href="/privacy" className="hover:text-white transition-colors underline underline-offset-2">
+            プライバシーポリシー
+          </Link>
+        </div>
       </div>
     </footer>
   );
