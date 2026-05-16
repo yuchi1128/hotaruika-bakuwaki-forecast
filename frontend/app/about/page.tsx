@@ -104,6 +104,25 @@ const AboutPage = () => {
               でAIによる予測手法やWebサイトの構築など、技術的な内容を解説しています。
             </p>
           </section>
+
+          <section>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">運営者情報</h2>
+            <ul className="list-none mt-4 space-y-2 bg-muted/50 p-6 rounded-lg border border-blue-400/10">
+              <li><span className="font-bold text-purple-300">運営者：</span> ホタルイカ爆湧き予報 運営者（個人運営）</li>
+              <li>
+                <span className="font-bold text-purple-300">お問い合わせ：</span>{' '}
+                <Link href="mailto:bakuwaki.jp@gmail.com" className="text-blue-400 hover:underline">
+                  bakuwaki.jp@gmail.com
+                </Link>
+              </li>
+              <li>
+                <span className="font-bold text-purple-300">X (旧Twitter)：</span>{' '}
+                <Link href="https://x.com/bakuwaki_jp" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
+                  @bakuwaki_jp
+                </Link>
+              </li>
+            </ul>
+          </section>
         </CardContent>
       </Card>
     </div>
