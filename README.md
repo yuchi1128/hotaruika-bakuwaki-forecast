@@ -15,8 +15,7 @@
 ### 使用技術
 
 - **フロントエンド**: Next.js, TypeScript
-- **UI**: Tailwind CSS, shadcn/ui
 - **バックエンド**: Go, FastAPI
 - **データベース・ストレージ**: Supabase
-- **インフラ**: Docker, Vercel, GCP(Cloud Run), GitHub Actions
+- **インフラ**: Docker, Vercel, Google Cloud Platform, GitHub Actions
 - **機械学習**: LightGBM
