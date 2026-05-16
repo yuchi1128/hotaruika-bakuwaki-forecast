@@ -123,13 +123,47 @@ const PrivacyPage = () => {
               掲示板に投稿された内容は、当サイトのサービス内で他のユーザーに表示されます。投稿前に、個人を特定できる情報や他者に開示したくない情報を含めていないか十分にご確認ください。
             </p>
             <p className="mt-4">
-              利用規約に違反する投稿、または運営者が不適切と判断した投稿は、予告なく削除する場合があります。また、悪質な利用者については、デバイス単位での投稿制限を行うことがあります。
+              本ポリシーに違反する投稿、または運営者が不適切と判断した投稿は、予告なく削除する場合があります。また、悪質な利用者については、デバイス単位での投稿制限を行うことがあります。
             </p>
           </section>
 
           <section>
             <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
-              8. データの保管期間と削除のご依頼
+              8. 禁止事項
+            </h2>
+            <p>
+              当サイトのご利用にあたっては、以下の行為を禁止します。これらに該当する投稿は予告なく削除する場合があります。
+            </p>
+            <ul className="list-disc list-inside mt-4 space-y-2">
+              <li>誹謗中傷、脅迫、差別的な表現を含む投稿</li>
+              <li>違法行為またはそれを助長する内容</li>
+              <li>アダルト・過度に暴力的な内容</li>
+              <li>スパム、宣伝目的の連投</li>
+              <li>他者の著作権・プライバシー・肖像権を侵害する内容</li>
+              <li>個人情報（本人・他者を問わず）の投稿</li>
+              <li>他者へのなりすまし</li>
+              <li>当サイトのシステムへの不正アクセス・攻撃</li>
+              <li>その他、運営者が不適切と判断する行為</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
+              9. 免責事項
+            </h2>
+            <ul className="list-disc list-inside mt-4 space-y-2">
+              <li>当サイトの「湧き指数」はAI（機械学習）による予測であり、実際の結果と異なる場合があります。予報の精度は保証しません。</li>
+              <li>気象データ・潮位データなど第三者から取得した情報の正確性については保証しません。</li>
+              <li>掲示板の投稿内容の正確性・適法性は、投稿者ご本人の責任に帰属します。</li>
+              <li>当サイトからリンクする外部サイトのコンテンツについては、当サイトは責任を負いません。</li>
+              <li>当サイトは予告なくサービス内容の変更・一時停止・終了を行う場合があります。</li>
+              <li>当サイトの利用、または利用できなかったことにより生じたいかなる損害についても、運営者は責任を負いません。</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
+              10. データの保管期間と削除のご依頼
             </h2>
             <p>
               取得した情報は、サービス提供に必要な期間および法令で定められた期間、保管します。ご自身の投稿の削除や、保存されているデータの削除をご希望の場合は、後述のお問い合わせ先までご連絡ください。
@@ -138,7 +172,7 @@ const PrivacyPage = () => {
 
           <section>
             <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
-              9. 未成年者の利用について
+              11. 未成年者の利用について
             </h2>
             <p>
               未成年の方が当サイトをご利用になる場合は、保護者の方の同意のもとでご利用ください。
@@ -147,7 +181,7 @@ const PrivacyPage = () => {
 
           <section>
             <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
-              10. プライバシーポリシーの変更について
+              12. プライバシーポリシーの変更について
             </h2>
             <p>
               本ポリシーの内容は、法令の変更やサービス内容の変更に応じて、予告なく改定することがあります。改定後のポリシーは、当サイトに掲載した時点で効力を生じるものとします。
@@ -156,7 +190,7 @@ const PrivacyPage = () => {
 
           <section>
             <h2 className="text-base md:text-xl font-semibold mb-4 border-b-2 border-blue-300/20 pb-2 text-blue-300 text-glow-weak">
-              11. お問い合わせ
+              13. お問い合わせ
             </h2>
             <p>
               本ポリシーに関するお問い合わせや、データの削除依頼などは、以下までご連絡ください。
