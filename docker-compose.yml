@@ -30,8 +30,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: "${DATABASE_URL:-postgres://user:password@db:5432/hotaruika_db?sslmode=disable}"
-      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,https://bakuwaki-yoho.com}"
       TZ: Asia/Tokyo
+    # ALLOWED_ORIGINS は backend/.env で管理する
     env_file:
       - ./backend/.env
 
