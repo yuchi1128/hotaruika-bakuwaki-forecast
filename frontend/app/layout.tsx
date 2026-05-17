@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
-import Script from 'next/script';
 
 // Zen Kaku Gothic New (ローカルフォント)
 const zenKaku = localFont({
@@ -61,19 +60,19 @@ export default function RootLayout({
 
   return (
     <html lang="ja">
+      <head>
+        {/* Google AdSense */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3679714075949321"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={zenKaku.variable}>
         {/* JSON-LDスクリプト */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-
-        {/* Google AdSense */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3679714075949321"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
 
         <div className="fixed inset-0 z-[-1] bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
