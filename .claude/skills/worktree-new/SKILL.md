@@ -64,10 +64,13 @@ git branch -a | grep "worktree-<topic>"
 
 ```
 開発モードを選んでください:
-[A] フロントエンドのみ (Main backend を共有・推奨)
-    → docker起動不要、軽量
-[B] バックエンドも変更
-    → worktree専用の backend Docker を起動する
+[A] フロントエンドのみ変更 (Main の backend / DB を共有・推奨)
+    → Docker起動不要、軽量
+[B] フロント + バックエンド変更 (Main DB を共有)
+    → Worktree専用の backend Docker のみ起動
+[C] フロント + バック + DB変更 (完全独立)
+    → Worktree専用の backend と db 両方を起動
+    → DBスキーマ変更 (マイグレーション) の検証に使う
 ```
 
 #### 4. ワークツリー作成
@@ -83,7 +86,7 @@ cd .claude/worktrees/<topic>
 bash scripts/setup-worktree.sh
 ```
 
-出力から **Frontend port** と **Backend port** を抽出する。
+出力から **Frontend port** / **Backend port** / **DB port** を抽出する。
 
 #### 6. 依存パッケージのインストール (初回のみ)
 
@@ -92,24 +95,42 @@ cd frontend
 [ -d node_modules ] || npm install
 ```
 
-#### 7. (モードB のみ) frontend env.local の書き換え
+#### 7. (モードB / C のみ) frontend env.local の書き換え
 
-setup-worktree.sh が生成した `frontend/.env.local` の `NEXT_PUBLIC_API_URL` を、デフォルトの `http://localhost:8080` から worktree backend のポートに書き換える。
+`frontend/.env.local` の `NEXT_PUBLIC_API_URL` を worktree backend に書き換える:
 
 ```bash
 sed -i.tmp "s|^NEXT_PUBLIC_API_URL=http://localhost:8080|NEXT_PUBLIC_API_URL=http://localhost:<backend-port>|" .env.local
 rm .env.local.tmp
 ```
 
-#### 8. (モードB のみ) Backend 起動
+#### 8. (モードC のみ) .env の DATABASE_URL 書き換え
 
-ワークツリーのルートで実行 (バックグラウンド):
+ワークツリーのルート `.env` の `DATABASE_URL` を Mode C 用 (docker内部 db:5432) に書き換える:
 
 ```bash
-docker compose up backend --no-deps
+sed -i.tmp \
+  -e 's|^DATABASE_URL=postgres://user:password@host.docker.internal:5433/hotaruika_db?sslmode=disable|# DATABASE_URL=postgres://user:password@host.docker.internal:5433/hotaruika_db?sslmode=disable|' \
+  -e 's|^# DATABASE_URL=postgres://user:password@db:5432/hotaruika_db?sslmode=disable|DATABASE_URL=postgres://user:password@db:5432/hotaruika_db?sslmode=disable|' \
+  .env
+rm .env.tmp
 ```
 
-#### 9. Dev サーバー起動 (バックグラウンド)
+#### 9. Docker 起動 (バックグラウンド)
+
+モードに応じて起動するサービスが異なる:
+
+- **モードA**: 起動不要 (スキップ)
+- **モードB**:
+  ```bash
+  docker compose up backend --no-deps
+  ```
+- **モードC**:
+  ```bash
+  docker compose up backend db
+  ```
+
+#### 10. Dev サーバー起動 (バックグラウンド)
 
 ```bash
 PORT=<frontend-port> npm run dev
@@ -117,7 +138,7 @@ PORT=<frontend-port> npm run dev
 
 起動完了 (`✓ Ready` ログ) を確認してから次へ。
 
-#### 10. 結果報告
+#### 11. 結果報告
 
 ユーザーに以下を伝える:
 
@@ -126,9 +147,10 @@ PORT=<frontend-port> npm run dev
 
   Path:     .claude/worktrees/<topic>
   Branch:   worktree-<topic>
-  Mode:     <A: フロントのみ / B: バック含む>
+  Mode:     <A: フロントのみ / B: バック共有DB / C: バック+独立DB>
   Frontend: http://localhost:<frontend-port>
-  Backend:  <Main共有 (8080) / Worktree (<backend-port>)>
+  Backend:  Main共有 (8080) or Worktree (<backend-port>)
+  DB:       Main共有 (5433) or Worktree (<db-port>)
 
 ブラウザで http://localhost:<frontend-port> を開いて作業を始めてください。
 ```
@@ -153,12 +175,13 @@ PORT=<frontend-port> npm run dev
    Branch:   worktree-add-terms-page
    Frontend: http://localhost:3115
    Backend:  Main共有 (8080)
+   DB:       Main共有 (5433)
 ```
 
-### モードB (バックエンドも変更)
+### モードB (フロント+バック・Main DB共有)
 
 ```
-ユーザー: 通報APIを追加したい
+ユーザー: 通報APIを追加したい (DBスキーマは変えない)
 → /worktree-new
    トピック: add-report-api
    モード: B
@@ -166,6 +189,21 @@ PORT=<frontend-port> npm run dev
    Branch:   worktree-add-report-api
    Frontend: http://localhost:3122
    Backend:  Worktree (8122)
+   DB:       Main共有 (5433)
+```
+
+### モードC (フロント+バック+独立DB)
+
+```
+ユーザー: テーブルを追加するマイグレーションを試したい
+→ /worktree-new
+   トピック: add-feature-flags-table
+   モード: C
+→ Path:     .claude/worktrees/add-feature-flags-table
+   Branch:   worktree-add-feature-flags-table
+   Frontend: http://localhost:3108
+   Backend:  Worktree (8108)
+   DB:       Worktree (5508)
 ```
 
 ### 失敗例: 未コミット変更あり

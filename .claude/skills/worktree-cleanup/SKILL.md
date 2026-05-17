@@ -72,12 +72,12 @@ git -C <main-repo-path> branch --merged main | grep "worktree-<topic>"
 このセッションで `npm run dev` をバックグラウンド起動していた場合、**TaskStop** で停止する。
 (タスクIDが不明な場合はユーザーに確認するか、`lsof -i :<port>` で確認)
 
-#### 5. Worktree backend Docker の停止
+#### 5. Worktree の Docker (backend / db) 停止
 
-該当ワークツリーのコンテナが起動しているか確認:
+該当ワークツリーのコンテナが起動しているか確認 (Mode B では backend のみ、Mode C では backend と db 両方):
 
 ```bash
-docker ps --filter "name=<worktree-name>-backend" --format "{{.Names}}"
+docker ps --filter "name=<worktree-name>-" --format "{{.Names}}"
 ```
 
 起動していれば worktree ルートで:
@@ -86,6 +86,8 @@ docker ps --filter "name=<worktree-name>-backend" --format "{{.Names}}"
 cd .claude/worktrees/<topic>
 docker compose down
 ```
+
+(backend / db / その他関連コンテナがまとめて停止・削除される)
 
 #### 6. main へ移動
 
@@ -171,6 +173,19 @@ git fetch --prune
 → マージ済み
 → dev サーバー停止
 → Worktree backend Docker停止
+→ worktree削除 / ブランチ削除 / main最新化 / 完了
+```
+
+### 通常の片付け (マージ済み・モードCだった)
+
+```
+ユーザー: マイグレーションの検証終わった、片付けて
+→ /worktree-cleanup
+→ 対象: add-feature-flags-table
+→ 未コミット変更なし
+→ マージ済み
+→ dev サーバー停止
+→ Worktree backend + db Docker停止
 → worktree削除 / ブランチ削除 / main最新化 / 完了
 ```
 
